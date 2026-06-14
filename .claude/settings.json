@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5199/)",
+      "Read(//tmp/**)",
+      "Bash(kill %1)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5198/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5197/)",
+      "Bash(node -e \"for \\(const m of ['jsdom','playwright','playwright-core','puppeteer','puppeteer-core']\\){try{require.resolve\\(m\\);console.log\\('FOUND',m\\)}catch{console.log\\('missing',m\\)}}\")",
+      "Bash(pkill -f \"vite --port 5191\")",
+      "Bash(npx prisma *)",
+      "Bash(python -c ' *)",
+      "Bash(npx nest *)",
+      "Bash(cd c:/Cprojects/meetupwebapp/server && mkdir -p prisma/migrations/0_init && cp /tmp/init_migration.sql prisma/migrations/0_init/migration.sql && printf 'provider = \"mysql\"\\\\n' > prisma/migrations/migration_lock.toml && ls -R prisma/migrations | head && echo \"--- tail of migration:\" && tail -6 prisma/migrations/0_init/migration.sql)",
+      "Bash(DATABASE_URL=\"mysql://jmaa:jmaa@localhost:3306/jmaa\" JWT_ACCESS_SECRET=x JWT_REFRESH_SECRET=y PORT=4123 timeout 25 node dist/main.js)",
+      "Bash(docker --version)",
+      "Bash(docker info *)",
+      "Bash(docker compose *)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\")",
+      "PowerShell(\"launched\")",
+      "Bash(powershell.exe -Command 'Get-NetTCPConnection -LocalPort 3306 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 3 OwningProcess | ForEach-Object { \\(Get-Process -Id $_.OwningProcess\\).ProcessName }')",
+      "Bash(docker rm *)",
+      "Bash(docker run *)",
+      "Bash(DATABASE_URL=\"mysql://jmaa:jmaa@localhost:3307/jmaa\" npm run seed)",
+      "Bash(curl -s http://localhost:4000/health)",
+      "Bash(curl -s http://localhost:4000/activity-types)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(len\\(d\\),'types; first:',d[0]['name'],d[0]['group'],d[0]['vibe']\\)\")",
+      "Bash(curl -s \"http://localhost:4000/events?limit=50\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('total',d['total'],'| sample:',d['items'][0]['title'],'-',d['items'][0]['status']\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4000/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4000/docs)",
+      "Read(//c/Users/dell/.claude/skills/ui-ux-pro-max/**)",
+      "Bash(python skills/ui-ux-pro-max/scripts/search.py \"social community meetup app login welcome engaging\" --design-system -p \"Jmaa Meetup\")",
+      "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"social community meetup app login welcome engaging\" --design-system -p \"Jmaa Meetup\")"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
+    ]
+  }
+}

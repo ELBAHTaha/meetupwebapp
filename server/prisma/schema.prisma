@@ -1,0 +1,466 @@
+// Jmaâ — Prisma schema (MySQL 8). Mirrors the frontend TypeScript types.
+// Canonical naming: a meetup is an `Event`; the catalog entry is an `ActivityType`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum LookingFor {
+  FRIENDS
+  ACTIVITIES
+  BOTH
+}
+
+enum ActivityCategory {
+  SPORT
+  OUTDOOR
+  SOCIAL
+}
+
+enum Vibe {
+  CHILL
+  ACTIVE
+}
+
+enum GenderPreference {
+  ANY
+  WOMEN
+  MEN
+}
+
+enum Visibility {
+  PUBLIC
+  INVITE
+}
+
+enum EventStatus {
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  JOINED
+  WAITLISTED
+}
+
+enum RatingType {
+  HOST_TO_ATTENDEE
+  ATTENDEE_TO_HOST
+}
+
+enum ReportTargetType {
+  USER
+  EVENT
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ModerationActionType {
+  WARN
+  SUSPEND
+  BAN
+}
+
+enum PlanType {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum SubStatus {
+  INACTIVE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum PriorityLevel {
+  STANDARD
+  EXPRESS
+  PRIORITY
+}
+
+enum BusinessStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum SponsorshipTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum SponsorshipStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String?
+  googleId     String?    @unique
+  name         String
+  photoUrl     String?
+  bio          String?    @db.Text
+  neighborhood String?
+  zip          String?
+  lat          Float?
+  lng          Float?
+  birthday     DateTime?  @db.Date
+  gender       Gender?
+  phone        String?
+  lookingFor   LookingFor @default(BOTH)
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  suspendedUntil DateTime?
+  trustScore   Decimal    @default(5.0) @db.Decimal(3, 2)
+  flagCount    Int        @default(0)
+  verified     Boolean    @default(false)
+  stripeCustomerId String? @unique
+  subscriptionPlan PlanType @default(FREE)
+  subscriptionStatus SubStatus @default(INACTIVE)
+  subscriptionEndsAt DateTime?
+  cardLastFour String?
+  isPremiumUser Boolean @default(false)
+  premiumUntil DateTime?
+  creditAmountCents Int @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  hostedEvents     Event[]            @relation("HostedEvents")
+  attendances      Attendance[]
+  customTypes      ActivityType[]     @relation("CustomTypes")
+  ratingsGiven     Rating[]           @relation("RatingsGiven")
+  ratingsReceived  Rating[]           @relation("RatingsReceived")
+  flags            Flag[]
+  chatMessages     ChatMessage[]
+  reportsMade      Report[]           @relation("ReportsMade")
+  reportsAgainst   Report[]           @relation("ReportsAgainst")
+  reportsResolved  Report[]           @relation("ReportsResolved")
+  moderationsTaken ModerationAction[] @relation("AdminActions")
+  moderationsAgainst ModerationAction[] @relation("AgainstActions")
+  notifications    Notification[]
+  refreshTokens    RefreshToken[]
+  userActivities   UserActivity[]
+  subscriptionEvents SubscriptionEvent[]
+
+  @@index([status])
+  @@index([trustScore])
+  @@index([subscriptionPlan, subscriptionStatus])
+}
+
+// Activity interests on a profile (with level).
+model UserActivity {
+  id             String       @id @default(cuid())
+  userId         String
+  activityTypeId String
+  level          String       @default("any")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityType   ActivityType @relation(fields: [activityTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, activityTypeId])
+}
+
+model ActivityType {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String           @unique
+  icon        String // lucide icon key
+  category    ActivityCategory
+  colorToken  String
+  outdoor     Boolean          @default(false)
+  vibe        Vibe             @default(CHILL)
+  isCustom    Boolean          @default(false)
+  createdById String?
+  createdBy   User?            @relation("CustomTypes", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  events         Event[]
+  userActivities UserActivity[]
+}
+
+model Event {
+  id               String           @id @default(cuid())
+  hostId           String
+  host             User             @relation("HostedEvents", fields: [hostId], references: [id], onDelete: Cascade)
+  activityTypeId   String
+  activityType     ActivityType     @relation(fields: [activityTypeId], references: [id])
+  title            String
+  description      String?          @db.Text
+  locationLabel    String
+  address          String
+  lat              Float
+  lng              Float
+  isPublicPlace    Boolean          @default(true)
+  startsAt         DateTime
+  endsAt           DateTime
+  maxAttendees     Int
+  minPlayers       Int              @default(1)
+  skillLevel       String?
+  price            Decimal          @default(0) @db.Decimal(8, 2)
+  travelersWelcome Boolean          @default(true)
+  genderPreference GenderPreference @default(ANY)
+  visibility       Visibility       @default(PUBLIC)
+  status           EventStatus      @default(LIVE)
+  priorityLevel    PriorityLevel    @default(STANDARD)
+  expressPaymentIntentId String?
+  expressFeePaid   Boolean          @default(false)
+  approvedAt       DateTime?
+  pinnedUntil      DateTime?
+  startedAt        DateTime?
+  hostSpotNote     String?
+  reminderSentAt   DateTime?
+  ratePromptSentAt DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  attendances Attendance[]
+  chatThread  ChatThread?
+  ratings     Rating[]
+  flags       Flag[]
+  reports     Report[]         @relation("EventReports")
+  venueUsages ActivityVenue[]
+
+  @@index([startsAt, status])
+  @@index([hostId])
+  @@index([activityTypeId])
+  @@index([priorityLevel, createdAt])
+  @@index([pinnedUntil])
+}
+
+model Attendance {
+  id               String           @id @default(cuid())
+  eventId          String
+  event            Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status           AttendanceStatus @default(JOINED)
+  waitlistPosition Int?
+  joinedAt         DateTime         @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+}
+
+model ChatThread {
+  id        String        @id @default(cuid())
+  eventId   String        @unique
+  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+  messages  ChatMessage[]
+  reports   Report[]      @relation("ThreadReports")
+}
+
+model ChatMessage {
+  id       String     @id @default(cuid())
+  threadId String
+  thread   ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId String
+  sender   User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text     String     @db.Text
+  sentAt   DateTime   @default(now())
+
+  @@index([threadId, sentAt])
+}
+
+model Rating {
+  id         String     @id @default(cuid())
+  eventId    String
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fromUserId String
+  fromUser   User       @relation("RatingsGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  toUser     User       @relation("RatingsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+  score      Int
+  type       RatingType
+  createdAt  DateTime   @default(now())
+
+  flags Flag[]
+
+  @@unique([eventId, fromUserId, toUserId])
+  @@index([toUserId])
+}
+
+model Flag {
+  id        String   @id @default(cuid())
+  userId    String // the flagged user
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ratingId  String?
+  rating    Rating?  @relation(fields: [ratingId], references: [id], onDelete: SetNull)
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Report {
+  id            String           @id @default(cuid())
+  reporterId    String
+  reporter      User             @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType    ReportTargetType
+  targetUserId  String?
+  targetUser    User?            @relation("ReportsAgainst", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetEventId String?
+  targetEvent   Event?           @relation("EventReports", fields: [targetEventId], references: [id], onDelete: SetNull)
+  reason        String           @db.Text
+  chatThreadId  String?
+  chatThread    ChatThread?      @relation("ThreadReports", fields: [chatThreadId], references: [id], onDelete: SetNull)
+  status        ReportStatus     @default(OPEN)
+  resolvedById  String?
+  resolvedBy    User?            @relation("ReportsResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime         @default(now())
+
+  @@index([status])
+}
+
+model ModerationAction {
+  id            String               @id @default(cuid())
+  adminId       String
+  admin         User                 @relation("AdminActions", fields: [adminId], references: [id], onDelete: Cascade)
+  targetUserId  String
+  targetUser    User                 @relation("AgainstActions", fields: [targetUserId], references: [id], onDelete: Cascade)
+  action        ModerationActionType
+  suspendDays   Int?
+  note          String?
+  createdAt     DateTime             @default(now())
+
+  @@index([targetUserId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String   @db.Text
+  eventId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Business {
+  id               String         @id @default(cuid())
+  name             String
+  description      String?        @db.Text
+  address          String
+  lat              Float?
+  lng              Float?
+  contactEmail     String
+  phone            String?
+  stripeCustomerId String?        @unique
+  status           BusinessStatus @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  sponsorships Sponsorship[]
+  venueUsages  ActivityVenue[]
+
+  @@index([status])
+}
+
+model Sponsorship {
+  id                      String            @id @default(cuid())
+  businessId              String
+  business                Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  tier                    SponsorshipTier
+  monthlyPriceCents       Int
+  startDate               DateTime
+  endDate                 DateTime?
+  stripeSubscriptionId    String?           @unique
+  status                  SponsorshipStatus @default(ACTIVE)
+  activitiesUsedThisMonth Int               @default(0)
+  lastResetDate           DateTime          @default(now())
+  createdAt               DateTime          @default(now())
+
+  activityUsages ActivityVenue[]
+
+  @@index([businessId, status])
+  @@index([tier, status])
+}
+
+model ActivityVenue {
+  id            String      @id @default(cuid())
+  activityId    String
+  activity      Event       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sponsorshipId String?
+  sponsorship   Sponsorship? @relation(fields: [sponsorshipId], references: [id], onDelete: SetNull)
+  isSponsored   Boolean     @default(false)
+  couponCode    String?
+  createdAt     DateTime    @default(now())
+
+  @@index([activityId])
+  @@index([businessId, createdAt])
+  @@index([sponsorshipId])
+}
+
+model SubscriptionEvent {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventType     String
+  stripeEventId String   @unique
+  data          Json
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+}

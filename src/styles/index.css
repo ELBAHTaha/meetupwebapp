@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-ink font-body antialiased;
+    -webkit-tap-highlight-color: transparent;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+    font-optical-sizing: auto;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Calm, warm focus ring in the primary accent */
+  :focus-visible {
+    @apply outline-none ring-2 ring-clay/60 ring-offset-2;
+    --tw-ring-offset-color: #fbf8f2;
+  }
+}
+
+@layer components {
+  .skeleton {
+    @apply relative overflow-hidden rounded-card bg-surface-sunk;
+    background-image: linear-gradient(
+      90deg,
+      rgba(231, 223, 210, 0) 0px,
+      rgba(255, 255, 255, 0.55) 40px,
+      rgba(231, 223, 210, 0) 80px
+    );
+    background-size: 800px 100%;
+    @apply animate-shimmer;
+  }
+
+  /* Thin Moroccan geometric motif — a single quiet accent line */
+  .motif-rule {
+    height: 8px;
+    background-image: repeating-linear-gradient(
+      135deg,
+      #e7dfd2 0,
+      #e7dfd2 1px,
+      transparent 1px,
+      transparent 7px
+    );
+    opacity: 0.7;
+  }
+}
+
+/* Leaflet — warm neutral base, clay links */
+.leaflet-container {
+  font-family: inherit;
+  background: #ece6da;
+}
+.leaflet-container a {
+  color: #2e5a87;
+}
+.jmaa-pin {
+  background: transparent;
+  border: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
