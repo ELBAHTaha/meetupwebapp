@@ -54,6 +54,11 @@ export class SignupDto {
   @IsOptional()
   @IsEnum(['partners', 'friends', 'both'])
   lookingFor?: 'partners' | 'friends' | 'both';
+
+  @ApiPropertyOptional({ description: 'Cloudflare Turnstile token (verified when configured).' })
+  @IsOptional()
+  @IsString()
+  turnstileToken?: string;
 }
 
 export class LoginDto {

@@ -152,6 +152,7 @@ model User {
   status       UserStatus @default(ACTIVE)
   suspendedUntil DateTime?
   trustScore   Decimal    @default(5.0) @db.Decimal(3, 2)
+  reliabilityAdj Decimal  @default(0) @db.Decimal(4, 2)
   flagCount    Int        @default(0)
   verified     Boolean    @default(false)
   stripeCustomerId String? @unique
@@ -181,6 +182,7 @@ model User {
   refreshTokens    RefreshToken[]
   userActivities   UserActivity[]
   subscriptionEvents SubscriptionEvent[]
+  businessesOwned  Business[]         @relation("BusinessOwner")
 
   @@index([status])
   @@index([trustScore])
@@ -228,6 +230,7 @@ model Event {
   description      String?          @db.Text
   locationLabel    String
   address          String
+  areaLabel        String?
   lat              Float
   lng              Float
   isPublicPlace    Boolean          @default(true)
@@ -247,6 +250,8 @@ model Event {
   approvedAt       DateTime?
   pinnedUntil      DateTime?
   startedAt        DateTime?
+  underReview      Boolean          @default(false)
+  hostConfirmedAt  DateTime?
   hostSpotNote     String?
   reminderSentAt   DateTime?
   ratePromptSentAt DateTime?
@@ -335,11 +340,20 @@ model Flag {
   @@index([userId])
 }
 
+enum ReportReason {
+  FAKE_ACTIVITY
+  INAPPROPRIATE
+  NO_SHOW_HOST
+  SUSPICIOUS_USER
+  OTHER
+}
+
 model Report {
   id            String           @id @default(cuid())
   reporterId    String
   reporter      User             @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
   targetType    ReportTargetType
+  category      ReportReason     @default(OTHER)
   targetUserId  String?
   targetUser    User?            @relation("ReportsAgainst", fields: [targetUserId], references: [id], onDelete: SetNull)
   targetEventId String?
@@ -353,6 +367,15 @@ model Report {
   createdAt     DateTime         @default(now())
 
   @@index([status])
+}
+
+// Hashed contacts of banned users — checked at signup to block re-registration.
+model BannedContact {
+  id        String   @id @default(cuid())
+  phoneHash String?  @unique
+  emailHash String?  @unique
+  reason    String?
+  createdAt DateTime @default(now())
 }
 
 model ModerationAction {
@@ -406,6 +429,8 @@ model Business {
   phone            String?
   stripeCustomerId String?        @unique
   status           BusinessStatus @default(PENDING)
+  ownerId          String?
+  owner            User?          @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -413,6 +438,7 @@ model Business {
   venueUsages  ActivityVenue[]
 
   @@index([status])
+  @@index([ownerId])
 }
 
 model Sponsorship {

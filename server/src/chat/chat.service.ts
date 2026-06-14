@@ -1,5 +1,6 @@
-import { ForbiddenException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { messageViolation } from '../common/utils/message-filter';
 
 @Injectable()
 export class ChatService {
@@ -42,6 +43,8 @@ export class ChatService {
   }
 
   async sendMessage(eventId: string, userId: string, text: string): Promise<unknown> {
+    const violation = messageViolation(text);
+    if (violation) throw new BadRequestException(violation);
     const thread = await this.authorize(eventId, userId);
     const msg = await this.prisma.chatMessage.create({
       data: { threadId: thread.id, senderId: userId, text: text.slice(0, 2000) },

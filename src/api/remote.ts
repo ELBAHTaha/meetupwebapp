@@ -20,6 +20,7 @@ import type {
   EnrichedEvent,
   EventFilters,
   LoginInput,
+  MyBusiness,
   Rating,
   RatingInput,
   ReportInput,
@@ -50,6 +51,7 @@ export async function signup(input: {
   phone?: string;
   gender?: string;
   lookingFor?: string;
+  turnstileToken?: string;
   /** base64 data URL captured from the file picker; uploaded as `photo`. */
   avatar?: string;
 }): Promise<User> {
@@ -65,6 +67,7 @@ export async function signup(input: {
   if (input.phone) form.set('phone', input.phone);
   if (input.gender) form.set('gender', input.gender);
   if (input.lookingFor) form.set('lookingFor', input.lookingFor);
+  if (input.turnstileToken) form.set('turnstileToken', input.turnstileToken);
   if (input.avatar) {
     const blob = await fetch(input.avatar).then((r) => r.blob());
     form.set('photo', blob, 'avatar.jpg');
@@ -135,6 +138,7 @@ export function createEvent(input: CreateEventInput & { lat?: number; lng?: numb
     description: input.description,
     locationLabel: loc.label,
     address: (input as { address?: string }).address ?? loc.label,
+    areaLabel: input.areaLabel,
     lat: loc.lat,
     lng: loc.lng,
     isPublicPlace: input.publicPlaceConfirmed ?? true,
@@ -181,6 +185,11 @@ export const registerBusiness = (input: {
 export const createSponsorshipCheckout = (businessId: string, tier: 'bronze' | 'silver' | 'gold') =>
   api.post<{ url: string }>(`/businesses/${businessId}/sponsorship-checkout`, { tier });
 
+export const getMyBusiness = () => api.get<MyBusiness>('/businesses/mine');
+
+export const updateMyBusiness = (patch: { name?: string; description?: string; address?: string; phone?: string }) =>
+  api.patch<MyBusiness>('/businesses/mine', patch);
+
 export async function joinEvent(id: string): Promise<EnrichedEvent> {
   const res = await api.post<{ event: EnrichedEvent }>(`/events/${id}/join`);
   return res.event;
@@ -192,6 +201,14 @@ export function leaveEvent(id: string): Promise<EnrichedEvent> {
 
 export function startActivity(id: string, note: string): Promise<EnrichedEvent> {
   return api.post<EnrichedEvent>(`/events/${id}/start`, { hostSpotNote: note });
+}
+
+export function confirmActivity(id: string): Promise<EnrichedEvent> {
+  return api.post<EnrichedEvent>(`/events/${id}/confirm`);
+}
+
+export function cancelActivity(id: string): Promise<EnrichedEvent> {
+  return api.post<EnrichedEvent>(`/events/${id}/cancel`);
 }
 
 /**
@@ -293,6 +310,11 @@ export const listSubscribers = () => api.get('/admin/subscribers');
 export const listBusinessesAdmin = () => api.get('/admin/businesses');
 export const approveBusiness = (id: string) => api.post(`/admin/businesses/${id}/approve`);
 export const listExpressPaymentsAdmin = () => api.get('/admin/express-payments');
+export const listUnderReviewActivities = () => api.get<EnrichedEvent[]>('/admin/under-review');
+export const restoreActivity = (id: string) => api.post(`/admin/activities/${id}/restore`);
+export const listPendingActivities = () => api.get<EnrichedEvent[]>('/admin/pending-activities');
+export const approveActivity = (id: string) => api.post(`/admin/activities/${id}/approve`);
+export const rejectActivity = (id: string) => api.post(`/admin/activities/${id}/reject`);
 export const resolveReport = (id: string) => api.patch(`/admin/reports/${id}/resolve`);
 export const warnUser = (id: string) => api.post(`/admin/users/${id}/warn`);
 export const suspendUser = (id: string, days = 7) => api.post(`/admin/users/${id}/suspend`, { days });

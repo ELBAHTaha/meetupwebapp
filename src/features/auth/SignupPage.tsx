@@ -5,6 +5,7 @@ import { AlertCircle, Bike, Building2, Camera, Coffee, Dices, Lock, Mail, MapPin
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Field';
+import { Turnstile, isTurnstileEnabled } from '@/components/Turnstile';
 import { signup } from '@/api';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
@@ -44,6 +45,7 @@ export function SignupPage() {
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | null>(null);
   const [phone, setPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [loading, setLoading] = useState(false);
 
   function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -61,6 +63,7 @@ export function SignupPage() {
     if (!google && password.length < 8) return setError('Password must be at least 8 characters.');
     if (!google && !gender) return setError('Please select your gender.');
     if (birthday && ageFrom(birthday) < 18) return setError(t('auth.ageError'));
+    if (isTurnstileEnabled() && !turnstileToken) return setError(t('auth.captchaError'));
     setLoading(true);
     try {
       const user = await signup({
@@ -74,6 +77,7 @@ export function SignupPage() {
         birthday: birthday || undefined,
         gender: gender ?? undefined,
         phone: phone || undefined,
+        turnstileToken: turnstileToken || undefined,
       });
       setLogin(user);
       toast(t('auth.activeNote'), 'success');
@@ -217,6 +221,8 @@ export function SignupPage() {
                 </div>
               </div>
               <Input type="tel" label={t('auth.phone')} hint={t('auth.phoneHint')} placeholder="+212…" value={phone} onChange={(e) => setPhone(e.target.value)} leftIcon={<Phone className="h-5 w-5" strokeWidth={1.6} />} />
+
+              <Turnstile onToken={setTurnstileToken} />
 
               {error && (
                 <div className="flex items-center gap-2 rounded-input bg-clay-soft px-4 py-2.5 text-meta font-medium text-clay">

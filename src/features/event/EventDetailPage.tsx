@@ -8,9 +8,11 @@ import {
   Clock,
   Flag,
   Hand,
+  Lock,
   MapPin,
   MessageCircle,
   Share2,
+  ShieldCheck,
   Star,
   Ticket,
   Users,
@@ -32,7 +34,7 @@ import { Textarea } from '@/components/Field';
 import { ReportSheet } from '@/components/ReportSheet';
 import { RatingSheet } from '@/components/RatingSheet';
 import { useAsync } from '@/hooks/useAsync';
-import { canStart, getConditions, getEvent, joinEvent, leaveEvent, startActivity } from '@/api';
+import { canStart, cancelActivity, confirmActivity, getConditions, getEvent, joinEvent, leaveEvent, startActivity } from '@/api';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { activityColor } from '@/lib/activityColors';
@@ -122,6 +124,35 @@ export function EventDetailPage() {
       toast('Attendees notified you’ve arrived 👋', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not start', 'error');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleConfirm() {
+    setActing(true);
+    try {
+      await confirmActivity(event!.id);
+      bumpData();
+      reload();
+      toast(t('event.confirmedToast'), 'success');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not confirm', 'error');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!window.confirm(t('event.cancelConfirm'))) return;
+    setActing(true);
+    try {
+      await cancelActivity(event!.id);
+      bumpData();
+      reload();
+      toast(t('event.cancelledToast'), 'info');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not cancel', 'error');
     } finally {
       setActing(false);
     }
@@ -276,20 +307,66 @@ export function EventDetailPage() {
           <div className="mb-3 flex items-center gap-2">
             <h2 className="font-display text-h2 font-medium text-ink">{t('event.location')}</h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-medium text-ink-soft">
-              <MapPin className="h-3 w-3" strokeWidth={1.6} /> {t('event.meetingPoint')}
+              {event.locationHidden ? (
+                <><Lock className="h-3 w-3" strokeWidth={1.6} /> {t('event.generalArea')}</>
+              ) : (
+                <><MapPin className="h-3 w-3" strokeWidth={1.6} /> {t('event.meetingPoint')}</>
+              )}
             </span>
           </div>
-          <MapView
-            center={event.resolvedLocation}
-            zoom={14}
-            interactive={false}
-            markers={[{ id: event.id, lat: event.resolvedLocation.lat, lng: event.resolvedLocation.lng, colorHex: color.hex }]}
-            className="h-48 rounded-card border border-border"
-          />
-          <p className="mt-2 flex items-center gap-1.5 text-meta text-ink-soft">
-            <MapPin className="h-4 w-4 text-clay" strokeWidth={1.6} />
-            {event.resolvedLocation.label}
-          </p>
+
+          {event.locationHidden ? (
+            <>
+              <div className="relative">
+                <MapView
+                  center={event.resolvedLocation}
+                  zoom={12}
+                  interactive={false}
+                  markers={[]}
+                  className="h-48 rounded-card border border-border"
+                />
+                <div className="pointer-events-none absolute inset-0 grid place-items-center rounded-card bg-ink/10">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-surface/95 px-3 py-1.5 text-meta font-medium text-ink shadow-sm backdrop-blur-sm">
+                    <Lock className="h-4 w-4 text-clay" strokeWidth={1.7} /> {t('event.locationLocked')}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-2 flex items-center gap-1.5 text-meta text-ink-soft">
+                <MapPin className="h-4 w-4 text-clay" strokeWidth={1.6} />
+                {event.generalArea ?? event.resolvedLocation.label} · {t('event.approxArea')}
+              </p>
+              {isFull ? (
+                <p className="mt-3 rounded-card border border-border bg-surface-sunk/60 px-3 py-2.5 text-center text-meta font-medium text-ink-soft">
+                  {t('event.fullNoLocation')}
+                </p>
+              ) : (
+                <Button
+                  className="mt-3"
+                  fullWidth
+                  variant="outline"
+                  loading={acting}
+                  leftIcon={<Lock className="h-4 w-4" strokeWidth={1.7} />}
+                  onClick={handleJoin}
+                >
+                  {t('event.joinToSeeLocation')}
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <MapView
+                center={event.resolvedLocation}
+                zoom={14}
+                interactive={false}
+                markers={[{ id: event.id, lat: event.resolvedLocation.lat, lng: event.resolvedLocation.lng, colorHex: color.hex }]}
+                className="h-48 rounded-card border border-border"
+              />
+              <p className="mt-2 flex items-center gap-1.5 text-meta text-ink-soft">
+                <MapPin className="h-4 w-4 text-clay" strokeWidth={1.6} />
+                {event.resolvedLocation.label}
+              </p>
+            </>
+          )}
         </section>
 
         {/* Secondary actions */}
@@ -303,6 +380,32 @@ export function EventDetailPage() {
             {t('event.report')}
           </Button>
         </div>
+
+        {/* Host checkpoint controls */}
+        {status === 'host' && event.status !== 'PAST' && event.lifecycle !== 'cancelled' && (
+          <div className="rounded-card border border-border bg-surface p-4">
+            {!event.approvedAt ? (
+              <p className="flex items-center gap-2 text-meta font-medium text-saffron">
+                <Clock className="h-4 w-4" strokeWidth={1.8} /> {t('event.pendingReview')}
+              </p>
+            ) : event.hostConfirmedAt ? (
+              <p className="flex items-center gap-2 text-meta font-medium text-olive">
+                <ShieldCheck className="h-4 w-4" strokeWidth={1.8} /> {t('event.confirmed')}
+              </p>
+            ) : (
+              <>
+                <p className="text-meta font-medium text-ink">{t('event.confirmTitle')}</p>
+                <p className="mt-0.5 text-[12px] text-ink-soft">{t('event.confirmHint')}</p>
+                <Button className="mt-3" fullWidth loading={acting} leftIcon={<ShieldCheck className="h-4 w-4" strokeWidth={1.7} />} onClick={handleConfirm}>
+                  {t('event.confirmCta')}
+                </Button>
+              </>
+            )}
+            <button onClick={handleCancel} disabled={acting} className="mt-3 w-full text-center text-[12px] font-medium text-clay hover:underline disabled:opacity-50 cursor-pointer">
+              {t('event.cancelActivity')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sticky RSVP bar */}

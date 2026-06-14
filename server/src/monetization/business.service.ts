@@ -33,8 +33,91 @@ export class BusinessService {
     private readonly stripeClient: StripeClientService,
   ) {}
 
-  register(dto: RegisterBusinessDto) {
-    return this.prisma.business.create({ data: { ...dto, status: 'PENDING' } });
+  register(dto: RegisterBusinessDto, ownerId?: string) {
+    return this.prisma.business.create({ data: { ...dto, ownerId, status: 'PENDING' } });
+  }
+
+  /** The signed-in owner's venue with its live sponsorship usage and activities. */
+  async myBusiness(userId: string): Promise<unknown> {
+    const business = await this.prisma.business.findFirst({
+      where: { ownerId: userId },
+      orderBy: { createdAt: 'desc' },
+      include: { sponsorships: { where: { status: 'ACTIVE' }, orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!business) throw new NotFoundException('No business found for this account.');
+    const sponsorship = business.sponsorships[0] ?? null;
+    const limit = sponsorship ? TIER_LIMIT[sponsorship.tier] : null;
+
+    const usages = await this.prisma.activityVenue.findMany({
+      where: { businessId: business.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        activity: {
+          select: {
+            id: true,
+            title: true,
+            startsAt: true,
+            host: { select: { name: true } },
+            activityType: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      business: {
+        id: business.id,
+        name: business.name,
+        description: business.description ?? '',
+        address: business.address,
+        lat: business.lat ?? undefined,
+        lng: business.lng ?? undefined,
+        phone: business.phone ?? '',
+        contactEmail: business.contactEmail,
+        status: business.status.toLowerCase(),
+      },
+      sponsorship: sponsorship
+        ? {
+            tier: sponsorship.tier.toLowerCase(),
+            status: sponsorship.status.toLowerCase(),
+            used: sponsorship.activitiesUsedThisMonth,
+            limit: limit == null ? 'unlimited' : limit,
+            remaining: limit == null ? 'unlimited' : Math.max(0, limit - sponsorship.activitiesUsedThisMonth),
+            startDate: sponsorship.startDate.toISOString(),
+            monthlyPriceCents: sponsorship.monthlyPriceCents,
+          }
+        : null,
+      activities: usages.map((u) => ({
+        id: u.activity.id,
+        title: u.activity.title,
+        activityType: u.activity.activityType.name,
+        hostName: u.activity.host.name,
+        startsAt: u.activity.startsAt.toISOString(),
+        couponCode: u.couponCode ?? undefined,
+      })),
+    };
+  }
+
+  async updateMyBusiness(
+    userId: string,
+    dto: { name?: string; description?: string; address?: string; phone?: string },
+  ): Promise<unknown> {
+    const business = await this.prisma.business.findFirst({
+      where: { ownerId: userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!business) throw new NotFoundException('No business found for this account.');
+    await this.prisma.business.update({
+      where: { id: business.id },
+      data: {
+        name: dto.name ?? undefined,
+        description: dto.description ?? undefined,
+        address: dto.address ?? undefined,
+        phone: dto.phone ?? undefined,
+      },
+    });
+    return this.myBusiness(userId);
   }
 
   async createSponsorshipCheckout(businessId: string, tierInput: 'bronze' | 'silver' | 'gold'): Promise<{ url: string }> {

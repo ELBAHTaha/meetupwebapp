@@ -13,7 +13,7 @@ import type {
   User,
   ViewerRsvp,
 } from '@/types';
-import { SEED_ACTIVITIES } from './catalog';
+import { CITIES, SEED_ACTIVITIES } from './catalog';
 import {
   CURRENT_USER_ID,
   SEED_CONDITIONS,
@@ -45,6 +45,9 @@ function normalizeEvent(e: JmaaEvent): JmaaEvent {
     endsAt: ends,
     genderPreference: e.genderPreference ?? 'any',
     lifecycle: e.lifecycle ?? (past ? 'completed' : 'live'),
+    // Seed activities are treated as already approved (admin approval applies to
+    // newly created normal-user activities).
+    approvedAt: e.approvedAt ?? e.startsAt,
   };
 }
 
@@ -208,12 +211,36 @@ export function resolvedLocationOf(e: JmaaEvent): EventLocation {
   return e.location ?? { lat: 33.5731, lng: -7.5898, label: 'Location TBD' };
 }
 
+/** Display name of the nearest seed city to a coordinate. */
+function nearestCityName(p: EventLocation): string {
+  let best = CITIES[0];
+  let bestD = Infinity;
+  for (const c of CITIES) {
+    const d = (c.lat - p.lat) ** 2 + (c.lng - p.lng) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = c;
+    }
+  }
+  return best.name;
+}
+
 export function enrich(e: JmaaEvent, viewerId = db.currentUserId): EnrichedEvent {
   const activity = findActivity(e.activityId)!;
   const host = findUser(e.hostId)!;
   const spot = findSpot(e.spotId);
   const goingCount = goingCountOf(e);
   const waitlistCount = e.attendees.filter((a) => a.status === 'waitlisted').length;
+
+  // Progressive disclosure: only members see the exact pin/label.
+  const viewerStatus = viewerStatusOf(e, viewerId);
+  const joined =
+    viewerStatus === 'host' || viewerStatus === 'joined' || viewerStatus === 'waitlisted' || viewerStatus === 'past';
+  const full = resolvedLocationOf(e);
+  const generalArea = e.areaLabel ?? nearestCityName(full);
+  const fuzz = (n: number) => Math.round(n * 100) / 100; // ~1km grid
+  const resolvedLocation = joined ? full : { lat: fuzz(full.lat), lng: fuzz(full.lng), label: generalArea };
+
   return {
     ...e,
     activity,
@@ -222,8 +249,10 @@ export function enrich(e: JmaaEvent, viewerId = db.currentUserId): EnrichedEvent
     goingCount,
     waitlistCount,
     openSpots: Math.max(0, e.capacity - goingCount),
-    viewerStatus: viewerStatusOf(e, viewerId),
-    resolvedLocation: resolvedLocationOf(e),
+    viewerStatus,
+    resolvedLocation,
+    generalArea,
+    locationHidden: !joined,
   };
 }
 

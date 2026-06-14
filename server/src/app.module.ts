@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import configuration from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
+import { TrustModule } from './trust/trust.module';
 import { StorageModule } from './storage/storage.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -32,6 +33,7 @@ import { HealthController } from './health/health.controller';
     ScheduleModule.forRoot(),
     // Infrastructure
     PrismaModule,
+    TrustModule,
     StorageModule,
     GeocodingModule,
     NotificationsModule,

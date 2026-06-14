@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Plane, Star } from 'lucide-react';
+import { BadgeCheck, Lock, MapPin, Plane, Star } from 'lucide-react';
 import type { EnrichedEvent } from '@/types';
+import { cn } from '@/lib/cn';
 import { ActivityIcon } from './ActivityIcon';
 import { Avatar } from './Avatar';
 import { EventStatusBadge } from './EventStatusBadge';
@@ -46,12 +47,35 @@ export function EventCard({ event, fromCity }: Props) {
         rounded={false}
         className="aspect-[3/2] w-full"
       >
-        <div className="absolute inset-x-3 top-3 flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-2.5 py-1 text-[12px] font-medium text-ink backdrop-blur-sm">
-            <ActivityIcon activity={event.activity} size="sm" className="!h-4 !w-4" />
-            {event.activity.name}
-          </span>
+        <div className="absolute inset-x-3 top-3 flex items-start justify-between">
+          <div className="flex flex-col items-start gap-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-2.5 py-1 text-[12px] font-medium text-ink backdrop-blur-sm">
+              <ActivityIcon activity={event.activity} size="sm" className="!h-4 !w-4" />
+              {event.activity.name}
+            </span>
+            {event.sponsoredVenue && (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm',
+                  event.sponsoredVenue.tier === 'gold'
+                    ? 'bg-saffron'
+                    : event.sponsoredVenue.tier === 'silver'
+                      ? 'bg-majorelle'
+                      : 'bg-clay',
+                )}
+                title={`Sponsored venue · ${event.sponsoredVenue.name}`}
+              >
+                <BadgeCheck className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
+                Sponsored venue
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5">
+            {!event.approvedAt && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-saffron px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+                {t('event.pendingTag')}
+              </span>
+            )}
             {isOwn && (
               <span className="inline-flex items-center gap-1 rounded-full bg-clay px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
                 <Star className="h-3 w-3 fill-white" strokeWidth={0} aria-hidden="true" />
@@ -70,7 +94,11 @@ export function EventCard({ event, fromCity }: Props) {
       <div className="p-3.5">
         <h3 className="line-clamp-2 font-display text-h3 font-medium leading-snug text-ink">{event.title}</h3>
         <div className="mt-1.5 flex items-center gap-1.5 text-meta text-ink-soft">
-          <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+          {event.locationHidden ? (
+            <Lock className="h-3.5 w-3.5 shrink-0 text-ink-faint" strokeWidth={1.6} />
+          ) : (
+            <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+          )}
           <span className="truncate">{event.resolvedLocation.label}</span>
           {dist !== null && <span className="shrink-0 text-ink-faint">· {formatDistance(dist)}</span>}
         </div>

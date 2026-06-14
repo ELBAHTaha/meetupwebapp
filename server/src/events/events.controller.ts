@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -39,7 +40,9 @@ export class EventsController {
     return this.events.attendees(id);
   }
 
+  // Anti-abuse: cap activity creation at 5 per hour per user.
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 3_600_000 } })
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateEventDto) {
     return this.events.create(user.id, dto);
@@ -55,6 +58,12 @@ export class EventsController {
   @Post(':id/cancel')
   cancel(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.events.cancel(id, user.id);
+  }
+
+  @ApiBearerAuth()
+  @Post(':id/confirm')
+  confirm(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.events.confirm(id, user.id);
   }
 
   @ApiBearerAuth()

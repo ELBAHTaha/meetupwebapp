@@ -38,3 +38,25 @@ export class SponsorshipCheckoutDto {
   @IsEnum(['bronze', 'silver', 'gold'])
   tier!: 'bronze' | 'silver' | 'gold';
 }
+
+export class UpdateBusinessDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+}

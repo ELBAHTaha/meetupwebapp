@@ -13,7 +13,8 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { QueryEventsDto } from './dto/query-events.dto';
 import { eventInclude, serializeEvent } from '../common/serializers/event.serializer';
-import { looksLikePrivatePlace } from '../common/utils/private-place';
+import { looksLikePrivatePlace, containsProhibitedContent } from '../common/utils/private-place';
+import { TrustService } from '../trust/trust.service';
 import { haversineKm } from '../common/utils/haversine';
 import { ActivityCategory, GenderPreference, Prisma, Visibility } from '@prisma/client';
 import { SubscriptionService } from '../monetization/subscription.service';
@@ -34,6 +35,7 @@ export class EventsService {
     private readonly subscriptions: SubscriptionService,
     private readonly expressPayments: ExpressPaymentService,
     private readonly businesses: BusinessService,
+    private readonly trust: TrustService,
   ) {}
 
   // --- guards -------------------------------------------------------------
@@ -61,6 +63,11 @@ export class EventsService {
   async create(userId: string, dto: CreateEventDto): Promise<unknown> {
     await this.ensureActive(userId);
     const mustPayForExtra = await this.subscriptions.requiresExtraEventPayment(userId);
+    // A business hosting at its own sponsored venue is governed by its monthly
+    // sponsorship limit (enforced in trackVenueUsage), not the consumer weekly fee.
+    const ownsVenue = dto.businessId
+      ? (await this.prisma.business.count({ where: { id: dto.businessId, ownerId: userId } })) > 0
+      : false;
 
     const startsAt = new Date(dto.startsAt);
     const endsAt = new Date(dto.endsAt);
@@ -78,6 +85,9 @@ export class EventsService {
     if (looksLikePrivatePlace(dto.title, dto.address, dto.locationLabel)) {
       throw new UnprocessableEntityException('That looks like a private home — meetups must be at public venues.');
     }
+    if (containsProhibitedContent(dto.title, dto.description, dto.address, dto.locationLabel)) {
+      throw new UnprocessableEntityException('Activities can’t mention alcohol, drugs, or inappropriate content.');
+    }
 
     const activityTypeId = await this.activityTypes.resolveId(dto.activityId);
     if (!activityTypeId) throw new BadRequestException('Unknown activity type.');
@@ -94,7 +104,7 @@ export class EventsService {
     // Free hosts get one activity per rolling week. Beyond that they must pay
     // the one-time extra-activity fee ($0.99, or $2.99 for featured placement);
     // active paid plans are treated as unlimited by the weekly check above.
-    if (mustPayForExtra && !expressFeePaid) {
+    if (mustPayForExtra && !expressFeePaid && !ownsVenue) {
       throw new BadRequestException(
         'You’ve used your free activity this week. Pay the one-time fee to host another, or upgrade to Pro for unlimited hosting.',
       );
@@ -118,6 +128,7 @@ export class EventsService {
         description: dto.description,
         locationLabel: dto.locationLabel,
         address: dto.address,
+        areaLabel: dto.areaLabel,
         lat: dto.lat,
         lng: dto.lng,
         isPublicPlace: true,
@@ -130,11 +141,13 @@ export class EventsService {
         travelersWelcome: dto.travelersWelcome ?? true,
         genderPreference: (dto.genderPreference?.toUpperCase() as GenderPreference) ?? 'ANY',
         visibility: (dto.visibility?.toUpperCase() as Visibility) ?? 'PUBLIC',
-        status: 'LIVE', // live immediately — no approval step
+        status: 'LIVE',
         priorityLevel,
         expressPaymentIntentId: dto.expressPaymentIntentId,
         expressFeePaid,
-        approvedAt: new Date(),
+        // Business activities (own sponsored venue) go live instantly; everything
+        // a normal user creates waits for admin approval (approvedAt stays null).
+        approvedAt: ownsVenue ? new Date() : null,
         pinnedUntil,
         chatThread: { create: { expiresAt: new Date(endsAt.getTime() + CHAT_TTL) } },
       },
@@ -146,8 +159,10 @@ export class EventsService {
     await this.notifications.push({
       userId,
       type: 'confirmed',
-      title: 'Your activity is live 🎉',
-      body: `“${event.title}” is now visible in the feed.`,
+      title: event.approvedAt ? 'Your activity is live 🎉' : 'Activity submitted for review',
+      body: event.approvedAt
+        ? `“${event.title}” is now visible in the feed.`
+        : `“${event.title}” will appear once an admin approves it.`,
       eventId: event.id,
     });
 
@@ -159,6 +174,8 @@ export class EventsService {
     const where: Prisma.EventWhereInput = {
       status: 'LIVE',
       visibility: 'PUBLIC',
+      underReview: false, // hidden pending report review
+      approvedAt: { not: null }, // hidden until an admin approves
       endsAt: { gt: new Date() },
     };
 
@@ -231,6 +248,13 @@ export class EventsService {
       );
     }
 
+    // Sponsored-venue activities pinned on top: Gold › Silver › Bronze. Stable
+    // sort preserves the prior ordering (date/distance) within each tier.
+    const tierRank: Record<string, number> = { gold: 3, silver: 2, bronze: 1 };
+    serialized = serialized.sort(
+      (a: any, b: any) => (tierRank[b.sponsoredVenue?.tier] ?? 0) - (tierRank[a.sponsoredVenue?.tier] ?? 0),
+    );
+
     const total = serialized.length;
     const start = (query.page - 1) * query.limit;
     const items = serialized.slice(start, start + query.limit);
@@ -239,6 +263,8 @@ export class EventsService {
 
   async detail(id: string, viewerId?: string): Promise<unknown> {
     const e = await this.loadOrThrow(id, viewerId);
+    // Under-review or not-yet-approved activities are hidden from everyone but the host.
+    if ((e.underReview || !e.approvedAt) && e.hostId !== viewerId) throw new NotFoundException('Activity not found.');
     return serializeEvent(e, viewerId);
   }
 
@@ -308,6 +334,10 @@ export class EventsService {
     const e = await this.loadOrThrow(id);
     if (e.hostId !== userId) throw new ForbiddenException('Only the host can cancel this activity.');
     await this.prisma.event.update({ where: { id }, data: { status: 'CANCELLED' } });
+    // Cancelling within 2h of the start time is a flake — small trust penalty.
+    if (new Date(e.startsAt).getTime() - Date.now() < 2 * 60 * 60 * 1000) {
+      await this.trust.adjust(userId, -0.5, 'cancelled within 2h of start');
+    }
     await this.notifications.pushMany(
       e.attendances.map((a) => ({
         userId: a.userId,
@@ -317,6 +347,15 @@ export class EventsService {
         eventId: e.id,
       })),
     );
+    return this.detail(id, userId);
+  }
+
+  /** Host confirms the activity is happening (clears the auto-cancel risk). */
+  async confirm(id: string, userId: string): Promise<unknown> {
+    const e = await this.loadOrThrow(id);
+    if (e.hostId !== userId) throw new ForbiddenException('Only the host can confirm this activity.');
+    if (e.status !== 'LIVE') throw new BadRequestException('Only live activities can be confirmed.');
+    await this.prisma.event.update({ where: { id }, data: { hostConfirmedAt: new Date() } });
     return this.detail(id, userId);
   }
 
@@ -343,7 +382,7 @@ export class EventsService {
   async join(id: string, userId: string): Promise<{ event: unknown; message: string }> {
     await this.ensureActive(userId);
     const e = await this.loadOrThrow(id);
-    if (e.status !== 'LIVE' || new Date(e.endsAt) < new Date()) {
+    if (e.status !== 'LIVE' || e.underReview || !e.approvedAt || new Date(e.endsAt) < new Date()) {
       throw new BadRequestException('This activity is no longer open to join.');
     }
     if (e.hostId === userId) throw new BadRequestException('You are the host of this activity.');

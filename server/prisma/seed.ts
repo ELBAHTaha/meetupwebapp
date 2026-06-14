@@ -158,6 +158,7 @@ async function main() {
         price: opts.price ?? 0,
         genderPreference: opts.gender ?? 'ANY',
         status: opts.status ?? 'LIVE',
+        approvedAt: new Date(), // seed activities are pre-approved demo data
         chatThread: { create: { expiresAt: new Date(endsAt.getTime() + 86_400_000) } },
         attendances: { create: (opts.attendees ?? []).map((k) => ({ userId: uid[k], status: 'JOINED' as const })) },
       },

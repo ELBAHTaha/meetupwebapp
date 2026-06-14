@@ -1,24 +1,16 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, RatingType } from '@prisma/client';
+import { RatingType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TrustService } from '../trust/trust.service';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { publicUser, userPublicInclude } from '../common/serializers/user.serializer';
 
 @Injectable()
 export class RatingsService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  /** Recompute a user's trust score (avg received) and distinct-event flag count. */
-  private async recomputeTrust(userId: string): Promise<void> {
-    const received = await this.prisma.rating.findMany({ where: { toUserId: userId }, select: { score: true } });
-    const trust = received.length ? received.reduce((s, r) => s + r.score, 0) / received.length : 5.0;
-    const flags = await this.prisma.flag.findMany({ where: { userId }, select: { eventId: true } });
-    const flagCount = new Set(flags.map((f) => f.eventId)).size;
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { trustScore: new Prisma.Decimal(trust.toFixed(2)), flagCount },
-    });
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly trust: TrustService,
+  ) {}
 
   async submit(eventId: string, fromUserId: string, dto: CreateRatingDto): Promise<unknown> {
     const event = await this.prisma.event.findUnique({
@@ -64,7 +56,7 @@ export class RatingsService {
         },
       });
     }
-    await this.recomputeTrust(dto.toUserId);
+    await this.trust.recompute(dto.toUserId);
 
     return { id: rating.id, score: rating.score, type: rating.type };
   }

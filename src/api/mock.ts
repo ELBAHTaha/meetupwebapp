@@ -10,6 +10,7 @@ import type {
   EventFilters,
   JmaaEvent,
   LoginInput,
+  MyBusiness,
   Rating,
   RatingInput,
   Report,
@@ -21,6 +22,7 @@ import type {
   User,
 } from '@/types';
 import { isToday, isTomorrow, isWithinInterval, addDays } from 'date-fns';
+import { messageViolation } from '@/lib/messageFilter';
 import {
   actionBlockReason,
   addRatingInStore,
@@ -185,6 +187,7 @@ function cityOriginForZip(zip?: string): { lat: number; lng: number } | null {
 export async function listEvents(filters: EventFilters = {}, opts: ListOpts = {}): Promise<EnrichedEvent[]> {
   let list = db.events
     .filter((e) => e.status !== 'PAST' && e.lifecycle !== 'cancelled' && e.lifecycle !== 'completed')
+    .filter((e) => !e.underReview && !!e.approvedAt)
     .filter((e) => matches(e, filters))
     .map((e) => enrich(e));
 
@@ -268,7 +271,7 @@ function freeActivityResetsAt(userId: string): string | undefined {
 }
 
 /** Create an activity. Goes LIVE immediately — there is no pending/approval state. */
-export async function createEvent(input: CreateEventInput): Promise<EnrichedEvent> {
+export async function createEvent(input: CreateEventInput & { lat?: number; lng?: number; address?: string }): Promise<EnrichedEvent> {
   const block = actionBlockReason(db.currentUserId);
   if (block) throw new Error(block);
   const me = findUser(db.currentUserId)!;
@@ -305,7 +308,8 @@ export async function createEvent(input: CreateEventInput): Promise<EnrichedEven
     priorityLevel: input.priorityLevel ?? (plan === 'premium' ? 'priority' : 'standard'),
     expressPaymentIntentId: input.expressPaymentIntentId,
     expressFeePaid: paidExtra,
-    approvedAt: new Date().toISOString(), // live immediately — no approval step
+    // Business-venue activities auto-approve; normal users' wait for admin review.
+    approvedAt: input.businessId ? new Date().toISOString() : undefined,
     pinnedUntil: pinned ? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() : undefined,
     businessId: input.businessId,
   };
@@ -382,6 +386,40 @@ export async function createSponsorshipCheckout(_businessId: string, tier: 'bron
   return delay({ url: `/business?mockTier=${tier}` }, 250);
 }
 
+let MOCK_BUSINESS: MyBusiness = {
+  business: {
+    id: 'biz-mock',
+    name: 'Café Atlas',
+    description: 'Cozy café & boardgame corner in Gauthier.',
+    address: 'Gauthier, Casablanca',
+    phone: '+212 600-000000',
+    contactEmail: 'hello@cafeatlas.ma',
+    status: 'approved',
+  },
+  sponsorship: {
+    tier: 'silver',
+    status: 'active',
+    used: 4,
+    limit: 15,
+    remaining: 11,
+    startDate: new Date(Date.now() - 12 * 86_400_000).toISOString(),
+    monthlyPriceCents: 9900,
+  },
+  activities: [
+    { id: 'e2', title: 'Sunday boardgames', activityType: 'Board games', hostName: 'Lena', startsAt: new Date(Date.now() + 2 * 86_400_000).toISOString(), couponCode: 'JMAA-ATLAS1' },
+    { id: 'e3', title: 'Coffee & code', activityType: 'Coffee', hostName: 'Omar', startsAt: new Date(Date.now() - 3 * 86_400_000).toISOString(), couponCode: 'JMAA-ATLAS2' },
+  ],
+};
+
+export async function getMyBusiness(): Promise<MyBusiness> {
+  return delay(MOCK_BUSINESS, 200);
+}
+
+export async function updateMyBusiness(patch: { name?: string; description?: string; address?: string; phone?: string }): Promise<MyBusiness> {
+  MOCK_BUSINESS = { ...MOCK_BUSINESS, business: { ...MOCK_BUSINESS.business, ...patch } };
+  return delay(MOCK_BUSINESS, 250);
+}
+
 /** Join checks: account active (not suspended/banned), not already joined. */
 export async function joinEvent(id: string, userId: string = db.currentUserId): Promise<EnrichedEvent> {
   const block = actionBlockReason(userId);
@@ -431,6 +469,8 @@ export async function getThread(id: string): Promise<ChatThread | null> {
 }
 
 export async function sendMessage(threadId: string, text: string): Promise<ChatMessage> {
+  const violation = messageViolation(text);
+  if (violation) throw new Error(violation);
   const thread = db.threads.find((t) => t.id === threadId);
   if (thread && threadExpired(thread)) throw new Error('This group chat has closed.');
   if (actionBlockReason(db.currentUserId)) throw new Error('Your account can’t send messages right now.');
@@ -485,6 +525,23 @@ export async function startActivity(id: string, note: string): Promise<EnrichedE
   return delay(enrich(e), 250);
 }
 
+export async function confirmActivity(id: string): Promise<EnrichedEvent> {
+  const e = findEvent(id);
+  if (!e) throw new Error('Activity not found.');
+  if (e.hostId !== db.currentUserId) throw new Error('Only the host can confirm this activity.');
+  e.hostConfirmedAt = new Date().toISOString();
+  return delay(enrich(e), 200);
+}
+
+export async function cancelActivity(id: string): Promise<EnrichedEvent> {
+  const e = findEvent(id);
+  if (!e) throw new Error('Activity not found.');
+  if (e.hostId !== db.currentUserId) throw new Error('Only the host can cancel this activity.');
+  e.lifecycle = 'cancelled';
+  e.status = 'PAST';
+  return delay(enrich(e), 200);
+}
+
 /** Whether a "start activity" action is currently allowed for the host. */
 export function canStart(e: Pick<JmaaEvent, 'startsAt' | 'startedAt'>): boolean {
   return !e.startedAt && new Date(e.startsAt).getTime() - Date.now() <= THIRTY_MIN;
@@ -531,6 +588,11 @@ export async function getRateablePeople(
 
 export async function reportTarget(input: ReportInput): Promise<Report> {
   const report = addReportInStore(db.currentUserId, input);
+  // Reported activities are hidden pending review (parity with the backend).
+  if (input.targetType === 'activity') {
+    const e = findEvent(input.targetId);
+    if (e) e.underReview = true;
+  }
   return delay(report, 250);
 }
 
@@ -627,6 +689,46 @@ export async function resolveReport(id: string): Promise<void> {
   const r = db.reports.find((x) => x.id === id);
   if (r) r.status = 'resolved';
   return delay(undefined, 150);
+}
+
+export async function listUnderReviewActivities(): Promise<EnrichedEvent[]> {
+  assertAdmin();
+  return delay(
+    db.events.filter((e) => e.underReview).map((e) => enrich(e)),
+    150,
+  );
+}
+
+export async function restoreActivity(id: string): Promise<{ success: true }> {
+  assertAdmin();
+  const e = findEvent(id);
+  if (e) e.underReview = false;
+  return delay({ success: true }, 150);
+}
+
+export async function listPendingActivities(): Promise<EnrichedEvent[]> {
+  assertAdmin();
+  return delay(
+    db.events.filter((e) => !e.approvedAt && e.lifecycle !== 'cancelled').map((e) => enrich(e)),
+    150,
+  );
+}
+
+export async function approveActivity(id: string): Promise<{ success: true }> {
+  assertAdmin();
+  const e = findEvent(id);
+  if (e) e.approvedAt = new Date().toISOString();
+  return delay({ success: true }, 150);
+}
+
+export async function rejectActivity(id: string): Promise<{ success: true }> {
+  assertAdmin();
+  const e = findEvent(id);
+  if (e) {
+    e.lifecycle = 'cancelled';
+    e.status = 'PAST';
+  }
+  return delay({ success: true }, 150);
 }
 
 async function moderate(userId: string, mutate: (u: User) => void, ms = 200): Promise<User> {

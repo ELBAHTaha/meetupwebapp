@@ -37,6 +37,7 @@ function avatarFor(u: Pick<User, 'photoUrl' | 'name'>): string {
 type UserWithRels = User & {
   userActivities?: { activityType: { slug: string }; level: string }[];
   _count?: { ratingsReceived?: number };
+  businessesOwned?: { id: string }[];
 };
 
 /** Public profile shape — never includes private contact/rating detail. */
@@ -56,8 +57,8 @@ export function publicUser(u: UserWithRels) {
     badges: [] as string[],
     isTraveler: false,
     lookingFor: lookingForOut(u.lookingFor),
-    status: u.status,
-    role: u.role,
+    status: u.status.toLowerCase() as 'active' | 'suspended' | 'banned',
+    role: u.role.toLowerCase() as 'user' | 'admin',
     subscriptionPlan: u.subscriptionPlan.toLowerCase(),
     subscriptionStatus: u.subscriptionStatus.toLowerCase(),
     subscriptionEndsAt: u.subscriptionEndsAt ? u.subscriptionEndsAt.toISOString() : undefined,
@@ -80,10 +81,13 @@ export function meUser(u: UserWithRels) {
     zip: u.zip ?? undefined,
     birthday: u.birthday ? u.birthday.toISOString().slice(0, 10) : undefined,
     suspendedUntil: u.suspendedUntil ? u.suspendedUntil.toISOString() : undefined,
+    // Present when this account owns a sponsored venue — drives the business UI.
+    businessId: u.businessesOwned?.[0]?.id ?? undefined,
   };
 }
 
 export const userPublicInclude = {
   userActivities: { include: { activityType: { select: { slug: true } } } },
   _count: { select: { ratingsReceived: true } },
+  businessesOwned: { select: { id: true }, take: 1 },
 } satisfies Prisma.UserInclude;

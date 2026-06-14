@@ -12,31 +12,39 @@ import { Skeleton } from '@/components/Skeleton';
 import { useAsync } from '@/hooks/useAsync';
 import {
   adminOverview,
+  approveActivity,
   banUser,
   listFlaggedUsers,
+  listPendingActivities,
   listReports,
+  listUnderReviewActivities,
+  rejectActivity,
   resolveReport,
+  restoreActivity,
   suspendUser,
   warnUser,
   type AdminReport,
 } from '@/api';
+import type { EnrichedEvent } from '@/types';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/format';
 
-type Tab = 'reports' | 'flagged';
+type Tab = 'pending' | 'reports' | 'flagged' | 'review';
 
 export function AdminPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, bumpData, dataVersion } = useSession();
-  const [tab, setTab] = useState<Tab>('reports');
+  const [tab, setTab] = useState<Tab>('pending');
   const [chatLog, setChatLog] = useState<AdminReport | null>(null);
 
   const overview = useAsync(() => adminOverview(), [dataVersion]);
   const reports = useAsync(() => listReports(), [dataVersion]);
   const flagged = useAsync(() => listFlaggedUsers(), [dataVersion]);
+  const review = useAsync(() => listUnderReviewActivities(), [dataVersion]);
+  const pending = useAsync(() => listPendingActivities(), [dataVersion]);
 
   // Role gate (mock) — non-admins are redirected.
   if (user && user.role !== 'admin') return <Navigate to="/discover" replace />;
@@ -62,16 +70,32 @@ export function AdminPage() {
 
         {/* Tabs */}
         <div className="mt-5 flex gap-1 rounded-full border border-border bg-surface p-1">
-          {(['reports', 'flagged'] as Tab[]).map((tb) => (
+          {(['pending', 'reports', 'flagged', 'review'] as Tab[]).map((tb) => (
             <button key={tb} onClick={() => setTab(tb)} className={cn('flex-1 rounded-full py-2 text-meta font-medium transition-colors cursor-pointer', tab === tb ? 'bg-ink text-bg' : 'text-ink-soft')}>
-              {t(tb === 'reports' ? 'admin.tabReports' : 'admin.tabFlagged')}
+              {t(tb === 'pending' ? 'admin.tabPending' : tb === 'reports' ? 'admin.tabReports' : tb === 'flagged' ? 'admin.tabFlagged' : 'admin.tabReview')}
             </button>
           ))}
         </div>
 
         <div className="mt-4 space-y-3 pb-8">
-          {tab === 'reports' ? (
-            reports.loading ? (
+          {tab === 'pending' &&
+            (pending.loading ? (
+              <Skeleton className="h-28 w-full" />
+            ) : pending.data && pending.data.length > 0 ? (
+              pending.data.map((e) => (
+                <PendingCard
+                  key={e.id}
+                  event={e}
+                  onApprove={() => act(() => approveActivity(e.id), t('admin.approved'))}
+                  onReject={() => act(() => rejectActivity(e.id), t('admin.rejected'))}
+                />
+              ))
+            ) : (
+              <EmptyState icon={ShieldCheck} title={t('admin.noPending')} />
+            ))}
+
+          {tab === 'reports' &&
+            (reports.loading ? (
               <Skeleton className="h-28 w-full" />
             ) : reports.data && reports.data.length > 0 ? (
               reports.data.map((r) => (
@@ -79,24 +103,37 @@ export function AdminPage() {
               ))
             ) : (
               <EmptyState icon={ShieldCheck} title={t('admin.noReports')} />
-            )
-          ) : flagged.loading ? (
-            <Skeleton className="h-28 w-full" />
-          ) : flagged.data && flagged.data.length > 0 ? (
-            flagged.data.map((f) => (
-              <FlaggedCard
-                key={f.user.id}
-                user={f.user}
-                reportCount={f.reportCount}
-                onWarn={() => act(() => warnUser(f.user.id), t('admin.actionDone'))}
-                onSuspend={() => act(() => suspendUser(f.user.id), t('admin.actionDone'))}
-                onBan={() => act(() => banUser(f.user.id), t('admin.actionDone'))}
-                onOpen={() => navigate(`/user/${f.user.id}`)}
-              />
-            ))
-          ) : (
-            <EmptyState icon={ShieldCheck} title={t('admin.noFlagged')} />
-          )}
+            ))}
+
+          {tab === 'flagged' &&
+            (flagged.loading ? (
+              <Skeleton className="h-28 w-full" />
+            ) : flagged.data && flagged.data.length > 0 ? (
+              flagged.data.map((f) => (
+                <FlaggedCard
+                  key={f.user.id}
+                  user={f.user}
+                  reportCount={f.reportCount}
+                  onWarn={() => act(() => warnUser(f.user.id), t('admin.actionDone'))}
+                  onSuspend={() => act(() => suspendUser(f.user.id), t('admin.actionDone'))}
+                  onBan={() => act(() => banUser(f.user.id), t('admin.actionDone'))}
+                  onOpen={() => navigate(`/user/${f.user.id}`)}
+                />
+              ))
+            ) : (
+              <EmptyState icon={ShieldCheck} title={t('admin.noFlagged')} />
+            ))}
+
+          {tab === 'review' &&
+            (review.loading ? (
+              <Skeleton className="h-28 w-full" />
+            ) : review.data && review.data.length > 0 ? (
+              review.data.map((e) => (
+                <UnderReviewCard key={e.id} event={e} onRestore={() => act(() => restoreActivity(e.id), t('admin.restored'))} />
+              ))
+            ) : (
+              <EmptyState icon={ShieldCheck} title={t('admin.noReview')} />
+            ))}
         </div>
       </div>
 
@@ -162,6 +199,46 @@ function ReportCard({ report, onResolve, onViewChat }: { report: AdminReport; on
         {report.status === 'open' && (
           <Button size="sm" onClick={onResolve}>{t('admin.resolve')}</Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PendingCard({ event, onApprove, onReject }: { event: EnrichedEvent; onApprove: () => void; onReject: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-card border border-border bg-surface p-4">
+      <div className="flex items-center gap-2">
+        <Tag className="bg-saffron-soft text-saffron">{t('admin.awaitingApproval')}</Tag>
+        <Tag className="bg-majorelle-soft text-majorelle">{t('report.reportActivity')}</Tag>
+      </div>
+      <p className="mt-2 font-display text-h3 font-medium text-ink">{event.title}</p>
+      <p className="text-meta text-ink-soft">
+        {t('admin.reporter')} {event.host.name} · {event.generalArea ?? event.resolvedLocation.label} · {formatRelative(event.startsAt)}
+      </p>
+      {event.description && <p className="mt-1 line-clamp-2 text-[12px] text-ink-soft">{event.description}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" onClick={onApprove}>{t('admin.approve')}</Button>
+        <Button size="sm" variant="danger" onClick={onReject}>{t('admin.reject')}</Button>
+      </div>
+    </div>
+  );
+}
+
+function UnderReviewCard({ event, onRestore }: { event: EnrichedEvent; onRestore: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-card border border-border bg-surface p-4">
+      <div className="flex items-center gap-2">
+        <Tag className="bg-clay text-white">{t('admin.hidden')}</Tag>
+        <Tag className="bg-majorelle-soft text-majorelle">{t('report.reportActivity')}</Tag>
+      </div>
+      <p className="mt-2 font-display text-h3 font-medium text-ink">{event.title}</p>
+      <p className="text-meta text-ink-soft">
+        {t('admin.reporter')} {event.host.name} · {event.generalArea ?? event.resolvedLocation.label}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" onClick={onRestore}>{t('admin.restore')}</Button>
       </div>
     </div>
   );

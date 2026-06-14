@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { publicUser } from './user.serializer';
 import { serializeActivity } from './activity.serializer';
+import { nearestCityName } from '../utils/area';
 
 export const eventInclude = {
   host: {
@@ -20,6 +21,14 @@ export const eventInclude = {
       },
     },
     orderBy: { joinedAt: 'asc' },
+  },
+  // Sponsored-venue link (a business hosting at its own venue) — used to pin and
+  // badge the activity in the feed.
+  venueUsages: {
+    where: { isSponsored: true },
+    include: { business: { select: { name: true } }, sponsorship: { select: { tier: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
   },
 } satisfies Prisma.EventInclude;
 
@@ -64,7 +73,21 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     }
   }
 
-  const resolvedLocation = { lat: e.lat, lng: e.lng, label: e.locationLabel };
+  // Progressive disclosure: only members (host/joined/waitlisted/past) see the
+  // exact address + pin. Everyone else gets a general area and fuzzed coords.
+  const joined =
+    viewerStatus === 'host' || viewerStatus === 'joined' || viewerStatus === 'waitlisted' || viewerStatus === 'past';
+  const generalArea = e.areaLabel ?? nearestCityName({ lat: e.lat, lng: e.lng }) ?? 'Nearby area';
+  const fuzz = (n: number) => Math.round(n * 100) / 100; // ~1km grid
+  const resolvedLocation = joined
+    ? { lat: e.lat, lng: e.lng, label: e.locationLabel }
+    : { lat: fuzz(e.lat), lng: fuzz(e.lng), label: generalArea };
+
+  const venue = e.venueUsages[0];
+  const sponsoredVenue =
+    venue && venue.sponsorship
+      ? { name: venue.business.name, tier: venue.sponsorship.tier.toLowerCase() as 'bronze' | 'silver' | 'gold' }
+      : undefined;
 
   return {
     id: e.id,
@@ -72,10 +95,12 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     title: e.title,
     hostId: e.hostId,
     description: e.description ?? '',
-    address: e.address,
-    locationLabel: e.locationLabel,
+    address: joined ? e.address : '',
+    locationLabel: joined ? e.locationLabel : generalArea,
     location: resolvedLocation,
     resolvedLocation,
+    generalArea,
+    locationHidden: !joined,
     startsAt: e.startsAt.toISOString(),
     endsAt: e.endsAt.toISOString(),
     durationMins,
@@ -91,11 +116,13 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     status,
     lifecycle: e.status.toLowerCase() as 'live' | 'completed' | 'cancelled',
     startedAt: e.startedAt ? e.startedAt.toISOString() : undefined,
-    hostSpotNote: e.hostSpotNote ?? undefined,
+    hostConfirmedAt: e.hostConfirmedAt ? e.hostConfirmedAt.toISOString() : undefined,
+    hostSpotNote: joined ? e.hostSpotNote ?? undefined : undefined,
     priorityLevel: e.priorityLevel.toLowerCase(),
     expressFeePaid: e.expressFeePaid,
     approvedAt: e.approvedAt ? e.approvedAt.toISOString() : undefined,
     pinnedUntil: e.pinnedUntil ? e.pinnedUntil.toISOString() : undefined,
+    sponsoredVenue,
     attendees,
     // Enriched relations (so the frontend doesn't need a separate user store).
     activity: serializeActivity(e.activityType),

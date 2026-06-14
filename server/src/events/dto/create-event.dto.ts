@@ -40,6 +40,12 @@ export class CreateEventDto {
   @MaxLength(240)
   address!: string;
 
+  @ApiPropertyOptional({ description: 'General area shown before joining (e.g. "Maârif").' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  areaLabel?: string;
+
   @ApiProperty()
   @Type(() => Number)
   @IsLatitude()

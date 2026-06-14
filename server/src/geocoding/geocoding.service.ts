@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { haversineKm } from '../common/utils/haversine';
+import { CITY_CENTRES } from '../common/utils/area';
 
 interface LatLng {
   lat: number;
@@ -12,17 +13,10 @@ interface LatLng {
  */
 @Injectable()
 export class GeocodingService {
-  // City centres used to approximate distance from a user's ZIP/area.
-  private readonly cities: Record<string, LatLng> = {
-    casablanca: { lat: 33.5731, lng: -7.5898 },
-    rabat: { lat: 34.0209, lng: -6.8416 },
-    sale: { lat: 34.0531, lng: -6.7985 },
-    marrakech: { lat: 31.6295, lng: -7.9811 },
-    agadir: { lat: 30.4278, lng: -9.5981 },
-    tangier: { lat: 35.7595, lng: -5.834 },
-    essaouira: { lat: 31.5085, lng: -9.7595 },
-    taghazout: { lat: 30.5447, lng: -9.709 },
-  };
+  // City centres (shared source of truth) used to approximate distance.
+  private readonly cities: Record<string, LatLng> = Object.fromEntries(
+    Object.entries(CITY_CENTRES).map(([slug, c]) => [slug, { lat: c.lat, lng: c.lng }]),
+  );
 
   // ZIP prefixes (first 2 digits) → city, covering the seed cities.
   private readonly zipPrefix: Record<string, keyof GeocodingService['cities'] | string> = {

@@ -6,7 +6,7 @@ import { Textarea } from './Field';
 import { Chip } from './Chip';
 import { reportTarget } from '@/api';
 import { toast } from '@/store/toast';
-import type { ReportInput } from '@/types';
+import type { ReportCategory, ReportInput } from '@/types';
 
 interface Props {
   open: boolean;
@@ -18,6 +18,17 @@ interface Props {
 
 const REASONS = ['report.r1', 'report.r2', 'report.r3', 'report.r4', 'report.r5'];
 
+// Map the chosen reason to a moderation category (user reports default to
+// "suspicious_user" when the reason isn't behaviour/no-show specific).
+function categoryFor(reason: string | null, targetType: ReportInput['targetType']): ReportCategory {
+  if (reason === 'report.r2') return 'no_show_host';
+  if (reason === 'report.r1') return 'inappropriate';
+  if (targetType === 'user') return 'suspicious_user';
+  if (reason === 'report.r3') return 'fake_activity';
+  if (reason === 'report.r4') return 'inappropriate';
+  return 'other';
+}
+
 export function ReportSheet({ open, onClose, targetType, targetId, chatThreadId }: Props) {
   const { t } = useTranslation();
   const [reason, setReason] = useState<string | null>(null);
@@ -28,7 +39,7 @@ export function ReportSheet({ open, onClose, targetType, targetId, chatThreadId 
     const reasonText = [reason ? t(reason) : '', detail].filter(Boolean).join(' — ');
     if (!reasonText) return;
     setSaving(true);
-    await reportTarget({ targetType, targetId, reason: reasonText, chatThreadId });
+    await reportTarget({ targetType, targetId, category: categoryFor(reason, targetType), reason: reasonText, chatThreadId });
     setSaving(false);
     setReason(null);
     setDetail('');

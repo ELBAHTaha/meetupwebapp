@@ -49,6 +49,31 @@ export class AdminController {
     return this.admin.expressPaymentsList();
   }
 
+  @Get('pending-activities')
+  pendingActivities() {
+    return this.admin.pendingActivities();
+  }
+
+  @Post('activities/:id/approve')
+  approveActivity(@Param('id') id: string) {
+    return this.admin.approveActivity(id);
+  }
+
+  @Post('activities/:id/reject')
+  rejectActivity(@Param('id') id: string) {
+    return this.admin.rejectActivity(id);
+  }
+
+  @Get('under-review')
+  underReview() {
+    return this.admin.underReviewActivities();
+  }
+
+  @Post('activities/:id/restore')
+  restoreActivity(@Param('id') id: string) {
+    return this.admin.restoreActivity(id);
+  }
+
   @Patch('reports/:id/resolve')
   resolve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.admin.resolveReport(id, user.id);

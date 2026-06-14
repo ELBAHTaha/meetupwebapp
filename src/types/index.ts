@@ -94,6 +94,41 @@ export interface User {
   isPremiumUser?: boolean;
   premiumUntil?: string;
   creditAmountCents?: number;
+  /** Set when this account owns a sponsored venue — switches to the business UI. */
+  businessId?: string;
+}
+
+export interface MyBusinessActivity {
+  id: string;
+  title: string;
+  activityType: string;
+  hostName: string;
+  startsAt: string;
+  couponCode?: string;
+}
+
+export interface MyBusiness {
+  business: {
+    id: string;
+    name: string;
+    description: string;
+    address: string;
+    lat?: number;
+    lng?: number;
+    phone: string;
+    contactEmail: string;
+    status: string;
+  };
+  sponsorship: {
+    tier: SponsorshipTier;
+    status: string;
+    used: number;
+    limit: number | 'unlimited';
+    remaining: number | 'unlimited';
+    startDate: string;
+    monthlyPriceCents: number;
+  } | null;
+  activities: MyBusinessActivity[];
 }
 
 export interface Activity {
@@ -142,6 +177,8 @@ export interface JmaaEvent {
   hostId: string;
   spotId?: string;
   location?: EventLocation; // used when no saved spot
+  /** Host-entered general area shown before joining (e.g. "Maârif"). */
+  areaLabel?: string;
   startsAt: string; // ISO
   durationMins: number;
   capacity: number;
@@ -164,6 +201,8 @@ export interface JmaaEvent {
   endsAt?: string;
   /** Set when the host taps "Start activity". */
   startedAt?: string;
+  /** Set when the host confirms the activity is happening (avoids auto-cancel). */
+  hostConfirmedAt?: string;
   /** Host's "how to spot me" note, shown to attendees once started. */
   hostSpotNote?: string;
   priorityLevel?: PriorityLevel;
@@ -174,6 +213,8 @@ export interface JmaaEvent {
   businessId?: string;
   /** When the activity was created — drives the weekly free-activity limit. */
   createdAt?: string;
+  /** Hidden pending admin review (auto-set when reported). */
+  underReview?: boolean;
 }
 
 export interface Conditions {
@@ -284,6 +325,7 @@ export interface CreateEventInput {
   title: string;
   spotId?: string;
   location?: EventLocation;
+  areaLabel?: string;
   startsAt: string;
   durationMins: number;
   capacity: number;
@@ -327,6 +369,8 @@ export interface SignupInput {
   gender?: 'MALE' | 'FEMALE' | 'OTHER';
   /** True when created via the mocked Google OAuth button. */
   google?: boolean;
+  /** Cloudflare Turnstile token (sent when the CAPTCHA is configured). */
+  turnstileToken?: string;
 }
 
 export interface RatingInput {
@@ -336,9 +380,12 @@ export interface RatingInput {
   type: Rating['type'];
 }
 
+export type ReportCategory = 'fake_activity' | 'inappropriate' | 'no_show_host' | 'suspicious_user' | 'other';
+
 export interface ReportInput {
   targetType: Report['targetType'];
   targetId: string;
+  category?: ReportCategory;
   reason: string;
   chatThreadId?: string;
 }
@@ -367,4 +414,10 @@ export interface EnrichedEvent extends JmaaEvent {
   openSpots: number;
   viewerStatus: ViewerRsvp;
   resolvedLocation: EventLocation;
+  /** Set when hosted at a sponsored business venue — pinned & badged in the feed. */
+  sponsoredVenue?: { name: string; tier: SponsorshipTier };
+  /** True when the viewer hasn't joined — exact address/pin are hidden. */
+  locationHidden?: boolean;
+  /** Coarse area shown before joining (host's areaLabel or nearest city). */
+  generalArea?: string;
 }

@@ -31,6 +31,9 @@ export interface AppConfig {
     silverPriceId?: string;
     goldPriceId?: string;
   };
+  turnstile: {
+    secretKey?: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -65,5 +68,8 @@ export default (): AppConfig => ({
     bronzePriceId: process.env.STRIPE_BRONZE_PRICE_ID || undefined,
     silverPriceId: process.env.STRIPE_SILVER_PRICE_ID || undefined,
     goldPriceId: process.env.STRIPE_GOLD_PRICE_ID || undefined,
+  },
+  turnstile: {
+    secretKey: process.env.TURNSTILE_SECRET_KEY || undefined,
   },
 });

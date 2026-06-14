@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
@@ -9,6 +11,11 @@ import { age } from '../common/utils/private-place';
 import { lookingForIn, meUser, userPublicInclude } from '../common/serializers/user.serializer';
 import { GoogleProfile } from './strategies/google.strategy';
 
+/** Stable hash for banned-contact lookups (normalized). */
+export function hashContact(value: string): string {
+  return createHash('sha256').update(value.trim().toLowerCase()).digest('hex');
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -16,17 +23,44 @@ export class AuthService {
     private readonly tokens: TokensService,
     private readonly storage: StorageService,
     private readonly geocoding: GeocodingService,
+    private readonly config: ConfigService,
   ) {}
 
   private async withUser(userId: string) {
     return this.prisma.user.findUniqueOrThrow({ where: { id: userId }, include: userPublicInclude });
   }
 
+  /** Verify a Cloudflare Turnstile token. Dev bypass when no real secret is set. */
+  private async verifyTurnstile(token?: string): Promise<void> {
+    const secret = this.config.get<string>('turnstile.secretKey');
+    if (!secret || secret.includes('xxx')) return; // not configured → bypass
+    if (!token) throw new BadRequestException('Please complete the CAPTCHA.');
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token }),
+    });
+    const data = (await res.json()) as { success: boolean };
+    if (!data.success) throw new BadRequestException('CAPTCHA verification failed. Please try again.');
+  }
+
+  /** Block re-registration with a banned user's phone/email. */
+  private async assertNotBanned(email: string, phone?: string): Promise<void> {
+    const hashes = [hashContact(email), ...(phone ? [hashContact(phone)] : [])];
+    const hit = await this.prisma.bannedContact.findFirst({
+      where: { OR: [{ emailHash: { in: hashes } }, { phoneHash: { in: hashes } }] },
+      select: { id: true },
+    });
+    if (hit) throw new ForbiddenException('This account can’t be created.');
+  }
+
   async signup(dto: SignupDto, photo?: Express.Multer.File): Promise<{ user: unknown } & TokenPair> {
+    await this.verifyTurnstile(dto.turnstileToken);
     const birthday = new Date(dto.birthday);
     if (Number.isNaN(birthday.getTime())) throw new BadRequestException('Invalid birthday.');
     if (age(birthday) < 18) throw new UnprocessableEntityException('You must be 18 or older to use Jmaâ.');
 
+    await this.assertNotBanned(dto.email, dto.phone);
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new BadRequestException('An account with this email already exists.');
 

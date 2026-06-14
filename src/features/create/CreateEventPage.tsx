@@ -65,6 +65,7 @@ export function CreateEventPage() {
   const [travelers, setTravelers] = useState(true);
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [publicConfirmed, setPublicConfirmed] = useState(false);
+  const [areaLabel, setAreaLabel] = useState('');
   const [priorityLevel, setPriorityLevel] = useState<PriorityLevel>('standard');
   const [expressPaymentIntentId, setExpressPaymentIntentId] = useState<string | undefined>();
   const [businessId, setBusinessId] = useState<string | undefined>();
@@ -110,6 +111,7 @@ export function CreateEventPage() {
         title: (title || `${activity.name} meetup`).slice(0, 60),
         spotId,
         location: spotId ? undefined : resolvedLocation,
+        areaLabel: areaLabel.trim() || undefined,
         startsAt: new Date(startsAtMs).toISOString(),
         durationMins: duration,
         capacity,
@@ -127,7 +129,7 @@ export function CreateEventPage() {
         businessId,
       });
       bumpData();
-      toast(t('create.published'), 'success');
+      toast(created.approvedAt ? t('create.published') : t('create.submitted'), 'success');
       navigate(`/event/${created.id}`);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not publish', 'error');
@@ -267,6 +269,15 @@ export function CreateEventPage() {
                 </span>
                 <span className="flex items-center gap-1.5 text-meta font-medium text-ink"><ShieldCheck className="h-4 w-4 text-olive" strokeWidth={1.7} /> {t('create.publicPlace')}</span>
               </button>
+              <div className="mt-4">
+                <Input
+                  label={t('create.areaLabel')}
+                  hint={t('create.areaHint')}
+                  placeholder={t('create.areaPlaceholder')}
+                  value={areaLabel}
+                  onChange={(e) => setAreaLabel(e.target.value)}
+                />
+              </div>
             </div>
           )}
 

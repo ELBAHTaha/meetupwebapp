@@ -10,6 +10,11 @@ export class CreateReportDto {
   @IsString()
   targetId!: string;
 
+  @ApiPropertyOptional({ enum: ['fake_activity', 'inappropriate', 'no_show_host', 'suspicious_user', 'other'] })
+  @IsOptional()
+  @IsEnum(['fake_activity', 'inappropriate', 'no_show_host', 'suspicious_user', 'other'])
+  category?: 'fake_activity' | 'inappropriate' | 'no_show_host' | 'suspicious_user' | 'other';
+
   @ApiProperty()
   @IsString()
   @MaxLength(1000)

@@ -5,6 +5,7 @@ import { publicUser, userPublicInclude } from '../common/serializers/user.serial
 import { eventInclude, serializeEvent } from '../common/serializers/event.serializer';
 import { BusinessService } from '../monetization/business.service';
 import { ExpressPaymentService } from '../monetization/express-payment.service';
+import { hashContact } from '../auth/auth.service';
 
 @Injectable()
 export class AdminService {
@@ -43,8 +44,8 @@ export class AdminService {
     });
     const reportMap = new Map(reportCounts.map((r) => [r.targetUserId, r._count._all]));
 
-    // Also pull in users with ≥2 reports who aren't already candidates.
-    const reportedIds = reportCounts.filter((r) => r._count._all >= 2).map((r) => r.targetUserId as string);
+    // Also pull in users with ≥3 reports who aren't already candidates.
+    const reportedIds = reportCounts.filter((r) => r._count._all >= 3).map((r) => r.targetUserId as string);
     const extraIds = reportedIds.filter((id) => !candidates.some((c) => c.id === id));
     const extra = extraIds.length
       ? await this.prisma.user.findMany({ where: { id: { in: extraIds } }, include: userPublicInclude })
@@ -113,6 +114,56 @@ export class AdminService {
     }));
   }
 
+  /** Activities awaiting first approval (created by normal users). */
+  async pendingActivities(): Promise<unknown[]> {
+    const events = await this.prisma.event.findMany({
+      where: { approvedAt: null, status: 'LIVE' },
+      include: eventInclude,
+      orderBy: { createdAt: 'asc' },
+    });
+    return events.map((e) => serializeEvent(e));
+  }
+
+  async approveActivity(id: string): Promise<{ success: true }> {
+    const e = await this.prisma.event.update({ where: { id }, data: { approvedAt: new Date() } });
+    await this.notifications.push({
+      userId: e.hostId,
+      type: 'confirmed',
+      title: 'Your activity is approved 🎉',
+      body: `“${e.title}” is now live in the feed.`,
+      eventId: e.id,
+    });
+    return { success: true };
+  }
+
+  async rejectActivity(id: string): Promise<{ success: true }> {
+    const e = await this.prisma.event.update({ where: { id }, data: { status: 'CANCELLED' } });
+    await this.notifications.push({
+      userId: e.hostId,
+      type: 'admin',
+      title: 'Activity not approved',
+      body: `“${e.title}” wasn’t approved by the team.`,
+      eventId: e.id,
+    });
+    return { success: true };
+  }
+
+  /** Activities hidden pending review (auto-hidden when reported). */
+  async underReviewActivities(): Promise<unknown[]> {
+    const events = await this.prisma.event.findMany({
+      where: { underReview: true },
+      include: eventInclude,
+      orderBy: { updatedAt: 'desc' },
+    });
+    return events.map((e) => serializeEvent(e));
+  }
+
+  /** Clear the review hold so the activity is visible again. */
+  async restoreActivity(id: string): Promise<{ success: true }> {
+    await this.prisma.event.update({ where: { id }, data: { underReview: false } });
+    return { success: true };
+  }
+
   businessesList(): Promise<unknown[]> {
     return this.businesses.adminBusinesses();
   }
@@ -166,10 +217,17 @@ export class AdminService {
   }
 
   async ban(adminId: string, userId: string, note?: string): Promise<unknown> {
-    await this.ensureUser(userId);
+    const u = await this.ensureUser(userId);
     await this.prisma.user.update({ where: { id: userId }, data: { status: 'BANNED', suspendedUntil: null } });
     await this.prisma.refreshToken.updateMany({ where: { userId }, data: { revoked: true } });
     await this.prisma.moderationAction.create({ data: { adminId, targetUserId: userId, action: 'BAN', note } });
+    // Record hashed contacts so this person can't simply re-register.
+    const emailHash = hashContact(u.email);
+    await this.prisma.bannedContact.upsert({ where: { emailHash }, update: { reason: note }, create: { emailHash, reason: note } });
+    if (u.phone) {
+      const phoneHash = hashContact(u.phone);
+      await this.prisma.bannedContact.upsert({ where: { phoneHash }, update: { reason: note }, create: { phoneHash, reason: note } });
+    }
     return publicUser(await this.ensureUser(userId));
   }
 }
