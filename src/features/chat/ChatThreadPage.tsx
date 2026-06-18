@@ -12,7 +12,7 @@ import { threadExpired } from '@/api/store';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { formatChatTime } from '@/lib/format';
-import type { ChatMessage } from '@/types';
+import type { ChatMessage, ChatThread } from '@/types';
 import { cn } from '@/lib/cn';
 
 export function ChatThreadPage() {
@@ -21,6 +21,7 @@ export function ChatThreadPage() {
   const navigate = useNavigate();
   const { user } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [fetched, setFetched] = useState<ChatThread | null>(null);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
@@ -30,8 +31,11 @@ export function ChatThreadPage() {
   const event = thread?.eventId ? db.events.find((e) => e.id === thread.eventId) : undefined;
   const activity = event ? db.activities.find((a) => a.id === event.activityId) : undefined;
   const other = !thread?.eventId ? db.users.find((u) => thread?.participantIds.includes(u.id) && u.id !== user?.id) : undefined;
-  const title = thread?.title ?? other?.name ?? 'Chat';
+  const title = thread?.title ?? activity?.name ?? other?.name ?? fetched?.title ?? 'Chat';
   const expired = thread ? threadExpired(thread) : false;
+  // Once the activity ends the chat is read-only (separate from the 24h expiry).
+  const ended = fetched?.ended ?? (fetched?.endsAt ? new Date(fetched.endsAt) < new Date() : false);
+  const closed = expired || ended;
   // Report target: the activity for group chats, the other user for DMs.
   const reportTargetType = event ? 'activity' : 'user';
   const reportTargetId = event ? event.id : other?.id ?? '';
@@ -39,7 +43,7 @@ export function ChatThreadPage() {
   useEffect(() => {
     let active = true;
     getThread(threadId).then((th) => {
-      if (active) { setMessages(th?.messages ?? []); setLoading(false); }
+      if (active) { setMessages(th?.messages ?? []); setFetched(th); setLoading(false); }
     });
     return () => { active = false; };
   }, [threadId]);
@@ -108,9 +112,9 @@ export function ChatThreadPage() {
       </div>
 
       <div className="mx-auto w-full max-w-app border-t border-border bg-bg/95 px-4 py-3 backdrop-blur-md md:max-w-2xl" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}>
-        {expired ? (
+        {closed ? (
           <p className="flex items-center justify-center gap-2 py-2 text-meta text-ink-faint">
-            <Lock className="h-4 w-4" strokeWidth={1.6} /> {t('chat.expired')}
+            <Lock className="h-4 w-4" strokeWidth={1.6} /> {expired ? t('chat.expired') : t('chat.ended')}
           </p>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-center gap-2">

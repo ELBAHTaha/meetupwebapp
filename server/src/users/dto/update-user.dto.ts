@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateMeDto {
   @ApiPropertyOptional()
@@ -36,4 +36,17 @@ export class UpdateMeDto {
   @IsOptional()
   @IsEnum(['partners', 'friends', 'both'])
   lookingFor?: 'partners' | 'friends' | 'both';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  emailNotifications?: boolean;
+}
+
+export class SubmitVerificationDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  pose?: string;
 }

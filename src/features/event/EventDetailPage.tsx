@@ -17,6 +17,7 @@ import {
   Ticket,
   Users,
   UserCheck,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Avatar } from '@/components/Avatar';
@@ -53,6 +54,7 @@ export function EventDetailPage() {
   const [rateOpen, setRateOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [spotNote, setSpotNote] = useState('');
+  const [shareContact, setShareContact] = useState(false);
 
   const { data: event, loading, reload } = useAsync(() => getEvent(id), [id, dataVersion]);
   const showConditions = !!event?.activity.outdoor && !!event?.spotId;
@@ -82,11 +84,25 @@ export function EventDetailPage() {
   const waitlist = event.attendees.filter((a) => a.status === 'waitlisted');
   const isFull = event.openSpots <= 0;
 
+  // §7: when an event is hosted at a business venue, let attendees opt in to
+  // sharing their contact with that business (default off).
+  const businessOptIn = event.sponsoredVenue ? (
+    <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-card border border-border bg-surface-sunk/40 px-3 py-2 text-meta text-ink-soft">
+      <input
+        type="checkbox"
+        checked={shareContact}
+        onChange={(e) => setShareContact(e.target.checked)}
+        className="mt-0.5 h-4 w-4 accent-clay"
+      />
+      <span>{t('event.shareContactWithBusiness', { business: event.sponsoredVenue.name })}</span>
+    </label>
+  ) : null;
+
   async function handleJoin() {
     if (!user) return;
     setActing(true);
     try {
-      const updated = await joinEvent(event!.id, user.id);
+      const updated = await joinEvent(event!.id, shareContact);
       bumpData();
       reload();
       if (updated.viewerStatus === 'waitlisted') {
@@ -307,7 +323,9 @@ export function EventDetailPage() {
           <div className="mb-3 flex items-center gap-2">
             <h2 className="font-display text-h2 font-medium text-ink">{t('event.location')}</h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-medium text-ink-soft">
-              {event.locationHidden ? (
+              {event.isOnline ? (
+                <><Video className="h-3 w-3" strokeWidth={1.6} /> {t('event.online')}</>
+              ) : event.locationHidden ? (
                 <><Lock className="h-3 w-3" strokeWidth={1.6} /> {t('event.generalArea')}</>
               ) : (
                 <><MapPin className="h-3 w-3" strokeWidth={1.6} /> {t('event.meetingPoint')}</>
@@ -315,7 +333,38 @@ export function EventDetailPage() {
             </span>
           </div>
 
-          {event.locationHidden ? (
+          {event.isOnline ? (
+            <div className="rounded-card border border-border bg-surface p-4">
+              <p className="flex items-center gap-2 text-meta font-medium text-ink">
+                <Video className="h-4 w-4 text-majorelle" strokeWidth={1.7} /> {t('event.onlineActivity')}
+              </p>
+              {!event.locationHidden ? (
+                event.meetingUrl ? (
+                  <a
+                    href={event.meetingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-input bg-majorelle px-4 py-2.5 text-meta font-semibold text-white transition-opacity hover:opacity-90"
+                  >
+                    <Video className="h-4 w-4" strokeWidth={1.8} /> {t('event.joinMeeting')}
+                  </a>
+                ) : (
+                  <p className="mt-2 text-meta text-ink-soft">{t('event.onlineNoLink')}</p>
+                )
+              ) : isFull ? (
+                <p className="mt-3 rounded-card border border-border bg-surface-sunk/60 px-3 py-2.5 text-center text-meta font-medium text-ink-soft">
+                  {t('event.fullNoLocation')}
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-meta text-ink-soft">{t('event.onlineLockedHint')}</p>
+                  <Button className="mt-3" fullWidth variant="outline" loading={acting} leftIcon={<Lock className="h-4 w-4" strokeWidth={1.7} />} onClick={handleJoin}>
+                    {t('event.joinToSeeLink')}
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : event.locationHidden ? (
             <>
               <div className="relative">
                 <MapView
@@ -340,16 +389,19 @@ export function EventDetailPage() {
                   {t('event.fullNoLocation')}
                 </p>
               ) : (
-                <Button
-                  className="mt-3"
-                  fullWidth
-                  variant="outline"
-                  loading={acting}
-                  leftIcon={<Lock className="h-4 w-4" strokeWidth={1.7} />}
-                  onClick={handleJoin}
-                >
-                  {t('event.joinToSeeLocation')}
-                </Button>
+                <>
+                  {businessOptIn}
+                  <Button
+                    className="mt-3"
+                    fullWidth
+                    variant="outline"
+                    loading={acting}
+                    leftIcon={<Lock className="h-4 w-4" strokeWidth={1.7} />}
+                    onClick={handleJoin}
+                  >
+                    {t('event.joinToSeeLocation')}
+                  </Button>
+                </>
               )}
             </>
           ) : (
@@ -429,9 +481,12 @@ export function EventDetailPage() {
               </Button>
             )}
             {status === 'not_joined' && (
-              <Button size="lg" fullWidth loading={acting} onClick={handleJoin}>
-                {isFull ? t('event.joinWaitlist') : t('event.join')}
-              </Button>
+              <>
+                {businessOptIn}
+                <Button size="lg" fullWidth loading={acting} onClick={handleJoin}>
+                  {isFull ? t('event.joinWaitlist') : t('event.join')}
+                </Button>
+              </>
             )}
           </div>
         </div>

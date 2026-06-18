@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ReportReason } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TrustService } from '../trust/trust.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateReportDto } from './dto/create-report.dto';
 
 const REASON_MAP: Record<string, ReportReason> = {
@@ -17,6 +18,7 @@ export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly trust: TrustService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(reporterId: string, dto: CreateReportDto): Promise<unknown> {
@@ -51,6 +53,17 @@ export class ReportsService {
       // Reported activities are hidden immediately, pending admin review.
       await this.prisma.event.update({ where: { id: dto.targetId }, data: { underReview: true } }).catch(() => undefined);
     }
+
+    // Alert admins that a new report needs reviewing.
+    await this.notifications.notifyAdmins(
+      {
+        type: 'report',
+        title: 'New report filed',
+        body: `${isUser ? 'A user' : 'An activity'} was reported${dto.reason ? `: ${dto.reason}` : ''}.`,
+        eventId: isUser ? undefined : dto.targetId,
+      },
+      reporterId,
+    );
 
     return { id: report.id, status: report.status, createdAt: report.createdAt.toISOString() };
   }

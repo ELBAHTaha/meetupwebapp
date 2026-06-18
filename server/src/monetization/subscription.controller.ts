@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { SubscriptionService } from './subscription.service';
-import { StripeClientService } from './stripe-client.service';
+import { PaddleClientService } from './paddle-client.service';
 import { CheckoutDto, PremiumCheckoutDto } from './dto/subscription.dto';
 
 @ApiTags('subscriptions')
@@ -35,23 +35,24 @@ export class SubscriptionController {
   }
 }
 
-@ApiTags('stripe')
-@Controller('stripe')
-export class StripeWebhookController {
+@ApiTags('paddle')
+@Controller('paddle')
+export class PaddleWebhookController {
   constructor(
     private readonly subscriptions: SubscriptionService,
-    private readonly stripeClient: StripeClientService,
+    private readonly paddleClient: PaddleClientService,
     private readonly config: ConfigService,
   ) {}
 
   @Public()
   @Post('webhook')
   async webhook(@Req() req: Request & { rawBody?: Buffer }) {
-    const signature = req.headers['stripe-signature'];
-    const secret = this.config.get<string>('stripe.webhookSecret');
-    if (!signature || !secret) return { received: false };
-    const event = this.stripeClient.stripe.webhooks.constructEvent(req.rawBody ?? Buffer.from(JSON.stringify(req.body)), signature, secret);
-    await this.subscriptions.handleWebhook(event);
+    const signature = req.headers['paddle-signature'];
+    const secret = this.config.get<string>('paddle.webhookSecret');
+    if (!signature || typeof signature !== 'string' || !secret || secret.includes('xxx')) return { received: false };
+    const rawBody = (req.rawBody ?? Buffer.from(JSON.stringify(req.body))).toString('utf8');
+    const event = await this.paddleClient.paddle.webhooks.unmarshal(rawBody, secret, signature);
+    if (event) await this.subscriptions.handleWebhook(event);
     return { received: true };
   }
 }

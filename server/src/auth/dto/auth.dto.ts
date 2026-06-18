@@ -61,6 +61,38 @@ export class SignupDto {
   turnstileToken?: string;
 }
 
+/**
+ * Sign up a venue/business account. Distinct from consumer SignupDto — no
+ * birthday/18+ gate, no dating fields. Creates a user with role BUSINESS.
+ */
+export class BusinessSignupDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(80)
+  name!: string;
+
+  @ApiProperty()
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(72)
+  password!: string;
+
+  @ApiPropertyOptional({ description: 'Optional contact phone — never verified.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
+
+  @ApiPropertyOptional({ description: 'Cloudflare Turnstile token (verified when configured).' })
+  @IsOptional()
+  @IsString()
+  turnstileToken?: string;
+}
+
 export class LoginDto {
   @ApiProperty()
   @IsEmail()

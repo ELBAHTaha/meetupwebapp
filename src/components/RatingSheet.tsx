@@ -4,6 +4,7 @@ import { Sheet } from './Sheet';
 import { Button } from './Button';
 import { Avatar } from './Avatar';
 import { StarRating } from './StarRating';
+import { Textarea } from './Field';
 import { useAsync } from '@/hooks/useAsync';
 import { getRateablePeople, submitRating } from '@/api';
 import { toast } from '@/store/toast';
@@ -24,10 +25,14 @@ export function RatingSheet({ eventId, open, onClose, onDone }: Props) {
     [eventId, open],
   );
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [comments, setComments] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) setScores({});
+    if (open) {
+      setScores({});
+      setComments({});
+    }
   }, [open, eventId]);
 
   const people = data ?? [];
@@ -40,7 +45,13 @@ export function RatingSheet({ eventId, open, onClose, onDone }: Props) {
     }
     setSaving(true);
     for (const p of entries) {
-      await submitRating({ toUserId: p.user.id, activityId: eventId, score: scores[p.user.id], type: p.type as Rating['type'] });
+      await submitRating({
+        toUserId: p.user.id,
+        activityId: eventId,
+        score: scores[p.user.id],
+        type: p.type as Rating['type'],
+        comment: comments[p.user.id]?.trim() || undefined,
+      });
     }
     setSaving(false);
     toast(t('rate.thanks'), 'success');
@@ -62,12 +73,24 @@ export function RatingSheet({ eventId, open, onClose, onDone }: Props) {
         <div className="space-y-4">
           <p className="text-meta text-ink-soft">{t('rate.subtitle')}</p>
           {people.map((p) => (
-            <div key={p.user.id} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-3">
-              <div className="flex items-center gap-3">
-                <Avatar src={p.user.avatar} name={p.user.name} size="sm" verified={p.user.verified} />
-                <span className="font-display text-h3 font-medium">{p.user.name}</span>
+            <div key={p.user.id} className="rounded-card border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Avatar src={p.user.avatar} name={p.user.name} size="sm" verified={p.user.verified} />
+                  <span className="font-display text-h3 font-medium">{p.user.name}</span>
+                </div>
+                <StarRating value={scores[p.user.id] ?? 0} onChange={(v) => setScores((s) => ({ ...s, [p.user.id]: v }))} size={24} />
               </div>
-              <StarRating value={scores[p.user.id] ?? 0} onChange={(v) => setScores((s) => ({ ...s, [p.user.id]: v }))} size={24} />
+              {scores[p.user.id] > 0 && (
+                <Textarea
+                  className="mt-3"
+                  rows={2}
+                  maxLength={500}
+                  placeholder={t('rate.reviewPlaceholder')}
+                  value={comments[p.user.id] ?? ''}
+                  onChange={(e) => setComments((c) => ({ ...c, [p.user.id]: e.target.value }))}
+                />
+              )}
             </div>
           ))}
           <p className="text-[12px] text-ink-faint">{t('rate.private')}</p>

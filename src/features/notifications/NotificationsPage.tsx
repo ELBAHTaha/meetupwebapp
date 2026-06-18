@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BellOff, CalendarClock, CheckCheck, Hand, MessageCircle, PartyPopper, ShieldAlert, Star, UserPlus } from 'lucide-react';
+import { Bell, BellOff, CalendarClock, CheckCheck, Hand, MessageCircle, PartyPopper, ShieldAlert, Star, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import { useAsync } from '@/hooks/useAsync';
 import { listNotifications, markNotificationsRead } from '@/api';
+import { useSession } from '@/store/session';
 import { formatRelative } from '@/lib/format';
 import type { AppNotification } from '@/types';
 import { cn } from '@/lib/cn';
@@ -26,13 +27,17 @@ const iconFor: Record<AppNotification['type'], typeof MessageCircle> = {
 export function NotificationsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const bumpData = useSession((s) => s.bumpData);
   const { data, loading } = useAsync(() => listNotifications(), []);
 
   useEffect(() => {
-    // Mark read shortly after viewing.
-    const id = setTimeout(() => markNotificationsRead(), 1200);
+    // Mark read shortly after viewing, then refresh so the bell badge clears.
+    const id = setTimeout(async () => {
+      await markNotificationsRead();
+      bumpData();
+    }, 1200);
     return () => clearTimeout(id);
-  }, []);
+  }, [bumpData]);
 
   return (
     <div>
@@ -55,7 +60,7 @@ export function NotificationsPage() {
         ) : data && data.length > 0 ? (
           <div className="space-y-2">
             {data.map((n) => {
-              const Icon = iconFor[n.type];
+              const Icon = iconFor[n.type] ?? Bell;
               return (
                 <button
                   key={n.id}

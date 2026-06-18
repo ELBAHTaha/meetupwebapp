@@ -1,28 +1,26 @@
-import { useMemo, useState } from 'react';
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import { useEffect, useRef, useState } from 'react';
+import { CheckoutEventNames, initializePaddle, type Paddle } from '@paddle/paddle-js';
 import { Crown, Zap } from 'lucide-react';
-import { Button } from '@/components/Button';
 import { createExpressPaymentIntent } from '@/api';
 import { toast } from '@/store/toast';
 import type { PriorityLevel } from '@/types';
 import { cn } from '@/lib/cn';
 
-const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
-const stripePromise = key ? loadStripe(key) : null;
+const token = import.meta.env.VITE_PADDLE_CLIENT_TOKEN as string | undefined;
+const environment = ((import.meta.env.VITE_PADDLE_ENV as string) || 'sandbox') as 'sandbox' | 'production';
 
 type Opt = { id: PriorityLevel; title: string; copy: string; price: string };
 
-// First activity of the week: hosting is free; the paid option only buys a pin.
+// Free activity available: hosting is free; the paid option only buys a pin.
 const FREE_OPTIONS: Opt[] = [
-  { id: 'standard', title: 'Free', copy: 'Your free activity this week', price: '$0' },
-  { id: 'express', title: 'Pinned', copy: 'Free activity, pinned to the top for visibility', price: '$0.99' },
+  { id: 'standard', title: 'Free', copy: 'Your free activity (1 every 3 days)', price: 'Free' },
+  { id: 'express', title: 'Pinned', copy: 'Free activity, pinned to the top for visibility', price: '9.90 MAD' },
 ];
 
-// Free activity already used this week: hosting another now requires payment.
+// Free activity already used: hosting another now requires payment.
 const EXTRA_OPTIONS: Opt[] = [
-  { id: 'express', title: 'Create activity', copy: 'Host another activity this week', price: '$0.99' },
-  { id: 'priority', title: 'Create + Pinned', copy: 'Extra activity, pinned to the top', price: '$2.99' },
+  { id: 'express', title: 'Create activity', copy: 'Host another activity now', price: '9.90 MAD' },
+  { id: 'priority', title: 'Create + Pinned', copy: 'Extra activity, pinned to the top', price: '29.90 MAD' },
 ];
 
 export function ExpressPaymentBox({
@@ -38,21 +36,52 @@ export function ExpressPaymentBox({
   onChange: (priority: PriorityLevel, paymentIntentId?: string) => void;
 }) {
   const options = freeAvailable ? FREE_OPTIONS : EXTRA_OPTIONS;
-  const [clientSecret, setClientSecret] = useState<string>();
   const [loading, setLoading] = useState(false);
+
+  const paddleRef = useRef<Paddle>();
+  const pendingRef = useRef<{ priority: PriorityLevel; txnId: string }>();
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Boot Paddle.js once (only when a real client token is configured). The
+  // overlay confirms the one-time fee; the dev simulation path skips it.
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    initializePaddle({
+      environment,
+      token,
+      eventCallback: (event) => {
+        if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED && pendingRef.current) {
+          onChangeRef.current(pendingRef.current.priority, pendingRef.current.txnId);
+          toast('Extra-activity payment confirmed', 'success');
+          paddleRef.current?.Checkout.close();
+          pendingRef.current = undefined;
+        }
+      },
+    }).then((instance) => {
+      if (active) paddleRef.current = instance;
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function choose(priority: PriorityLevel) {
     onChange(priority, priority === 'standard' ? undefined : paymentIntentId);
-    setClientSecret(undefined);
     if (priority === 'standard') return;
     setLoading(true);
     try {
       const intent = await createExpressPaymentIntent(priority);
-      if (!stripePromise || intent.clientSecret.startsWith('mock_')) {
-        onChange(priority, `mock_${priority}_payment_intent`);
-        toast('Mock extra-activity payment marked ready', 'success');
+      // Real Paddle returns a transactionId → open the overlay checkout.
+      if (intent.transactionId && paddleRef.current) {
+        pendingRef.current = { priority, txnId: intent.transactionId };
+        paddleRef.current.Checkout.open({ transactionId: intent.transactionId });
       } else {
-        setClientSecret(intent.clientSecret);
+        // Dev simulation: mark the fee as paid with the mock reference.
+        const ref = intent.clientSecret?.startsWith('mock_') ? intent.clientSecret : `mock_${priority}_payment_intent`;
+        onChange(priority, ref);
+        toast('Mock extra-activity payment marked ready', 'success');
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not start payment', 'error');
@@ -87,46 +116,8 @@ export function ExpressPaymentBox({
           </button>
         ))}
       </div>
-      {clientSecret && stripePromise && (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <PaymentForm priority={value} onPaid={(id) => onChange(value, id)} />
-        </Elements>
-      )}
       {loading && <p className="mt-2 text-[12px] text-ink-faint">Preparing secure payment...</p>}
       {value !== 'standard' && paymentIntentId && <p className="mt-2 text-[12px] font-medium text-olive">Extra-activity payment ready.</p>}
-    </div>
-  );
-}
-
-function PaymentForm({ priority, onPaid }: { priority: PriorityLevel; onPaid: (paymentIntentId: string) => void }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [paying, setPaying] = useState(false);
-  const label = useMemo(() => (priority === 'priority' ? 'Pay $2.99' : 'Pay $0.99'), [priority]);
-
-  async function pay() {
-    if (!stripe || !elements) return;
-    setPaying(true);
-    const result = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-      confirmParams: { return_url: window.location.href },
-    });
-    setPaying(false);
-    if (result.error) {
-      toast(result.error.message ?? 'Payment failed', 'error');
-      return;
-    }
-    if (result.paymentIntent?.id) {
-      onPaid(result.paymentIntent.id);
-      toast('Extra-activity payment confirmed', 'success');
-    }
-  }
-
-  return (
-    <div className="mt-4 rounded-input border border-border bg-bg p-3">
-      <PaymentElement />
-      <Button className="mt-3" fullWidth loading={paying} onClick={pay}>{label}</Button>
     </div>
   );
 }

@@ -42,7 +42,7 @@ export class RatingsService {
     if (existing) throw new BadRequestException('You already rated this person for this activity.');
 
     const rating = await this.prisma.rating.create({
-      data: { eventId, fromUserId, toUserId: dto.toUserId, score: dto.score, type },
+      data: { eventId, fromUserId, toUserId: dto.toUserId, score: dto.score, comment: dto.comment?.trim() || null, type },
     });
 
     // A 1–2★ rating raises a flag (one per distinct event).
@@ -85,5 +85,29 @@ export class RatingsService {
     const users = await this.prisma.user.findMany({ where: { id: { in: toRate } }, include: userPublicInclude });
     const type: RatingType = isHost ? 'HOST_TO_ATTENDEE' : 'ATTENDEE_TO_HOST';
     return users.map((u) => ({ user: publicUser(u), type }));
+  }
+
+  /** Public written reviews left for a user (ratings that include a comment). */
+  async reviewsFor(userId: string): Promise<unknown[]> {
+    const ratings = await this.prisma.rating.findMany({
+      where: { toUserId: userId, comment: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { fromUser: { include: userPublicInclude } },
+    });
+    return ratings.map((r) => {
+      const from = publicUser(r.fromUser) as { name: string; avatar: string };
+      return {
+        id: r.id,
+        eventId: r.eventId,
+        fromUserId: r.fromUserId,
+        toUserId: r.toUserId,
+        rating: r.score,
+        text: r.comment ?? '',
+        createdAt: r.createdAt.toISOString(),
+        fromName: from.name,
+        fromAvatar: from.avatar,
+      };
+    });
   }
 }

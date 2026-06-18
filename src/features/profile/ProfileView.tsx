@@ -117,12 +117,15 @@ export function ProfileView({ user, self }: { user: User; self: boolean }) {
           <div className="space-y-3">
             {reviews.data.map((r) => {
               const from = db.users.find((u) => u.id === r.fromUserId);
+              const fromName = r.fromName ?? from?.name ?? 'Member';
+              const fromAvatar =
+                r.fromAvatar ?? from?.avatar ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(fromName)}`;
               return (
                 <div key={r.id} className="rounded-card border border-border bg-surface p-4">
                   <div className="flex items-center gap-2">
-                    {from && <Avatar src={from.avatar} name={from.name} size="sm" />}
+                    <Avatar src={fromAvatar} name={fromName} size="sm" />
                     <div className="flex-1">
-                      <p className="text-meta font-medium text-ink">{from?.name}</p>
+                      <p className="text-meta font-medium text-ink">{fromName}</p>
                       <div className="flex gap-0.5">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star key={i} className={cn('h-3 w-3', i < r.rating ? 'fill-saffron text-saffron' : 'text-border')} />

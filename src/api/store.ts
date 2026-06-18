@@ -237,15 +237,25 @@ export function enrich(e: JmaaEvent, viewerId = db.currentUserId): EnrichedEvent
   const joined =
     viewerStatus === 'host' || viewerStatus === 'joined' || viewerStatus === 'waitlisted' || viewerStatus === 'past';
   const full = resolvedLocationOf(e);
-  const generalArea = e.areaLabel ?? nearestCityName(full);
   const fuzz = (n: number) => Math.round(n * 100) / 100; // ~1km grid
-  const resolvedLocation = joined ? full : { lat: fuzz(full.lat), lng: fuzz(full.lng), label: generalArea };
+  // Online activities have no physical venue: show "Online", reveal the link to members.
+  const generalArea = e.isOnline ? 'Online' : e.areaLabel ?? nearestCityName(full);
+  const resolvedLocation = e.isOnline
+    ? { lat: full.lat, lng: full.lng, label: 'Online' }
+    : joined
+      ? full
+      : { lat: fuzz(full.lat), lng: fuzz(full.lng), label: generalArea };
 
   return {
     ...e,
     activity,
     host,
     spot,
+    // Public profiles of attendees (excludes the host) — mirrors the backend.
+    attendeeUsers: e.attendees
+      .filter((a) => a.status !== 'host')
+      .map((a) => findUser(a.userId))
+      .filter((u): u is NonNullable<typeof u> => !!u),
     goingCount,
     waitlistCount,
     openSpots: Math.max(0, e.capacity - goingCount),
@@ -253,6 +263,8 @@ export function enrich(e: JmaaEvent, viewerId = db.currentUserId): EnrichedEvent
     resolvedLocation,
     generalArea,
     locationHidden: !joined,
+    meetingUrl: e.isOnline && joined ? e.meetingUrl : undefined,
+    pinned: e.pinnedUntil ? new Date(e.pinnedUntil).getTime() > Date.now() : false,
   };
 }
 

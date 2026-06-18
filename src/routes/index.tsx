@@ -6,13 +6,13 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { SignupPage } from '@/features/auth/SignupPage';
 import { OnboardingPage } from '@/features/auth/OnboardingPage';
 import { DiscoverPage } from '@/features/discover/DiscoverPage';
-import { MapPage } from '@/features/map/MapPage';
 import { CreateEventPage } from '@/features/create/CreateEventPage';
 import { ChatListPage } from '@/features/chat/ChatListPage';
 import { ChatThreadPage } from '@/features/chat/ChatThreadPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { SettingsPage } from '@/features/profile/SettingsPage';
 import { EditProfilePage } from '@/features/profile/EditProfilePage';
+import { VerifyPage } from '@/features/profile/VerifyPage';
 import { EventDetailPage } from '@/features/event/EventDetailPage';
 import { UserProfilePage } from '@/features/profile/UserProfilePage';
 import { NotificationsPage } from '@/features/notifications/NotificationsPage';
@@ -25,6 +25,12 @@ import { BusinessLayout } from '@/features/business/BusinessLayout';
 import { BusinessDashboardPage } from '@/features/business/BusinessDashboardPage';
 import { BusinessVenuePage } from '@/features/business/BusinessVenuePage';
 import { BusinessCreateActivityPage } from '@/features/business/BusinessCreateActivityPage';
+import { BusinessActivityDetailPage } from '@/features/business/BusinessActivityDetailPage';
+import { BusinessChatListPage } from '@/features/business/BusinessChatListPage';
+import { BusinessChatThreadPage } from '@/features/business/BusinessChatThreadPage';
+import { BusinessOnboardPage } from '@/features/business/BusinessOnboardPage';
+import { VenuesPage } from '@/features/venues/VenuesPage';
+import { VenueDetailPage } from '@/features/venues/VenueDetailPage';
 
 function Protected({ children, business }: { children: React.ReactNode; business?: boolean }) {
   const { isAuthed, onboarded, user } = useSession.getState();
@@ -44,8 +50,8 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/login" replace /> },
-  { path: '/landing', element: <PublicOnly><LandingPage /></PublicOnly> },
+  { path: '/', element: <PublicOnly><LandingPage /></PublicOnly> },
+  { path: '/landing', element: <Navigate to="/" replace /> },
   { path: '/login', element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: '/signup', element: <PublicOnly><SignupPage /></PublicOnly> },
   { path: '/onboarding', element: <OnboardingPage /> },
@@ -60,12 +66,12 @@ export const router = createBrowserRouter([
     ),
     children: [
       { path: '/discover', element: <DiscoverPage /> },
-      { path: '/map', element: <MapPage /> },
       { path: '/create', element: <CreateEventPage /> },
       { path: '/chat', element: <ChatListPage /> },
       { path: '/chat/:threadId', element: <ChatThreadPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/profile/edit', element: <EditProfilePage /> },
+      { path: '/verify', element: <VerifyPage /> },
       { path: '/settings', element: <SettingsPage /> },
       { path: '/event/:id', element: <EventDetailPage /> },
       { path: '/user/:id', element: <UserProfilePage /> },
@@ -73,6 +79,9 @@ export const router = createBrowserRouter([
       { path: '/notifications', element: <NotificationsPage /> },
       { path: '/admin', element: <AdminPage /> },
       { path: '/pricing', element: <PricingPage /> },
+      { path: '/venues', element: <VenuesPage /> },
+      { path: '/venues/:id', element: <VenueDetailPage /> },
+      { path: '/business/onboard', element: <BusinessOnboardPage /> },
     ],
   },
   {
@@ -85,6 +94,9 @@ export const router = createBrowserRouter([
       { path: '/business/dashboard', element: <BusinessDashboardPage /> },
       { path: '/business/create', element: <BusinessCreateActivityPage /> },
       { path: '/business/venue', element: <BusinessVenuePage /> },
+      { path: '/business/activity/:id', element: <BusinessActivityDetailPage /> },
+      { path: '/business/chat', element: <BusinessChatListPage /> },
+      { path: '/business/chat/:eventId', element: <BusinessChatThreadPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

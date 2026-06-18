@@ -5,8 +5,9 @@ import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
+import { MailService } from '../mail/mail.service';
 import { TokensService, TokenPair } from './tokens.service';
-import { LoginDto, SignupDto } from './dto/auth.dto';
+import { BusinessSignupDto, LoginDto, SignupDto } from './dto/auth.dto';
 import { age } from '../common/utils/private-place';
 import { lookingForIn, meUser, userPublicInclude } from '../common/serializers/user.serializer';
 import { GoogleProfile } from './strategies/google.strategy';
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly storage: StorageService,
     private readonly geocoding: GeocodingService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
   private async withUser(userId: string) {
@@ -58,7 +60,7 @@ export class AuthService {
     await this.verifyTurnstile(dto.turnstileToken);
     const birthday = new Date(dto.birthday);
     if (Number.isNaN(birthday.getTime())) throw new BadRequestException('Invalid birthday.');
-    if (age(birthday) < 18) throw new UnprocessableEntityException('You must be 18 or older to use Jmaâ.');
+    if (age(birthday) < 18) throw new UnprocessableEntityException('You must be 18 or older to use hudlgo.');
 
     await this.assertNotBanned(dto.email, dto.phone);
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
@@ -84,6 +86,41 @@ export class AuthService {
         status: 'ACTIVE', // active immediately — no approval gating
       },
     });
+
+    // Welcome email (fire-and-forget — never block signup on email delivery).
+    void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);
+
+    const pair = await this.tokens.issue(user);
+    return { user: meUser(await this.withUser(user.id)), ...pair };
+  }
+
+  /**
+   * Sign up a venue/business account (role BUSINESS). Business accounts are
+   * separate from consumer accounts — an email already used by any account is
+   * rejected so a personal user can't be turned into a business.
+   */
+  async signupBusiness(dto: BusinessSignupDto): Promise<{ user: unknown } & TokenPair> {
+    await this.verifyTurnstile(dto.turnstileToken);
+    await this.assertNotBanned(dto.email, dto.phone);
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) {
+      throw new BadRequestException(
+        'An account with this email already exists. Use a different email for your business account.',
+      );
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        passwordHash: await bcrypt.hash(dto.password, 10),
+        name: dto.name,
+        phone: dto.phone,
+        role: 'BUSINESS',
+        status: 'ACTIVE',
+      },
+    });
+
+    void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);
 
     const pair = await this.tokens.issue(user);
     return { user: meUser(await this.withUser(user.id)), ...pair };
@@ -114,6 +151,7 @@ export class AuthService {
           status: 'ACTIVE',
         },
       });
+      void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);
     } else if (!user.googleId) {
       user = await this.prisma.user.update({ where: { id: user.id }, data: { googleId: profile.googleId } });
     }

@@ -6,7 +6,7 @@ import { messageViolation } from '../common/utils/message-filter';
 export class ChatService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Host + joined/waitlisted attendees only. Throws 403/410 otherwise. */
+  /** Host + joined/waitlisted attendees only. Throws 403/410 otherwise. Returns the event. */
   private async authorize(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -18,11 +18,13 @@ export class ChatService {
     if (event.chatThread.expiresAt < new Date()) {
       throw new GoneException('This group chat has closed (24h after the meetup).');
     }
-    return event.chatThread;
+    return event;
   }
 
   async getThread(eventId: string, userId: string): Promise<unknown> {
-    const thread = await this.authorize(eventId, userId);
+    const event = await this.authorize(eventId, userId);
+    const thread = event.chatThread!;
+    const ended = new Date(event.endsAt) < new Date();
     const messages = await this.prisma.chatMessage.findMany({
       where: { threadId: thread.id },
       orderBy: { sentAt: 'asc' },
@@ -31,6 +33,10 @@ export class ChatService {
     return {
       id: thread.id,
       eventId,
+      title: event.title,
+      startsAt: event.startsAt.toISOString(),
+      endsAt: event.endsAt.toISOString(),
+      ended, // true once the activity has finished — chat becomes read-only
       expiresAt: thread.expiresAt.toISOString(),
       participantIds: await this.participantIds(eventId),
       messages: messages.map((m) => ({
@@ -45,9 +51,13 @@ export class ChatService {
   async sendMessage(eventId: string, userId: string, text: string): Promise<unknown> {
     const violation = messageViolation(text);
     if (violation) throw new BadRequestException(violation);
-    const thread = await this.authorize(eventId, userId);
+    const event = await this.authorize(eventId, userId);
+    // Once the activity has ended, the chat is read-only for everyone.
+    if (new Date(event.endsAt) < new Date()) {
+      throw new ForbiddenException('This activity has ended — the chat is now read-only.');
+    }
     const msg = await this.prisma.chatMessage.create({
-      data: { threadId: thread.id, senderId: userId, text: text.slice(0, 2000) },
+      data: { threadId: event.chatThread!.id, senderId: userId, text: text.slice(0, 2000) },
     });
     return { id: msg.id, senderId: msg.senderId, text: msg.text, sentAt: msg.sentAt.toISOString() };
   }

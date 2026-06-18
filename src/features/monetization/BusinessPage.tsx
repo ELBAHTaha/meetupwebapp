@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3, Building2, Check, Crown, Lock, Mail, MapPin, Phone, Star, Store, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { DevelopedBy } from '@/components/DevelopedBy';
 import { Input, Textarea } from '@/components/Field';
 import { Tag } from '@/components/Chip';
-import { createSponsorshipCheckout, registerBusiness, signup } from '@/api';
+import { createSponsorshipCheckout, registerBusiness, signupBusiness } from '@/api';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { WELCOME_IMAGE } from '@/lib/imagery';
@@ -25,7 +26,7 @@ const tiers: {
   {
     id: 'bronze',
     name: 'Bronze',
-    price: '$49',
+    price: '490 MAD',
     tagline: 'Get discovered by locals',
     limit: '5 sponsored activities / month',
     icon: Store,
@@ -38,7 +39,7 @@ const tiers: {
   {
     id: 'silver',
     name: 'Silver',
-    price: '$99',
+    price: '990 MAD',
     tagline: 'Grow steady foot traffic',
     limit: '15 sponsored activities / month',
     icon: Star,
@@ -53,14 +54,14 @@ const tiers: {
   {
     id: 'gold',
     name: 'Gold',
-    price: '$199',
+    price: '1990 MAD',
     tagline: 'Become an official partner',
     limit: 'Unlimited sponsored activities',
     icon: Crown,
     points: [
       'Everything in Silver',
       'Official partner badge',
-      '$5 host credit for every activity at your venue',
+      '50 MAD host credit for every activity at your venue',
       'Top placement in the venue picker',
     ],
   },
@@ -88,14 +89,13 @@ export function BusinessPage() {
     }
     setSaving(true);
     try {
-      // 1. Create the owner's account so they can log in later (email + password).
-      const user = await signup({
+      // 1. Create a dedicated business account (role `business`). Business
+      //    accounts are separate from personal accounts — if the email is
+      //    already in use, signupBusiness rejects and we surface that.
+      const user = await signupBusiness({
         name: form.name,
         email: form.contactEmail,
         password: form.password,
-        birthday: '1990-01-01',
-        neighborhood: form.address.slice(0, 80) || 'Business',
-        zip: '00000',
         phone: form.phone || undefined,
       });
       setLogin(user);
@@ -110,13 +110,13 @@ export function BusinessPage() {
       })) as { id: string };
       const { url } = await createSponsorshipCheckout(business.id, tier);
 
-      // Real Stripe → redirect to external checkout. Dev simulation → the plan is
+      // Real Paddle → redirect to external checkout. Dev simulation → the plan is
       // already active, so head into the app instead of looping back here.
       if (url.startsWith('http') && !url.includes('simulated')) {
         window.location.href = url;
         return;
       }
-      toast('Your venue is registered — welcome to Jmaâ! 🎉', 'success');
+      toast('Your venue is registered — welcome to hudlgo! 🎉', 'success');
       navigate('/onboarding', { state: { business: true } });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not register business', 'error');
@@ -138,8 +138,8 @@ export function BusinessPage() {
         <div className="mx-auto w-full max-w-2xl px-6 pt-12 animate-fade-in">
           <div className="flex items-center justify-between">
             <button onClick={() => navigate(-1)} className="flex items-center gap-2.5 cursor-pointer">
-              <img src="/jmaa.svg" alt="Jmaâ" className="h-9 w-9" />
-              <span className="font-display text-h1 font-medium tracking-tight text-white">Jmaâ</span>
+              <img src="/jmaa.svg" alt="hudlgo" className="h-9 w-9" />
+              <span className="font-display text-h1 font-medium tracking-tight text-white">hudlgo</span>
             </button>
             <button
               onClick={() => navigate(-1)}
@@ -157,7 +157,7 @@ export function BusinessPage() {
               Put your venue where the plans happen
             </h1>
             <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-white/75">
-              Every Jmaâ meetup needs a place. Sponsored venues show up first when hosts pick where to gather — sending
+              Every hudlgo meetup needs a place. Sponsored venues show up first when hosts pick where to gather — sending
               a steady stream of new faces through your door.
             </p>
           </div>
@@ -272,6 +272,8 @@ export function BusinessPage() {
               <p className="text-center text-[12px] text-ink-faint">
                 Registers your venue on the {selected.name} plan and creates your login.
               </p>
+
+              <DevelopedBy className="mt-2" />
             </div>
           </div>
         </div>

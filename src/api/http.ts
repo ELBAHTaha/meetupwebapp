@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// HTTP client for the Jmaâ backend (NestJS). Activated when VITE_API_URL is set;
+// HTTP client for the hudlgo backend (NestJS). Activated when VITE_API_URL is set;
 // otherwise the app keeps using the in-memory mock in `src/api/index.ts`.
 //
 // Handles: base URL, JWT Authorization header, and transparent refresh-on-401

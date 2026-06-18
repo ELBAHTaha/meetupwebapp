@@ -58,7 +58,7 @@ export function publicUser(u: UserWithRels) {
     isTraveler: false,
     lookingFor: lookingForOut(u.lookingFor),
     status: u.status.toLowerCase() as 'active' | 'suspended' | 'banned',
-    role: u.role.toLowerCase() as 'user' | 'admin',
+    role: u.role.toLowerCase() as 'user' | 'admin' | 'business',
     subscriptionPlan: u.subscriptionPlan.toLowerCase(),
     subscriptionStatus: u.subscriptionStatus.toLowerCase(),
     subscriptionEndsAt: u.subscriptionEndsAt ? u.subscriptionEndsAt.toISOString() : undefined,
@@ -81,6 +81,8 @@ export function meUser(u: UserWithRels) {
     zip: u.zip ?? undefined,
     birthday: u.birthday ? u.birthday.toISOString().slice(0, 10) : undefined,
     suspendedUntil: u.suspendedUntil ? u.suspendedUntil.toISOString() : undefined,
+    verificationStatus: u.verificationStatus.toLowerCase() as 'none' | 'pending' | 'approved' | 'rejected',
+    emailNotifications: u.emailNotifications,
     // Present when this account owns a sponsored venue — drives the business UI.
     businessId: u.businessesOwned?.[0]?.id ?? undefined,
   };

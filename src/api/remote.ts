@@ -12,7 +12,10 @@
 import { api, tokens } from './http';
 import type {
   Activity,
+  AdminBusinessVerification,
+  AdminVenueClaim,
   AppNotification,
+  BusinessOrg,
   ChatMessage,
   ChatThread,
   CreateActivityInput,
@@ -24,8 +27,11 @@ import type {
   Rating,
   RatingInput,
   ReportInput,
+  Review,
   SponsoredVenue,
   User,
+  VenueCard,
+  VenueProfile,
 } from '@/types';
 
 // ---- Auth ------------------------------------------------------------------
@@ -77,6 +83,19 @@ export async function signup(input: {
   return res.user;
 }
 
+/** Sign up a venue/business account (role `business`). Separate from consumer signup. */
+export async function signupBusiness(input: {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  turnstileToken?: string;
+}): Promise<User> {
+  const res = await api.post<AuthResponse>('/auth/business/signup', input);
+  tokens.set(res);
+  return res.user;
+}
+
 export function getCurrentUser(): Promise<User> {
   return api.get<User>('/auth/me');
 }
@@ -87,6 +106,13 @@ export function updateProfile(patch: Partial<User>): Promise<User> {
 
 export function getUser(id: string): Promise<User | null> {
   return api.get<User>(`/users/${id}`).catch(() => null);
+}
+
+export function submitVerification(selfie: File, pose: string): Promise<User> {
+  const form = new FormData();
+  form.append('selfie', selfie);
+  form.append('pose', pose);
+  return api.upload<User>('/users/me/verification', form);
 }
 
 // ---- Activity types --------------------------------------------------------
@@ -110,6 +136,10 @@ function eventQuery(filters: EventFilters): string {
   if (filters.travelersOnly) p.set('travelersWelcome', 'true');
   if (filters.search) p.set('search', filters.search);
   if (filters.date && filters.date !== 'any') p.set('when', filters.date === 'week' ? 'all' : filters.date);
+  // "Near me": sort by distance from the viewer's coordinates (no city scope).
+  if (filters.sort) p.set('sort', filters.sort);
+  if (filters.lat != null) p.set('lat', String(filters.lat));
+  if (filters.lng != null) p.set('lng', String(filters.lng));
   p.set('limit', '50');
   return p.toString();
 }
@@ -142,6 +172,8 @@ export function createEvent(input: CreateEventInput & { lat?: number; lng?: numb
     lat: loc.lat,
     lng: loc.lng,
     isPublicPlace: input.publicPlaceConfirmed ?? true,
+    isOnline: input.isOnline ?? false,
+    meetingUrl: input.meetingUrl,
     startsAt: input.startsAt,
     endsAt: new Date(new Date(input.startsAt).getTime() + input.durationMins * 60000).toISOString(),
     maxAttendees: input.capacity,
@@ -159,16 +191,23 @@ export function createEvent(input: CreateEventInput & { lat?: number; lng?: numb
 
 // ---- Monetization ----------------------------------------------------------
 export const getSubscriptionSummary = () =>
-  api.get<{ remaining: number | 'unlimited'; plan: string; status: string; resetsAt?: string }>('/subscriptions/me');
+  api.get<{
+    remaining: number | 'unlimited';
+    plan: string;
+    status: string;
+    resetsAt?: string;
+    pinsRemaining: number | 'unlimited';
+    pinQuota: number | 'unlimited';
+  }>('/subscriptions/me');
 
-export const createSubscriptionCheckout = (planType: 'pro' | 'premium') =>
+export const createSubscriptionCheckout = (planType: 'bronze' | 'silver' | 'gold') =>
   api.post<{ url: string }>('/subscriptions/checkout', { planType });
 
 export const createPremiumUserCheckout = () =>
   api.post<{ url: string }>('/subscriptions/premium-checkout', { planType: 'attendee' });
 
 export const createExpressPaymentIntent = (priorityLevel: 'express' | 'priority') =>
-  api.post<{ clientSecret: string; amountCents: number }>('/payments/express-intent', { priorityLevel });
+  api.post<{ clientSecret: string; amountCents: number; transactionId?: string }>('/payments/express-intent', { priorityLevel });
 
 export const listSponsoredVenues = () => api.get<SponsoredVenue[]>('/businesses/sponsored-venues');
 
@@ -190,8 +229,111 @@ export const getMyBusiness = () => api.get<MyBusiness>('/businesses/mine');
 export const updateMyBusiness = (patch: { name?: string; description?: string; address?: string; phone?: string }) =>
   api.patch<MyBusiness>('/businesses/mine', patch);
 
-export async function joinEvent(id: string): Promise<EnrichedEvent> {
-  const res = await api.post<{ event: EnrichedEvent }>(`/events/${id}/join`);
+export const uploadVenuePhotos = (files: File[]) => {
+  const form = new FormData();
+  files.forEach((f) => form.append('photos', f));
+  return api.upload<MyBusiness>('/businesses/mine/photos', form);
+};
+
+export const removeVenuePhoto = (url: string) => api.del<MyBusiness>('/businesses/mine/photos', { url });
+
+// ---- Business orgs & venues (Foundation) ----------------------------------
+export const createBusinessOrg = (input: {
+  name: string;
+  category: string;
+  legalName?: string;
+  description?: string;
+  address: string;
+  lat?: number;
+  lng?: number;
+  contactEmail: string;
+  phone?: string;
+  website?: string;
+  acceptBusinessTos: boolean;
+}) => api.post<BusinessOrg>('/businesses', input);
+
+export const getMyBusinesses = () => api.get<BusinessOrg[]>('/me/businesses');
+
+export const getBusinessOrg = (id: string) =>
+  api.get<{ id: string; name: string; category: string; description: string; logoUrl: string | null; coverUrl: string | null; website: string | null; verified: boolean; venues: VenueCard[] }>(`/businesses/${id}`);
+
+export const updateBusinessOrg = (
+  id: string,
+  patch: Partial<{ name: string; category: string; legalName: string; description: string; address: string; phone: string; website: string; logoUrl: string; coverUrl: string }>,
+) => api.patch<BusinessOrg>(`/businesses/${id}`, patch);
+
+export const submitBusinessVerification = (
+  id: string,
+  input: { rcNumber?: string; iceNumber?: string; documents?: File[]; documentUrls?: string[] },
+) => {
+  const form = new FormData();
+  if (input.rcNumber) form.append('rcNumber', input.rcNumber);
+  if (input.iceNumber) form.append('iceNumber', input.iceNumber);
+  (input.documentUrls ?? []).forEach((u) => form.append('documentUrls[]', u));
+  (input.documents ?? []).forEach((f) => form.append('documents', f));
+  return api.upload<{ id: string; status: string; documentCount: number }>(`/businesses/${id}/verification`, form);
+};
+
+export const inviteBusinessMember = (id: string, email: string, role: 'MANAGER' | 'STAFF') =>
+  api.post<{ success: true }>(`/businesses/${id}/members/invite`, { email, role });
+
+export const acceptBusinessInvite = (businessId: string) =>
+  api.post<{ success: true }>('/businesses/members/accept', { businessId });
+
+export const updateBusinessMemberRole = (id: string, userId: string, role: 'MANAGER' | 'STAFF') =>
+  api.patch<{ success: true }>(`/businesses/${id}/members/${userId}`, { role });
+
+export const removeBusinessMember = (id: string, userId: string) =>
+  api.del<{ success: true }>(`/businesses/${id}/members/${userId}`);
+
+export const listVenues = (filters: { category?: string; q?: string; lat?: number; lng?: number; radiusKm?: number } = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.set(k, String(v)); });
+  const s = qs.toString();
+  return api.get<VenueCard[]>(`/venues${s ? `?${s}` : ''}`);
+};
+
+export const getVenue = (id: string) => api.get<VenueProfile>(`/venues/${id}`);
+
+export const createVenue = (input: {
+  businessId: string;
+  name: string;
+  category: string;
+  description?: string;
+  address: string;
+  lat: number;
+  lng: number;
+  amenities?: string[];
+  hours?: Record<string, string>;
+  phone?: string;
+  website?: string;
+}) => api.post<VenueCard>('/venues', input);
+
+export const updateVenue = (
+  id: string,
+  patch: Partial<{ name: string; category: string; description: string; address: string; lat: number; lng: number; amenities: string[]; hours: Record<string, string>; phone: string; website: string }>,
+) => api.patch<VenueCard>(`/venues/${id}`, patch);
+
+export const claimVenue = (id: string, businessId: string, evidence?: File[]) => {
+  const form = new FormData();
+  form.append('businessId', businessId);
+  (evidence ?? []).forEach((f) => form.append('evidence', f));
+  return api.upload<{ id: string; status: string }>(`/venues/${id}/claim`, form);
+};
+
+export const submitVenueReview = (id: string, rating: number, text?: string) =>
+  api.post<{ id: string; rating: number; text: string }>(`/venues/${id}/reviews`, { rating, text });
+
+// ---- Admin (business verification + venue claims) ----
+export const listBusinessVerificationsAdmin = () => api.get<AdminBusinessVerification[]>('/admin/business-verifications');
+export const approveBusinessVerification = (id: string) => api.post<{ success: true }>(`/admin/business-verifications/${id}/approve`);
+export const rejectBusinessVerification = (id: string, note?: string) => api.post<{ success: true }>(`/admin/business-verifications/${id}/reject`, { note });
+export const listVenueClaimsAdmin = () => api.get<AdminVenueClaim[]>('/admin/venue-claims');
+export const approveVenueClaim = (id: string) => api.post<{ success: true }>(`/admin/venue-claims/${id}/approve`);
+export const rejectVenueClaim = (id: string, note?: string) => api.post<{ success: true }>(`/admin/venue-claims/${id}/reject`, { note });
+
+export async function joinEvent(id: string, shareContactWithHostBusiness = false): Promise<EnrichedEvent> {
+  const res = await api.post<{ event: EnrichedEvent }>(`/events/${id}/join`, { shareContactWithHostBusiness });
   return res.event;
 }
 
@@ -282,16 +424,25 @@ export async function listThreads(_userId: string | undefined): Promise<ChatThre
 
 // ---- Ratings & reports -----------------------------------------------------
 export function submitRating(input: RatingInput): Promise<Rating> {
-  return api.post<Rating>(`/events/${input.activityId}/ratings`, { toUserId: input.toUserId, score: input.score });
+  return api.post<Rating>(`/events/${input.activityId}/ratings`, { toUserId: input.toUserId, score: input.score, comment: input.comment });
 }
 
 export function getRateablePeople(eventId: string): Promise<{ user: User; type: Rating['type'] }[]> {
   return api.get(`/events/${eventId}/ratings/pending`);
 }
 
+export function getReviewsForUser(userId: string): Promise<Review[]> {
+  return api.get<Review[]>(`/users/${userId}/reviews`);
+}
+
 export function reportTarget(input: ReportInput): Promise<unknown> {
   return api.post('/reports', input);
 }
+
+export const submitFeedback = (input: import('./mock').FeedbackInput) =>
+  api.post<{ success: true }>('/feedback', input);
+export const listFeedback = () => api.get<import('./mock').AdminFeedback[]>('/admin/feedback');
+export const resolveFeedback = (id: string) => api.patch(`/admin/feedback/${id}/resolve`);
 
 // ---- Notifications ---------------------------------------------------------
 export function listNotifications(): Promise<AppNotification[]> {
@@ -304,6 +455,7 @@ export function markNotificationsRead(): Promise<void> {
 
 // ---- Admin -----------------------------------------------------------------
 export const adminOverview = () => api.get('/admin/overview');
+export const adminAnalytics = () => api.get<import('./mock').AdminAnalytics>('/admin/analytics');
 export const listReports = () => api.get('/admin/reports');
 export const listFlaggedUsers = () => api.get('/admin/flagged-users');
 export const listSubscribers = () => api.get('/admin/subscribers');
@@ -313,6 +465,9 @@ export const listExpressPaymentsAdmin = () => api.get('/admin/express-payments')
 export const listUnderReviewActivities = () => api.get<EnrichedEvent[]>('/admin/under-review');
 export const restoreActivity = (id: string) => api.post(`/admin/activities/${id}/restore`);
 export const listPendingActivities = () => api.get<EnrichedEvent[]>('/admin/pending-activities');
+export const listVerifications = () => api.get<import('./mock').AdminVerification[]>('/admin/verifications');
+export const approveVerification = (id: string) => api.post(`/admin/verifications/${id}/approve`);
+export const rejectVerification = (id: string) => api.post(`/admin/verifications/${id}/reject`);
 export const approveActivity = (id: string) => api.post(`/admin/activities/${id}/approve`);
 export const rejectActivity = (id: string) => api.post(`/admin/activities/${id}/reject`);
 export const resolveReport = (id: string) => api.patch(`/admin/reports/${id}/resolve`);

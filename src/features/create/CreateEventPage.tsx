@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format, formatDistanceToNowStrict } from 'date-fns';
-import { AlertTriangle, Building2, Check, Loader2, MapPin, Minus, Plus, Search, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarClock, Check, Loader2, MapPin, Minus, Pin, Plus, Search, ShieldCheck, Video } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { Input, Textarea } from '@/components/Field';
@@ -58,13 +58,15 @@ export function CreateEventPage() {
 
   const [title, setTitle] = useState('');
   const [capacity, setCapacity] = useState(8);
-  const [minPlayers, setMinPlayers] = useState(1);
+  const [minPlayers, setMinPlayers] = useState(4);
   const [genderPref, setGenderPref] = useState<GenderPreference>('any');
   const [price, setPrice] = useState(0);
   const [description, setDescription] = useState('');
   const [travelers, setTravelers] = useState(true);
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [publicConfirmed, setPublicConfirmed] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [meetingUrl, setMeetingUrl] = useState('');
   const [areaLabel, setAreaLabel] = useState('');
   const [priorityLevel, setPriorityLevel] = useState<PriorityLevel>('standard');
   const [expressPaymentIntentId, setExpressPaymentIntentId] = useState<string | undefined>();
@@ -103,15 +105,19 @@ export function CreateEventPage() {
   }
 
   async function publish() {
-    if (!activity || !resolvedLocation) return;
+    if (!activity || (!isOnline && !resolvedLocation)) return;
     setPublishing(true);
     try {
       const created = await createEvent({
         activityId: activity.id,
         title: (title || `${activity.name} meetup`).slice(0, 60),
-        spotId,
-        location: spotId ? undefined : resolvedLocation,
-        areaLabel: areaLabel.trim() || undefined,
+        spotId: isOnline ? undefined : spotId,
+        location: isOnline
+          ? { lat: 0, lng: 0, label: 'Online' }
+          : spotId
+            ? undefined
+            : resolvedLocation ?? undefined,
+        areaLabel: isOnline ? 'Online' : areaLabel.trim() || undefined,
         startsAt: new Date(startsAtMs).toISOString(),
         durationMins: duration,
         capacity,
@@ -123,7 +129,9 @@ export function CreateEventPage() {
         visibility,
         vibe: 'chill',
         genderPreference: genderPref,
-        publicPlaceConfirmed: publicConfirmed,
+        publicPlaceConfirmed: isOnline ? true : publicConfirmed,
+        isOnline,
+        meetingUrl: isOnline ? meetingUrl.trim() || undefined : undefined,
         priorityLevel,
         expressPaymentIntentId,
         businessId,
@@ -146,7 +154,7 @@ export function CreateEventPage() {
   const privateWarn = looksPrivate(`${title} ${resolvedLocation?.label ?? ''}`);
   const canNext =
     step === 0 ? !!activity
-    : step === 1 ? !!resolvedLocation && publicConfirmed
+    : step === 1 ? (isOnline ? true : !!resolvedLocation && publicConfirmed && areaLabel.trim().length > 0)
     : step === 2 ? timeValid
     : step === 3 ? title.trim().length > 0
     : step === 4 ? (freeAvailable ? priorityLevel === 'standard' || !!expressPaymentIntentId : !!expressPaymentIntentId)
@@ -174,11 +182,7 @@ export function CreateEventPage() {
           {step === 0 && (
             <div className="space-y-5">
               <h2 className="font-display text-h1 font-medium">{t('create.chooseActivity')}</h2>
-              <div className="rounded-card border border-border bg-surface p-3 text-meta text-ink-soft">
-                Host plan: <span className="font-semibold capitalize text-ink">{subscription.data?.plan ?? 'free'}</span>
-                <span className="mx-1">·</span>
-                Remaining free activities: <span className="font-semibold text-ink">{subscription.data?.remaining ?? '...'}</span>
-              </div>
+              <PlanSummary data={subscription.data ?? undefined} />
               {grouped.map(({ group, items }) => (
                 <div key={group}>
                   <p className="mb-2 text-meta font-semibold uppercase tracking-wide text-ink-faint">{GROUP_LABELS[group]}</p>
@@ -210,7 +214,25 @@ export function CreateEventPage() {
           {step === 1 && (
             <div>
               <h2 className="font-display text-h1 font-medium">{t('create.placeTitle')}</h2>
-              {(sponsoredVenues.data?.length ?? 0) > 0 && (
+              <div className="mt-3">
+                <ToggleRow label={t('create.onlineActivity')} on={isOnline} onToggle={() => { setIsOnline((v) => !v); setBusinessId(undefined); }} />
+              </div>
+              {isOnline && (
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-start gap-2 rounded-card border border-majorelle/40 bg-majorelle-soft px-3 py-2.5 text-meta text-ink">
+                    <Video className="mt-0.5 h-4 w-4 shrink-0 text-majorelle" strokeWidth={1.7} />
+                    <span>{t('create.onlineHint')}</span>
+                  </div>
+                  <Input
+                    label={t('create.meetingLink')}
+                    hint={t('create.meetingLinkHint')}
+                    placeholder="https://meet.google.com/…"
+                    value={meetingUrl}
+                    onChange={(e) => setMeetingUrl(e.target.value)}
+                  />
+                </div>
+              )}
+              {!isOnline && (sponsoredVenues.data?.length ?? 0) > 0 && (
                 <div className="mt-3 rounded-card border border-border bg-surface p-3">
                   <p className="mb-2 flex items-center gap-1.5 text-meta font-semibold text-ink">
                     <Building2 className="h-4 w-4 text-majorelle" strokeWidth={1.7} /> Sponsored venues
@@ -230,6 +252,8 @@ export function CreateEventPage() {
                   {businessId && <p className="mt-1.5 text-[12px] text-ink-faint">Venue sponsor selected. Your activity will be linked to their profile.</p>}
                 </div>
               )}
+              {!isOnline && (
+                <>
               <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
                 {CITIES.map((c) => (
                   <Chip key={c.id} active={mapCity === c.name} onClick={() => { setMapCity(c.name); setSpotId(undefined); setPoint(null); setMapCenter({ lat: c.lat, lng: c.lng }); setMapZoom(12); }} activeClassName="bg-clay text-white">{c.name}</Chip>
@@ -277,7 +301,13 @@ export function CreateEventPage() {
                   value={areaLabel}
                   onChange={(e) => setAreaLabel(e.target.value)}
                 />
+                <p className="mt-2 flex items-start gap-1.5 rounded-input bg-surface-sunk/60 px-3 py-2 text-[12px] text-ink-soft">
+                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-olive" strokeWidth={1.7} />
+                  {t('create.areaPrivacy')}
+                </p>
               </div>
+                </>
+              )}
             </div>
           )}
 
@@ -319,8 +349,8 @@ export function CreateEventPage() {
                   ))}
                 </div>
               </div>
-              <Stepper label={t('create.capacity')} value={capacity} min={2} max={12} onChange={(v) => { setCapacity(v); if (minPlayers > v) setMinPlayers(v); }} />
-              <Stepper label={t('create.minPlayers')} hint={t('create.minPlayersHint')} value={minPlayers} min={1} max={capacity} onChange={setMinPlayers} />
+              <Stepper label={t('create.capacity')} hint={t('create.capacityHint')} value={capacity} min={4} max={12} onChange={(v) => { setCapacity(v); if (minPlayers > v) setMinPlayers(v); }} />
+              <Stepper label={t('create.minPlayers')} hint={t('create.minPlayersHint')} value={minPlayers} min={4} max={capacity} onChange={setMinPlayers} />
               <div>
                 <span className="mb-1.5 block text-meta font-medium text-ink-soft">{t('create.price')}</span>
                 <div className="flex items-center gap-3">
@@ -342,7 +372,7 @@ export function CreateEventPage() {
           )}
 
           {/* STEP 5 — review + extra-activity fee */}
-          {step === 4 && activity && resolvedLocation && (
+          {step === 4 && activity && (isOnline || resolvedLocation) && (
             <div className="space-y-4">
               <h2 className="font-display text-h1 font-medium">{t('create.review')}</h2>
               <div className="overflow-hidden rounded-card border border-border bg-surface">
@@ -354,37 +384,57 @@ export function CreateEventPage() {
                   </div>
                 </div>
                 <dl className="divide-y divide-border border-t border-border text-meta">
-                  <Row k={t('event.location')} v={resolvedLocation.label} />
+                  <Row k={t('event.location')} v={isOnline ? 'Online' : resolvedLocation?.label ?? '—'} />
                   <Row k={t('create.date')} v={`${format(new Date(`${date}T${time}`), 'EEE d MMM')} · ${time}`} />
                   <Row k={t('create.capacity')} v={`${capacity} · min ${minPlayers}`} />
                   <Row k={t('create.price')} v={price === 0 ? t('create.priceFree') : `${price} MAD`} />
                   <Row k={t('create.travelersWelcome')} v={travelers ? t('common.done') : '—'} />
                 </dl>
               </div>
-              {subscription.data?.remaining === 'unlimited' ? (
-                <p className="rounded-card border border-border bg-surface p-4 text-meta text-ink-soft">
-                  Your {subscription.data.plan} plan includes unlimited hosting — no extra fee.
-                </p>
-              ) : (
-                <>
-                  {subscription.data?.remaining === 0 && (
-                    <p className="rounded-input border border-saffron/40 bg-saffron-soft px-3 py-2 text-[12px] font-medium text-ink">
-                      {subscription.data.resetsAt
-                        ? `Next free activity in ${formatDistanceToNowStrict(new Date(subscription.data.resetsAt))}. Choose a paid option below to host now.`
-                        : 'You’ve used your free activity this week. Choose a paid option below to host another.'}
+              {(() => {
+                const plan = subscription.data?.plan ?? 'free';
+                const remaining = subscription.data?.remaining;
+                const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
+                const onExpressChange = (level: PriorityLevel, intentId?: string) => {
+                  setPriorityLevel(level);
+                  setExpressPaymentIntentId(intentId);
+                };
+                // Gold (unlimited): always covered + featured.
+                if (remaining === 'unlimited') {
+                  return (
+                    <p className="rounded-card border border-olive/30 bg-olive-soft p-4 text-meta text-ink">
+                      {t('create.unlimitedFeatured')}
                     </p>
-                  )}
-                  <ExpressPaymentBox
-                    value={priorityLevel}
-                    paymentIntentId={expressPaymentIntentId}
-                    freeAvailable={freeAvailable}
-                    onChange={(level, intentId) => {
-                      setPriorityLevel(level);
-                      setExpressPaymentIntentId(intentId);
-                    }}
-                  />
-                </>
-              )}
+                  );
+                }
+                // Allowance used up (any plan): must pay the one-off fee to host now.
+                if (remaining === 0) {
+                  return (
+                    <>
+                      <p className="rounded-input border border-saffron/40 bg-saffron-soft px-3 py-2 text-[12px] font-medium text-ink">
+                        {subscription.data?.resetsAt
+                          ? t('create.nextFreeNotice', { time: formatDistanceToNowStrict(new Date(subscription.data.resetsAt)) })
+                          : t('create.usedNotice')}
+                      </p>
+                      <ExpressPaymentBox value={priorityLevel} paymentIntentId={expressPaymentIntentId} freeAvailable={false} onChange={onExpressChange} />
+                    </>
+                  );
+                }
+                // Paid tier within allowance (Bronze/Silver): covered, auto-pinned per quota.
+                if (plan !== 'free') {
+                  const pins = subscription.data?.pinsRemaining;
+                  const willPin = pins === 'unlimited' || (typeof pins === 'number' && pins > 0);
+                  return (
+                    <p className="rounded-card border border-olive/30 bg-olive-soft p-4 text-meta text-ink">
+                      {willPin ? t('create.planCoversPinned', { plan: planName }) : t('create.planCovers', { plan: planName })}
+                    </p>
+                  );
+                }
+                // Free plan within allowance: free, with the optional 9.90 MAD pin.
+                return (
+                  <ExpressPaymentBox value={priorityLevel} paymentIntentId={expressPaymentIntentId} freeAvailable onChange={onExpressChange} />
+                );
+              })()}
             </div>
           )}
         </div>
@@ -496,6 +546,78 @@ function PlaceSearch({
       )}
       {touched && !loading && q.trim().length >= 3 && results.length === 0 && (
         <p className="mt-2 text-[12px] text-ink-faint">No places found in {city}. Try another name or pick on the map.</p>
+      )}
+    </div>
+  );
+}
+
+const CADENCE_KEY: Record<string, string> = {
+  free: 'create.cadenceFree',
+  bronze: 'create.cadenceBronze',
+  silver: 'create.cadenceSilver',
+  gold: 'create.cadenceGold',
+};
+
+type PlanSummaryData = {
+  plan: string;
+  remaining: number | 'unlimited';
+  status: string;
+  resetsAt?: string;
+  pinsRemaining: number | 'unlimited';
+  pinQuota: number | 'unlimited';
+};
+
+/** Plan-aware hosting/pin summary shown at the top of the create flow. */
+function PlanSummary({ data }: { data?: PlanSummaryData }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const plan = data?.plan ?? 'free';
+  const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
+  const remaining = data?.remaining;
+  const pinQuota = data?.pinQuota;
+  const pinsRemaining = data?.pinsRemaining;
+
+  const hostingDetail =
+    remaining === 'unlimited'
+      ? undefined
+      : remaining === undefined
+        ? '…'
+        : remaining > 0
+          ? t('create.availableNow', { count: remaining })
+          : data?.resetsAt
+            ? t('create.nextIn', { time: formatDistanceToNowStrict(new Date(data.resetsAt)) })
+            : t('create.usedUp');
+
+  const pinsText =
+    pinQuota === 'unlimited'
+      ? t('create.pinsAlways')
+      : !pinQuota
+        ? t('create.pinsNone')
+        : t('create.pinsLeft', { n: pinsRemaining ?? 0, q: pinQuota });
+
+  return (
+    <div className="rounded-card border border-border bg-surface p-3.5">
+      <p className="text-meta font-semibold text-ink">
+        {t('create.hostPlan')}: <span className="capitalize text-clay">{planName}</span>
+      </p>
+      <div className="mt-2 space-y-1.5 text-[12px] text-ink-soft">
+        <p className="flex flex-wrap items-center gap-1.5">
+          <CalendarClock className="h-3.5 w-3.5 shrink-0 text-ink-faint" strokeWidth={1.7} />
+          {t('create.hostingLabel')}: <span className="font-medium text-ink">{t(CADENCE_KEY[plan] ?? CADENCE_KEY.free)}</span>
+          {hostingDetail && <span className="text-ink-faint">· {hostingDetail}</span>}
+        </p>
+        <p className="flex flex-wrap items-center gap-1.5">
+          <Pin className="h-3.5 w-3.5 shrink-0 text-ink-faint" strokeWidth={1.7} />
+          {t('create.pinsLabel')}: <span className="font-medium text-ink">{pinsText}</span>
+        </p>
+      </div>
+      {plan === 'free' && (
+        <button
+          onClick={() => navigate('/pricing')}
+          className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold text-clay hover:underline cursor-pointer"
+        >
+          {t('create.upgradeMore')}
+        </button>
       )}
     </div>
   );

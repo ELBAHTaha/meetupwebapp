@@ -39,6 +39,12 @@ export class SponsorshipCheckoutDto {
   tier!: 'bronze' | 'silver' | 'gold';
 }
 
+export class RemovePhotoDto {
+  @IsString()
+  @MaxLength(500)
+  url!: string;
+}
+
 export class UpdateBusinessDto {
   @IsOptional()
   @IsString()

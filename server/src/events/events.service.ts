@@ -69,6 +69,22 @@ export class EventsService {
       ? (await this.prisma.business.count({ where: { id: dto.businessId, ownerId: userId } })) > 0
       : false;
 
+    // Free business accounts may host exactly one activity. An active venue
+    // sponsorship (paid) lifts this cap; consumer accounts are unaffected.
+    const creator = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (creator?.role === 'BUSINESS') {
+      const hasActiveSponsorship =
+        (await this.prisma.sponsorship.count({ where: { status: 'ACTIVE', business: { ownerId: userId } } })) > 0;
+      if (!hasActiveSponsorship) {
+        const hosted = await this.prisma.event.count({ where: { hostId: userId, status: { not: 'CANCELLED' } } });
+        if (hosted >= 1) {
+          throw new BadRequestException(
+            'Free business accounts can host one activity. Sponsor a venue to host more.',
+          );
+        }
+      }
+    }
+
     const startsAt = new Date(dto.startsAt);
     const endsAt = new Date(dto.endsAt);
     const now = new Date();
@@ -79,11 +95,14 @@ export class EventsService {
       throw new UnprocessableEntityException('No same-day meetups — pick a future day.');
     }
     if (endsAt <= startsAt) throw new BadRequestException('End time must be after the start time.');
-    if (dto.isPublicPlace !== true) {
-      throw new UnprocessableEntityException('Activities must be at a public place.');
-    }
-    if (looksLikePrivatePlace(dto.title, dto.address, dto.locationLabel)) {
-      throw new UnprocessableEntityException('That looks like a private home — meetups must be at public venues.');
+    // Online activities have no physical venue, so the public-place rules don't apply.
+    if (!dto.isOnline) {
+      if (dto.isPublicPlace !== true) {
+        throw new UnprocessableEntityException('Activities must be at a public place.');
+      }
+      if (looksLikePrivatePlace(dto.title, dto.address, dto.locationLabel)) {
+        throw new UnprocessableEntityException('That looks like a private home — meetups must be at public venues.');
+      }
     }
     if (containsProhibitedContent(dto.title, dto.description, dto.address, dto.locationLabel)) {
       throw new UnprocessableEntityException('Activities can’t mention alcohol, drugs, or inappropriate content.');
@@ -93,7 +112,7 @@ export class EventsService {
     if (!activityTypeId) throw new BadRequestException('Unknown activity type.');
 
     const plan = await this.subscriptions.hostPlanForCreate(userId);
-    let priorityLevel: 'STANDARD' | 'EXPRESS' | 'PRIORITY' = plan.premiumPriority ? 'PRIORITY' : 'STANDARD';
+    let priorityLevel: 'STANDARD' | 'EXPRESS' | 'PRIORITY' = 'STANDARD';
     let expressFeePaid = false;
     if (dto.priorityLevel && dto.priorityLevel !== 'standard') {
       if (!dto.expressPaymentIntentId) throw new BadRequestException('Hosting an extra activity requires a successful payment.');
@@ -101,24 +120,25 @@ export class EventsService {
       expressFeePaid = true;
     }
 
-    // Free hosts get one activity per rolling week. Beyond that they must pay
-    // the one-time extra-activity fee ($0.99, or $2.99 for featured placement);
-    // active paid plans are treated as unlimited by the weekly check above.
+    // Each plan hosts 1 activity per its window (Free 3d / Bronze 2d / Silver 1d
+    // / Gold unlimited). Beyond that, hosting requires the one-time extra fee
+    // ($0.99, or $2.99 for featured placement).
     if (mustPayForExtra && !expressFeePaid && !ownsVenue) {
       throw new BadRequestException(
-        'You’ve used your free activity this week. Pay the one-time fee to host another, or upgrade to Pro for unlimited hosting.',
+        'You’ve used your free activity for now. Pay the one-time fee to host another, or upgrade your plan for more.',
       );
     }
 
     // Featured/pinned placement:
-    //  • paid subscribers (Pro pinnedUntil / Premium premiumPriority)
+    //  • the host's tier auto-pin allowance (Bronze 1/wk, Silver 3/wk, Gold ∞)
     //  • $2.99 "priority" extra always pins
-    //  • $0.99 "express" pins only on the host's free (first) activity of the
-    //    week — there the fee buys the pin, not the activity slot itself.
+    //  • $0.99 "express" pins only on the host's free activity of the window —
+    //    there the fee buys the pin, not the activity slot itself.
     const pinFromExpress = !mustPayForExtra && priorityLevel === 'EXPRESS';
     const pinnedUntil =
-      plan.pinnedUntil ??
-      (priorityLevel === 'PRIORITY' || pinFromExpress ? new Date(Date.now() + 24 * 60 * 60 * 1000) : undefined);
+      plan.autoPin || priorityLevel === 'PRIORITY' || pinFromExpress
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : undefined;
 
     const event = await this.prisma.event.create({
       data: {
@@ -132,10 +152,12 @@ export class EventsService {
         lat: dto.lat,
         lng: dto.lng,
         isPublicPlace: true,
+        isOnline: dto.isOnline ?? false,
+        meetingUrl: dto.isOnline ? dto.meetingUrl : null,
         startsAt,
         endsAt,
         maxAttendees: dto.maxAttendees,
-        minPlayers: Math.min(dto.minPlayers ?? 1, dto.maxAttendees),
+        minPlayers: Math.min(dto.minPlayers ?? 4, dto.maxAttendees),
         skillLevel: dto.skillLevel,
         price: dto.price ?? 0,
         travelersWelcome: dto.travelersWelcome ?? true,
@@ -165,6 +187,19 @@ export class EventsService {
         : `“${event.title}” will appear once an admin approves it.`,
       eventId: event.id,
     });
+
+    // Ping admins when an activity needs approval.
+    if (!event.approvedAt) {
+      await this.notifications.notifyAdmins(
+        {
+          type: 'admin',
+          title: 'Activity needs approval',
+          body: `“${event.title}” is awaiting review.`,
+          eventId: event.id,
+        },
+        userId,
+      );
+    }
 
     return serializeEvent(event, userId);
   }
@@ -213,7 +248,8 @@ export class EventsService {
     let events = await this.prisma.event.findMany({
       where,
       include: eventInclude,
-      orderBy: [{ pinnedUntil: 'desc' }, { startsAt: 'asc' }],
+      // Base order by date; pin/sponsor priority is applied (stably) after serialize.
+      orderBy: [{ startsAt: 'asc' }],
     });
 
     // 'weekend' refine to Sat/Sun
@@ -248,12 +284,17 @@ export class EventsService {
       );
     }
 
-    // Sponsored-venue activities pinned on top: Gold › Silver › Bronze. Stable
-    // sort preserves the prior ordering (date/distance) within each tier.
+    // Featured ordering (stable — preserves date/distance within each rank):
+    //   sponsored venues on top (Gold › Silver › Bronze), then pinned host-tier
+    //   activities, then everything else. A verified host gets a half-step boost so
+    //   their activity outranks an unverified host's at the same tier.
     const tierRank: Record<string, number> = { gold: 3, silver: 2, bronze: 1 };
-    serialized = serialized.sort(
-      (a: any, b: any) => (tierRank[b.sponsoredVenue?.tier] ?? 0) - (tierRank[a.sponsoredVenue?.tier] ?? 0),
-    );
+    const rankOf = (e: any): number => {
+      let r = e.sponsoredVenue ? 10 + (tierRank[e.sponsoredVenue.tier] ?? 0) : e.pinned ? 2 : 0;
+      if (e.host?.verified) r += 0.5;
+      return r;
+    };
+    serialized = serialized.sort((a: any, b: any) => rankOf(b) - rankOf(a));
 
     const total = serialized.length;
     const start = (query.page - 1) * query.limit;
@@ -379,7 +420,7 @@ export class EventsService {
     return this.detail(id, userId);
   }
 
-  async join(id: string, userId: string): Promise<{ event: unknown; message: string }> {
+  async join(id: string, userId: string, shareContactWithHostBusiness = false): Promise<{ event: unknown; message: string }> {
     await this.ensureActive(userId);
     const e = await this.loadOrThrow(id);
     if (e.status !== 'LIVE' || e.underReview || !e.approvedAt || new Date(e.endsAt) < new Date()) {
@@ -408,7 +449,18 @@ export class EventsService {
         userId,
         status: full ? 'WAITLISTED' : 'JOINED',
         waitlistPosition: full ? waitlistCount + 1 : null,
+        shareContactWithHostBusiness,
       },
+    });
+
+    // Let the host know someone joined (or waitlisted) their activity.
+    const joiner = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    await this.notifications.push({
+      userId: e.hostId,
+      type: 'join_request',
+      title: full ? 'New waitlist signup' : 'New attendee 🎉',
+      body: `${joiner?.name ?? 'Someone'} ${full ? 'joined the waitlist for' : 'joined'} “${e.title}”.`,
+      eventId: id,
     });
 
     const fresh = await this.loadOrThrow(id, userId);

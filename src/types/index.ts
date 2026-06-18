@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Shared domain types for Jmaâ.
+// Shared domain types for hudlgo.
 // These mirror the future REST API shapes — the mock API in src/api returns
 // exactly these structures.
 // ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ export type ActivityGroup = 'sport' | 'outdoor' | 'social';
 /** The feel of an activity: relaxed & social vs. active & competitive. */
 export type Vibe = 'chill' | 'active';
 
-/** What a user is on Jmaâ for — drives Discover personalization. */
+/** What a user is on hudlgo for — drives Discover personalization. */
 export type LookingFor = 'partners' | 'friends' | 'both';
 
 export type RsvpStatus = 'going' | 'waitlisted' | 'host';
@@ -41,8 +41,8 @@ export type Visibility = 'public' | 'invite';
 /** Account moderation state. New accounts are 'active' immediately (no gating). */
 export type UserStatus = 'active' | 'suspended' | 'banned';
 
-export type UserRole = 'user' | 'admin';
-export type HostPlan = 'free' | 'pro' | 'premium';
+export type UserRole = 'user' | 'admin' | 'business';
+export type HostPlan = 'free' | 'bronze' | 'silver' | 'gold';
 export type SubscriptionStatus = 'inactive' | 'active' | 'past_due' | 'canceled';
 export type PriorityLevel = 'standard' | 'express' | 'priority';
 export type SponsorshipTier = 'bronze' | 'silver' | 'gold';
@@ -62,7 +62,13 @@ export interface User {
   bio: string;
   city: string;
   activities: UserActivity[];
+  /** True once identity (selfie) verification is approved — shows a check mark. */
   verified: boolean;
+  /** Selfie-verification state for the owner's own account. */
+  verificationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  /** Admin-only: the submitted selfie + prompted pose (for review). */
+  verificationSelfieUrl?: string;
+  verificationPose?: string;
   rating: number; // 0–5 (legacy public review average)
   reviewCount: number;
   badges: string[];
@@ -94,6 +100,8 @@ export interface User {
   isPremiumUser?: boolean;
   premiumUntil?: string;
   creditAmountCents?: number;
+  /** Whether the user receives email mirrors of their in-app notifications. */
+  emailNotifications?: boolean;
   /** Set when this account owns a sponsored venue — switches to the business UI. */
   businessId?: string;
 }
@@ -104,6 +112,12 @@ export interface MyBusinessActivity {
   activityType: string;
   hostName: string;
   startsAt: string;
+  endsAt?: string;
+  going?: number;
+  capacity?: number;
+  price?: number;
+  status?: string;
+  locationLabel?: string;
   couponCode?: string;
 }
 
@@ -118,6 +132,7 @@ export interface MyBusiness {
     phone: string;
     contactEmail: string;
     status: string;
+    photos: string[];
   };
   sponsorship: {
     tier: SponsorshipTier;
@@ -129,6 +144,97 @@ export interface MyBusiness {
     monthlyPriceCents: number;
   } | null;
   activities: MyBusinessActivity[];
+}
+
+// ---- Business side (Foundation) -------------------------------------------
+export type BusinessRole = 'owner' | 'manager' | 'staff';
+
+/** A business organization the current user belongs to (business-mode context). */
+export interface BusinessOrg {
+  id: string;
+  name: string;
+  category: string;
+  legalName?: string;
+  rcNumber?: string;
+  iceNumber?: string;
+  description: string;
+  address: string;
+  lat?: number;
+  lng?: number;
+  contactEmail: string;
+  phone: string;
+  website?: string;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  status: string; // pending_verification | verified | rejected | suspended
+  verified: boolean;
+  role: BusinessRole;
+}
+
+export interface VenueCard {
+  id: string;
+  businessId: string | null;
+  name: string;
+  slug: string;
+  category: string;
+  address: string;
+  lat: number;
+  lng: number;
+  photos: string[];
+  status: string; // listed | claimed | verified
+  avgRating: number;
+  reviewCount: number;
+}
+
+export interface VenueReviewView {
+  id: string;
+  rating: number;
+  text: string;
+  authorName: string;
+  authorPhoto: string | null;
+  createdAt: string;
+}
+
+export interface VenueUpcomingEvent {
+  id: string;
+  title: string;
+  startsAt: string;
+  activityType: string;
+  hostName: string;
+}
+
+export interface VenueProfile extends VenueCard {
+  description: string;
+  amenities: string[];
+  hours: Record<string, string>;
+  phone: string | null;
+  website: string | null;
+  business: { id: string; name: string; verified: boolean; logoUrl: string | null } | null;
+  upcomingEvents: VenueUpcomingEvent[];
+  reviews: VenueReviewView[];
+}
+
+export interface AdminBusinessVerification {
+  id: string;
+  businessId: string;
+  businessName: string;
+  category: string;
+  contactEmail: string;
+  rcNumber?: string;
+  iceNumber?: string;
+  documentUrls: string[];
+  submittedAt: string;
+}
+
+export interface AdminVenueClaim {
+  id: string;
+  venueId: string;
+  venueName: string;
+  venueAddress: string;
+  businessId: string;
+  businessName: string;
+  evidence: string[];
+  submittedAt: string;
 }
 
 export interface Activity {
@@ -215,6 +321,10 @@ export interface JmaaEvent {
   createdAt?: string;
   /** Hidden pending admin review (auto-set when reported). */
   underReview?: boolean;
+  /** Online (virtual) activity — no physical venue. */
+  isOnline?: boolean;
+  /** Meeting link for online activities; only revealed to members. */
+  meetingUrl?: string;
 }
 
 export interface Conditions {
@@ -247,6 +357,11 @@ export interface ChatThread {
   messages: ChatMessage[];
   /** Group chats auto-expire 24h after the activity ends. */
   expiresAt?: string;
+  /** Activity start/end (group chats) — drives the date shown + read-only state. */
+  startsAt?: string;
+  endsAt?: string;
+  /** True once the activity has ended — no new messages allowed. */
+  ended?: boolean;
 }
 
 /** Private rating (host↔attendee). Never shown publicly; feeds trust score. */
@@ -280,6 +395,9 @@ export interface Review {
   rating: number;
   text: string;
   createdAt: string;
+  /** Embedded reviewer info (so reviews render for real backend users too). */
+  fromName?: string;
+  fromAvatar?: string;
 }
 
 export interface AppNotification {
@@ -318,6 +436,11 @@ export interface EventFilters {
   search?: string;
   /** Named intent collection key (see lib/collections). */
   collection?: string;
+  /** Sort order. 'distance' needs lat/lng (used by the "Near me" option). */
+  sort?: 'soonest' | 'distance';
+  /** Viewer coordinates for distance sort — overrides the city scope. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface CreateEventInput {
@@ -342,6 +465,10 @@ export interface CreateEventInput {
   priorityLevel?: PriorityLevel;
   expressPaymentIntentId?: string;
   businessId?: string;
+  /** Online (virtual) activity — no physical venue. */
+  isOnline?: boolean;
+  /** Optional meeting link for online activities. */
+  meetingUrl?: string;
 }
 
 export interface SponsoredVenue {
@@ -378,6 +505,8 @@ export interface RatingInput {
   activityId: string;
   score: number;
   type: Rating['type'];
+  /** Optional written review — shown publicly on the recipient's profile. */
+  comment?: string;
 }
 
 export type ReportCategory = 'fake_activity' | 'inappropriate' | 'no_show_host' | 'suspicious_user' | 'other';
@@ -409,6 +538,8 @@ export interface EnrichedEvent extends JmaaEvent {
   activity: Activity;
   host: User;
   spot?: Spot;
+  /** Public profiles of attendees (excludes the host); supplied by the backend. */
+  attendeeUsers?: User[];
   goingCount: number;
   waitlistCount: number;
   openSpots: number;
@@ -416,6 +547,8 @@ export interface EnrichedEvent extends JmaaEvent {
   resolvedLocation: EventLocation;
   /** Set when hosted at a sponsored business venue — pinned & badged in the feed. */
   sponsoredVenue?: { name: string; tier: SponsorshipTier };
+  /** Currently featured (pin still active) — shows a "Featured" badge + floats up the feed. */
+  pinned?: boolean;
   /** True when the viewer hasn't joined — exact address/pin are hidden. */
   locationHidden?: boolean;
   /** Coarse area shown before joining (host's areaLabel or nearest city). */

@@ -1,4 +1,4 @@
-// Jmaâ — Prisma schema (MySQL 8). Mirrors the frontend TypeScript types.
+// hudlgo — Prisma schema (MySQL 8). Mirrors the frontend TypeScript types.
 // Canonical naming: a meetup is an `Event`; the catalog entry is an `ActivityType`.
 
 generator client {
@@ -16,6 +16,9 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  // A venue/business account (owns a sponsored Business). Cannot use consumer
+  // features (joining activities, rating people, identity verification).
+  BUSINESS
 }
 
 enum UserStatus {
@@ -92,8 +95,16 @@ enum ModerationActionType {
 
 enum PlanType {
   FREE
-  PRO
-  PREMIUM
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum VerificationStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum SubStatus {
@@ -110,10 +121,45 @@ enum PriorityLevel {
 }
 
 enum BusinessStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum BusinessMemberRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum BusinessMemberStatus {
+  INVITED
+  ACTIVE
+}
+
+enum VenueStatus {
+  LISTED
+  CLAIMED
+  VERIFIED
+}
+
+enum VenueClaimStatus {
   PENDING
   APPROVED
   REJECTED
-  SUSPENDED
+}
+
+enum BizVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VenueReviewStatus {
+  VISIBLE
+  FLAGGED
+  REMOVED
 }
 
 enum SponsorshipTier {
@@ -148,6 +194,7 @@ model User {
   gender       Gender?
   phone        String?
   lookingFor   LookingFor @default(BOTH)
+  emailNotifications Boolean @default(true)
   role         Role       @default(USER)
   status       UserStatus @default(ACTIVE)
   suspendedUntil DateTime?
@@ -155,7 +202,11 @@ model User {
   reliabilityAdj Decimal  @default(0) @db.Decimal(4, 2)
   flagCount    Int        @default(0)
   verified     Boolean    @default(false)
-  stripeCustomerId String? @unique
+  verificationStatus    VerificationStatus @default(NONE)
+  verificationSelfieUrl String?
+  verificationPose      String?
+  verifiedAt            DateTime?
+  paddleCustomerId String? @unique
   subscriptionPlan PlanType @default(FREE)
   subscriptionStatus SubStatus @default(INACTIVE)
   subscriptionEndsAt DateTime?
@@ -183,6 +234,9 @@ model User {
   userActivities   UserActivity[]
   subscriptionEvents SubscriptionEvent[]
   businessesOwned  Business[]         @relation("BusinessOwner")
+  businessMemberships BusinessMember[]
+  venueReviews     VenueReview[]
+  feedback         Feedback[]         @relation("UserFeedback")
 
   @@index([status])
   @@index([trustScore])
@@ -234,6 +288,10 @@ model Event {
   lat              Float
   lng              Float
   isPublicPlace    Boolean          @default(true)
+  isOnline         Boolean          @default(false)
+  meetingUrl       String?
+  venueId          String?
+  venue            Venue?           @relation(fields: [venueId], references: [id], onDelete: SetNull)
   startsAt         DateTime
   endsAt           DateTime
   maxAttendees     Int
@@ -270,6 +328,7 @@ model Event {
   @@index([activityTypeId])
   @@index([priorityLevel, createdAt])
   @@index([pinnedUntil])
+  @@index([venueId])
 }
 
 model Attendance {
@@ -280,6 +339,8 @@ model Attendance {
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   status           AttendanceStatus @default(JOINED)
   waitlistPosition Int?
+  // §7 privacy: attendee opt-in to share their contact with the hosting business.
+  shareContactWithHostBusiness Boolean @default(false)
   joinedAt         DateTime         @default(now())
 
   @@unique([eventId, userId])
@@ -317,6 +378,7 @@ model Rating {
   toUserId   String
   toUser     User       @relation("RatingsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
   score      Int
+  comment    String?    @db.Text // optional written review — public on the recipient's profile
   type       RatingType
   createdAt  DateTime   @default(now())
 
@@ -406,6 +468,26 @@ model Notification {
   @@index([userId, read])
 }
 
+enum FeedbackCategory {
+  IDEA
+  BUG
+  PRAISE
+  OTHER
+}
+
+model Feedback {
+  id        String           @id @default(cuid())
+  userId    String?
+  user      User?            @relation("UserFeedback", fields: [userId], references: [id], onDelete: SetNull)
+  category  FeedbackCategory @default(OTHER)
+  message   String           @db.Text
+  path      String?
+  resolved  Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([resolved, createdAt])
+}
+
 model RefreshToken {
   id        String   @id @default(cuid())
   userId    String
@@ -421,24 +503,142 @@ model RefreshToken {
 model Business {
   id               String         @id @default(cuid())
   name             String
+  legalName        String?
+  rcNumber         String?        // Registre de Commerce
+  iceNumber        String?        // Identifiant Commun de l'Entreprise
+  category         String         @default("other")
   description      String?        @db.Text
   address          String
   lat              Float?
   lng              Float?
   contactEmail     String
   phone            String?
-  stripeCustomerId String?        @unique
-  status           BusinessStatus @default(PENDING)
+  website          String?
+  logoUrl          String?
+  coverUrl         String?
+  photos           Json?          // string[] of venue photo URLs
+  paddleCustomerId String?        @unique
+  status           BusinessStatus @default(PENDING_VERIFICATION)
+  verifiedAt       DateTime?
+  defaultVenueId   String?
+  businessTosAcceptedAt DateTime? // Business ToS / advertising-policy acceptance
   ownerId          String?
   owner            User?          @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  sponsorships Sponsorship[]
-  venueUsages  ActivityVenue[]
+  sponsorships  Sponsorship[]
+  venueUsages   ActivityVenue[]
+  members       BusinessMember[]
+  venues        Venue[]
+  verifications BusinessVerification[]
+  claims        VenueClaim[]
 
   @@index([status])
   @@index([ownerId])
+}
+
+// People who belong to a Business, with a role. Auth stays person-based (User);
+// belonging to a business unlocks "business mode" for that user.
+model BusinessMember {
+  id           String               @id @default(cuid())
+  businessId   String
+  business     Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         BusinessMemberRole   @default(STAFF)
+  invitedEmail String?
+  status       BusinessMemberStatus @default(INVITED)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([businessId, userId])
+  @@index([businessId, userId])
+  @@index([userId])
+}
+
+// RC/ICE + document submission reviewed by an admin to verify a business.
+model BusinessVerification {
+  id           String                @id @default(cuid())
+  businessId   String
+  business     Business              @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  rcNumber     String?
+  iceNumber    String?
+  documentUrls Json                  // string[] of uploaded document URLs
+  status       BizVerificationStatus @default(PENDING)
+  reviewedById String?
+  note         String?               @db.Text
+  createdAt    DateTime              @default(now())
+
+  @@index([status])
+  @@index([businessId])
+}
+
+// A first-class venue. Unclaimed venues can exist (businessId null) and be claimed.
+model Venue {
+  id          String      @id @default(cuid())
+  businessId  String?
+  business    Business?   @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  name        String
+  slug        String      @unique
+  category    String      @default("other")
+  description String?     @db.Text
+  address     String
+  lat         Float
+  lng         Float
+  photos      Json?       // string[]
+  amenities   Json?       // string[]
+  hours       Json?       // { [day]: string }
+  phone       String?
+  website     String?
+  status      VenueStatus @default(LISTED)
+  avgRating   Decimal     @default(0) @db.Decimal(3, 2)
+  reviewCount Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  events  Event[]
+  claims  VenueClaim[]
+  reviews VenueReview[]
+
+  @@index([slug])
+  @@index([businessId])
+  @@index([category])
+}
+
+model VenueClaim {
+  id           String           @id @default(cuid())
+  venueId      String
+  venue        Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  businessId   String
+  business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  evidence     Json             // string[] of evidence/document URLs
+  status       VenueClaimStatus @default(PENDING)
+  reviewedById String?
+  note         String?          @db.Text
+  createdAt    DateTime         @default(now())
+
+  @@index([status])
+  @@index([venueId])
+  @@index([businessId])
+}
+
+// Reviews of a venue — separate from person Rating/trustScore. Only users who
+// attended an event held at the venue may review (anti-fake measure).
+model VenueReview {
+  id              String            @id @default(cuid())
+  venueId         String
+  venue           Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating          Int
+  text            String?           @db.Text
+  status          VenueReviewStatus @default(VISIBLE)
+  attendedEventId String?
+  createdAt       DateTime          @default(now())
+
+  @@unique([venueId, userId])
+  @@index([venueId, status])
 }
 
 model Sponsorship {
@@ -449,7 +649,7 @@ model Sponsorship {
   monthlyPriceCents       Int
   startDate               DateTime
   endDate                 DateTime?
-  stripeSubscriptionId    String?           @unique
+  paddleSubscriptionId    String?           @unique
   status                  SponsorshipStatus @default(ACTIVE)
   activitiesUsedThisMonth Int               @default(0)
   lastResetDate           DateTime          @default(now())
@@ -483,7 +683,7 @@ model SubscriptionEvent {
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   eventType     String
-  stripeEventId String   @unique
+  paddleEventId String   @unique
   data          Json
   createdAt     DateTime @default(now())
 

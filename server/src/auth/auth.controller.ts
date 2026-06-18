@@ -16,7 +16,7 @@ import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshDto, SignupDto } from './dto/auth.dto';
+import { BusinessSignupDto, LoginDto, RefreshDto, SignupDto } from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 import { GoogleProfile } from './strategies/google.strategy';
@@ -32,6 +32,12 @@ export class AuthController {
   @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: 5 * 1024 * 1024 } }))
   signup(@Body() dto: SignupDto, @UploadedFile() photo?: Express.Multer.File) {
     return this.auth.signup(dto, photo);
+  }
+
+  @Public()
+  @Post('business/signup')
+  signupBusiness(@Body() dto: BusinessSignupDto) {
+    return this.auth.signupBusiness(dto);
   }
 
   @Public()

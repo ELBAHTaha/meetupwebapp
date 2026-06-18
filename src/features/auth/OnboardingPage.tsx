@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, Heart, MapPin, Plane, Users } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { DevelopedBy } from '@/components/DevelopedBy';
 import { ActivityIcon } from '@/components/ActivityIcon';
 import { CITIES, SEED_ACTIVITIES } from '@/api/catalog';
 import { updateProfile } from '@/api';
@@ -148,6 +149,8 @@ export function OnboardingPage() {
             {isLast ? t('onboarding.finish') : t('onboarding.next')}
           </Button>
         </div>
+
+        <DevelopedBy className="mt-8" />
       </div>
     </div>
   );

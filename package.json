@@ -1,5 +1,5 @@
 {
-  "name": "jmaa",
+  "name": "hudlgo",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,8 +10,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@stripe/react-stripe-js": "^3.10.0",
-    "@stripe/stripe-js": "^5.10.0",
+    "@paddle/paddle-js": "^1.6.4",
     "date-fns": "^4.1.0",
     "i18next": "^25.0.0",
     "leaflet": "^1.9.4",

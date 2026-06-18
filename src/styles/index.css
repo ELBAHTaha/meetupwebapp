@@ -3,8 +3,48 @@
 @tailwind utilities;
 
 @layer base {
+  /* Color tokens as RGB channel triplets so Tailwind's /opacity modifiers work.
+     Light is the default; .dark on <html> swaps the whole palette. */
   :root {
     color-scheme: light;
+    --c-bg: 251 248 242;
+    --c-surface: 255 255 255;
+    --c-surface-sunk: 243 237 226;
+    --c-border: 231 223 210;
+    --c-ink: 43 38 32;
+    --c-ink-soft: 111 101 87;
+    --c-ink-faint: 156 147 132;
+    --c-clay: 194 80 46;
+    --c-clay-press: 168 64 31;
+    --c-clay-soft: 241 226 219;
+    --c-olive: 95 99 66;
+    --c-olive-soft: 232 232 220;
+    --c-saffron: 216 154 52;
+    --c-saffron-soft: 246 233 207;
+    --c-majorelle: 46 90 135;
+    --c-majorelle-soft: 220 230 239;
+    --shimmer-hi: 255 255 255;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --c-bg: 23 20 16;
+    --c-surface: 32 28 23;
+    --c-surface-sunk: 44 39 32;
+    --c-border: 58 51 42;
+    --c-ink: 242 237 228;
+    --c-ink-soft: 183 173 157;
+    --c-ink-faint: 138 128 114;
+    --c-clay: 209 99 64;
+    --c-clay-press: 224 120 86;
+    --c-clay-soft: 58 36 28;
+    --c-olive: 138 145 100;
+    --c-olive-soft: 45 47 35;
+    --c-saffron: 224 165 70;
+    --c-saffron-soft: 58 46 24;
+    --c-majorelle: 110 150 196;
+    --c-majorelle-soft: 30 42 56;
+    --shimmer-hi: 255 255 255;
   }
 
   html,
@@ -38,7 +78,7 @@
   /* Calm, warm focus ring in the primary accent */
   :focus-visible {
     @apply outline-none ring-2 ring-clay/60 ring-offset-2;
-    --tw-ring-offset-color: #fbf8f2;
+    --tw-ring-offset-color: rgb(var(--c-bg));
   }
 }
 
@@ -47,12 +87,20 @@
     @apply relative overflow-hidden rounded-card bg-surface-sunk;
     background-image: linear-gradient(
       90deg,
-      rgba(231, 223, 210, 0) 0px,
-      rgba(255, 255, 255, 0.55) 40px,
-      rgba(231, 223, 210, 0) 80px
+      rgb(var(--shimmer-hi) / 0) 0px,
+      rgb(var(--shimmer-hi) / 0.45) 40px,
+      rgb(var(--shimmer-hi) / 0) 80px
     );
     background-size: 800px 100%;
     @apply animate-shimmer;
+  }
+  .dark .skeleton {
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--shimmer-hi) / 0) 0px,
+      rgb(var(--shimmer-hi) / 0.06) 40px,
+      rgb(var(--shimmer-hi) / 0) 80px
+    );
   }
 
   /* Thin Moroccan geometric motif — a single quiet accent line */
@@ -60,8 +108,8 @@
     height: 8px;
     background-image: repeating-linear-gradient(
       135deg,
-      #e7dfd2 0,
-      #e7dfd2 1px,
+      rgb(var(--c-border)) 0,
+      rgb(var(--c-border)) 1px,
       transparent 1px,
       transparent 7px
     );
@@ -73,6 +121,9 @@
 .leaflet-container {
   font-family: inherit;
   background: #ece6da;
+}
+.dark .leaflet-container {
+  background: #23201b;
 }
 .leaflet-container a {
   color: #2e5a87;

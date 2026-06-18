@@ -1,39 +1,44 @@
 /** @type {import('tailwindcss').Config} */
+// Colors are driven by CSS variables (RGB channel triplets) defined in
+// src/styles/index.css under :root (light) and .dark (dark) so the whole
+// palette — including /opacity modifiers — flips with the theme.
+const v = (name) => `rgb(var(${name}) / <alpha-value>)`;
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
         // --- Canvas & surfaces (neutrals do ~85% of the work) ---
-        bg: '#FBF8F2', // warm bone page background
-        surface: '#FFFFFF', // cards, sheets
-        'surface-sunk': '#F3EDE2', // wells, skeletons
-        border: '#E7DFD2', // hairline dividers
+        bg: v('--c-bg'), // warm bone page background
+        surface: v('--c-surface'), // cards, sheets
+        'surface-sunk': v('--c-surface-sunk'), // wells, skeletons
+        border: v('--c-border'), // hairline dividers
 
         // --- Text ---
         ink: {
-          DEFAULT: '#2B2620', // primary, warm near-black
-          soft: '#6F6557', // secondary
-          faint: '#9C9384', // tertiary / meta
+          DEFAULT: v('--c-ink'), // primary, warm near-black
+          soft: v('--c-ink-soft'), // secondary
+          faint: v('--c-ink-faint'), // tertiary / meta
         },
 
         // --- Accents (used sparingly) ---
         clay: {
-          DEFAULT: '#C2502E', // PRIMARY accent
-          press: '#A8401F', // pressed/hover
-          soft: '#F1E2DB', // tint background
+          DEFAULT: v('--c-clay'), // PRIMARY accent
+          press: v('--c-clay-press'), // pressed/hover
+          soft: v('--c-clay-soft'), // tint background
         },
         olive: {
-          DEFAULT: '#5F6342', // secondary
-          soft: '#E8E8DC',
+          DEFAULT: v('--c-olive'), // secondary
+          soft: v('--c-olive-soft'),
         },
         saffron: {
-          DEFAULT: '#D89A34', // highlights, ratings
-          soft: '#F6E9CF',
+          DEFAULT: v('--c-saffron'), // highlights, ratings
+          soft: v('--c-saffron-soft'),
         },
         majorelle: {
-          DEFAULT: '#2E5A87', // rare jewel accent / links
-          soft: '#DCE6EF',
+          DEFAULT: v('--c-majorelle'), // rare jewel accent / links
+          soft: v('--c-majorelle-soft'),
         },
       },
       fontFamily: {

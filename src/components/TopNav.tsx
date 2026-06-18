@@ -1,31 +1,41 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bell, CalendarRange, Compass, Crown, LogOut, MapPin, MessageCircle, Plus } from 'lucide-react';
+import { Bell, CalendarRange, Compass, Crown, LogOut, MessageCircle, Moon, Plus, ShieldAlert, Sun } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useSession } from '@/store/session';
+import { useTheme } from '@/store/theme';
+import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { toast } from '@/store/toast';
 import { Avatar } from './Avatar';
+import { LanguageToggle } from './LanguageToggle';
 
-const links = [
+const baseLinks: { to: string; icon: LucideIcon; key: string }[] = [
   { to: '/discover', icon: Compass, key: 'discover' },
-  { to: '/map', icon: MapPin, key: 'map' },
   { to: '/chat', icon: MessageCircle, key: 'chat' },
   { to: '/my-events', icon: CalendarRange, key: 'myEvents' },
   { to: '/pricing', icon: Crown, key: 'plans' },
-] as const;
+];
+
+const adminLink = { to: '/admin', icon: ShieldAlert, key: 'admin' };
 
 export function TopNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useSession((s) => s.user);
   const logout = useSession((s) => s.logout);
+  const theme = useTheme((s) => s.theme);
+  const toggleTheme = useTheme((s) => s.toggle);
+  const unread = useUnreadNotifications();
+
+  const links = user?.role === 'admin' ? [...baseLinks, adminLink] : baseLinks;
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-border bg-bg/85 backdrop-blur-md md:block">
       <div className="mx-auto flex h-16 max-w-shell items-center gap-6 px-6">
         <button onClick={() => navigate('/discover')} className="flex items-center gap-2 cursor-pointer">
-          <img src="/jmaa.svg" alt="Jmaâ" className="h-8 w-8" />
-          <span className="font-display text-h1 font-medium tracking-tight">Jmaâ</span>
+          <img src="/jmaa.svg" alt="hudlgo" className="h-8 w-8" />
+          <span className="font-display text-h1 font-medium tracking-tight">hudlgo</span>
         </button>
 
         <nav className="ml-4 flex items-center gap-1">
@@ -54,12 +64,25 @@ export function TopNav() {
             <Plus className="h-4 w-4" strokeWidth={2} />
             {t('nav.create')}
           </button>
+          <LanguageToggle />
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle dark mode"
+            className="grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-surface-sunk cursor-pointer"
+          >
+            {theme === 'dark' ? <Sun className="h-5 w-5" strokeWidth={1.6} /> : <Moon className="h-5 w-5" strokeWidth={1.6} />}
+          </button>
           <button
             onClick={() => navigate('/notifications')}
             aria-label={t('notifications.title')}
-            className="grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-surface-sunk cursor-pointer"
+            className="relative grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-surface-sunk cursor-pointer"
           >
             <Bell className="h-5 w-5" strokeWidth={1.6} />
+            {unread > 0 && (
+              <span className="absolute right-1 top-1 grid min-h-[16px] min-w-[16px] place-items-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
           </button>
           <button onClick={() => navigate('/profile')} className="cursor-pointer" aria-label={t('nav.profile')}>
             {user && <Avatar src={user.avatar} name={user.name} size="sm" verified={user.verified} />}

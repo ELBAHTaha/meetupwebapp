@@ -39,8 +39,8 @@ async function bootstrap(): Promise<void> {
 
   // Swagger / OpenAPI
   const swagger = new DocumentBuilder()
-    .setTitle('Jmaâ API')
-    .setDescription('Backend for the Jmaâ Morocco activity/meetup app.')
+    .setTitle('hudlgo API')
+    .setDescription('Backend for the hudlgo Morocco activity/meetup app.')
     .setVersion('0.1.0')
     .addBearerAuth()
     .build();
@@ -49,7 +49,7 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>('port', 4000);
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`Jmaâ API on http://localhost:${port}  ·  docs at /docs`);
+  console.log(`hudlgo API on http://localhost:${port}  ·  docs at /docs`);
 }
 
 void bootstrap();

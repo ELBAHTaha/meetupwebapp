@@ -40,6 +40,7 @@ export function BusinessCreateActivityPage() {
   const [time, setTime] = useState('18:00');
   const [duration, setDuration] = useState(90);
   const [capacity, setCapacity] = useState(8);
+  const [minCapacity, setMinCapacity] = useState(2);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +51,7 @@ export function BusinessCreateActivityPage() {
     if (!biz.data) return;
     if (!activityId) return toast('Pick an activity type', 'error');
     if (!timeValid) return toast('Start time must be more than 4 hours from now', 'error');
+    if (minCapacity > capacity) return toast('Min capacity can’t be more than the max capacity', 'error');
     setSaving(true);
     try {
       const b = biz.data.business;
@@ -64,7 +66,7 @@ export function BusinessCreateActivityPage() {
         startsAt: new Date(startsAtMs).toISOString(),
         durationMins: duration,
         capacity,
-        minPlayers: 1,
+        minPlayers: minCapacity,
         skillLevel: 'any',
         price: 0,
         description: description || `Hosted at ${b.name}.`,
@@ -134,14 +136,17 @@ export function BusinessCreateActivityPage() {
         </div>
         {!timeValid && <p className="-mt-1 text-[12px] font-medium text-clay">Pick a time more than 4 hours from now.</p>}
 
+        <Input label="Duration (min)" type="number" min={30} step={15} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Duration (min)" type="number" min={30} step={15} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-          <Input label="Capacity" type="number" min={2} max={12} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
+          <Input label="Min capacity" type="number" min={1} max={capacity} value={minCapacity} onChange={(e) => setMinCapacity(Number(e.target.value))} />
+          <Input label="Max capacity" type="number" min={2} max={12} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
         </div>
+        {minCapacity > capacity && <p className="-mt-1 text-[12px] font-medium text-clay">Min capacity can’t exceed max capacity.</p>}
 
         <Textarea label="Description" placeholder="What's the meetup about?" value={description} onChange={(e) => setDescription(e.target.value)} />
 
-        <Button size="lg" fullWidth loading={saving} disabled={!activityId || !timeValid} onClick={submit}>
+        <Button size="lg" fullWidth loading={saving} disabled={!activityId || !timeValid || minCapacity > capacity} onClick={submit}>
           Create activity
         </Button>
       </div>

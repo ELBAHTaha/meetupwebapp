@@ -19,6 +19,11 @@ export class AdminController {
     return this.admin.overview();
   }
 
+  @Get('analytics')
+  analytics() {
+    return this.admin.analytics();
+  }
+
   @Get('flagged-users')
   flagged() {
     return this.admin.flaggedUsers();
@@ -42,6 +47,46 @@ export class AdminController {
   @Post('businesses/:id/approve')
   approveBusiness(@Param('id') id: string) {
     return this.admin.approveBusiness(id);
+  }
+
+  @Get('business-verifications')
+  businessVerifications() {
+    return this.admin.businessVerifications();
+  }
+
+  @Post('business-verifications/:id/approve')
+  approveBusinessVerification(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.admin.approveBusinessVerification(id, user.id);
+  }
+
+  @Post('business-verifications/:id/reject')
+  rejectBusinessVerification(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ModerateNoteDto) {
+    return this.admin.rejectBusinessVerification(id, user.id, dto.note);
+  }
+
+  @Get('venue-claims')
+  venueClaims() {
+    return this.admin.venueClaims();
+  }
+
+  @Post('venue-claims/:id/approve')
+  approveVenueClaim(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.admin.approveVenueClaim(id, user.id);
+  }
+
+  @Post('venue-claims/:id/reject')
+  rejectVenueClaim(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ModerateNoteDto) {
+    return this.admin.rejectVenueClaim(id, user.id, dto.note);
+  }
+
+  @Post('venue-reviews/:id/flag')
+  flagVenueReview(@Param('id') id: string) {
+    return this.admin.flagVenueReview(id);
+  }
+
+  @Post('venue-reviews/:id/remove')
+  removeVenueReview(@Param('id') id: string) {
+    return this.admin.removeVenueReview(id);
   }
 
   @Get('express-payments')
@@ -72,6 +117,21 @@ export class AdminController {
   @Post('activities/:id/restore')
   restoreActivity(@Param('id') id: string) {
     return this.admin.restoreActivity(id);
+  }
+
+  @Get('verifications')
+  verifications() {
+    return this.admin.pendingVerifications();
+  }
+
+  @Post('verifications/:id/approve')
+  approveVerification(@Param('id') id: string) {
+    return this.admin.approveVerification(id);
+  }
+
+  @Post('verifications/:id/reject')
+  rejectVerification(@Param('id') id: string) {
+    return this.admin.rejectVerification(id);
   }
 
   @Patch('reports/:id/resolve')

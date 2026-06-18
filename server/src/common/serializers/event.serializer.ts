@@ -77,11 +77,15 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
   // exact address + pin. Everyone else gets a general area and fuzzed coords.
   const joined =
     viewerStatus === 'host' || viewerStatus === 'joined' || viewerStatus === 'waitlisted' || viewerStatus === 'past';
-  const generalArea = e.areaLabel ?? nearestCityName({ lat: e.lat, lng: e.lng }) ?? 'Nearby area';
+  const generalArea = e.isOnline
+    ? 'Online'
+    : e.areaLabel ?? nearestCityName({ lat: e.lat, lng: e.lng }) ?? 'Nearby area';
   const fuzz = (n: number) => Math.round(n * 100) / 100; // ~1km grid
-  const resolvedLocation = joined
-    ? { lat: e.lat, lng: e.lng, label: e.locationLabel }
-    : { lat: fuzz(e.lat), lng: fuzz(e.lng), label: generalArea };
+  const resolvedLocation = e.isOnline
+    ? { lat: e.lat, lng: e.lng, label: 'Online' }
+    : joined
+      ? { lat: e.lat, lng: e.lng, label: e.locationLabel }
+      : { lat: fuzz(e.lat), lng: fuzz(e.lng), label: generalArea };
 
   const venue = e.venueUsages[0];
   const sponsoredVenue =
@@ -101,6 +105,8 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     resolvedLocation,
     generalArea,
     locationHidden: !joined,
+    isOnline: e.isOnline,
+    meetingUrl: e.isOnline && joined ? e.meetingUrl ?? undefined : undefined,
     startsAt: e.startsAt.toISOString(),
     endsAt: e.endsAt.toISOString(),
     durationMins,
@@ -122,6 +128,8 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     expressFeePaid: e.expressFeePaid,
     approvedAt: e.approvedAt ? e.approvedAt.toISOString() : undefined,
     pinnedUntil: e.pinnedUntil ? e.pinnedUntil.toISOString() : undefined,
+    // Currently featured (pin still active) — drives the "Featured" badge + feed order.
+    pinned: e.pinnedUntil ? new Date(e.pinnedUntil) > new Date() : false,
     sponsoredVenue,
     attendees,
     // Enriched relations (so the frontend doesn't need a separate user store).

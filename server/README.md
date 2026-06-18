@@ -1,6 +1,6 @@
-# Jmaâ — Backend (NestJS + Prisma + MySQL)
+# hudlgo — Backend (NestJS + Prisma + MySQL)
 
-REST API for the Jmaâ Morocco activity/meetup app. Matches the frontend's data shapes and the
+REST API for the hudlgo Morocco activity/meetup app. Matches the frontend's data shapes and the
 product rules: **no SMS / no approval gating** (accounts active on signup, events live on
 creation), 18+ only, public places only, join/waitlist + team minimums, group chats that expire
 24h after an event, **private** ratings → trust score → flagging, reporting, and a **reactive**
@@ -100,6 +100,18 @@ POST   /reports
 GET    /admin/overview         GET /admin/flagged-users      GET /admin/reports
 PATCH  /admin/reports/:id/resolve
 POST   /admin/users/:id/warn   /suspend   /ban
+
+# Business side (Foundation)
+POST   /businesses             GET /me/businesses            GET /businesses/:id
+PATCH  /businesses/:id         POST /businesses/:id/verification
+POST   /businesses/:id/members/invite   POST /businesses/members/accept
+PATCH  /businesses/:id/members/:userId  DELETE /businesses/:id/members/:userId
+GET    /venues?category=&q=&lat=&lng=&radiusKm=   GET /venues/:id
+POST   /venues                 PATCH /venues/:id
+POST   /venues/:id/claim       POST /venues/:id/reviews
+GET    /admin/business-verifications   POST …/:id/approve   …/:id/reject
+GET    /admin/venue-claims             POST …/:id/approve   …/:id/reject
+POST   /admin/venue-reviews/:id/flag   …/:id/remove
 GET    /health
 ```
 
@@ -116,6 +128,15 @@ GET    /health
   ≥2 distinct events, or ≥2 reports.
 - **Scheduler:** every 5 min completes ended events + sends rating prompts; hourly sends
   day-before reminders and clears lapsed suspensions; nightly prunes very old chat messages.
+- **Business (Foundation):** a `Business` is an org; people belong via `BusinessMember`
+  roles (`OWNER ⊇ MANAGER ⊇ STAFF`, enforced by `BusinessRoleGuard`). Creating a business
+  makes the caller OWNER (`PENDING_VERIFICATION`); admin approves the RC/ICE submission to
+  `VERIFIED`. Venues are first-class; unclaimed (`LISTED`) venues can be claimed by a
+  business (admin-approved → `CLAIMED`/`VERIFIED`). Venue reviews require an attendance at an
+  event held at that venue.
+- **§7 attendee-data privacy (CNDP):** businesses receive **no** attendee PII — there is no
+  business-facing attendee endpoint, and `Attendance.shareContactWithHostBusiness` (set via
+  the join opt-in, default false) gates any future contact sharing.
 
 ---
 

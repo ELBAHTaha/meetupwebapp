@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateRatingDto {
   @ApiProperty()
@@ -13,4 +13,10 @@ export class CreateRatingDto {
   @Min(1)
   @Max(5)
   score!: number;
+
+  @ApiPropertyOptional({ description: 'Optional written review — shown publicly on the recipient’s profile.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  comment?: string;
 }

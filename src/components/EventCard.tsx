@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Lock, MapPin, Plane, Star } from 'lucide-react';
+import { BadgeCheck, Check, Lock, MapPin, Plane, Sparkles, Star, Video } from 'lucide-react';
 import type { EnrichedEvent } from '@/types';
 import { cn } from '@/lib/cn';
 import { ActivityIcon } from './ActivityIcon';
@@ -69,8 +69,28 @@ export function EventCard({ event, fromCity }: Props) {
                 Sponsored venue
               </span>
             )}
+            {event.pinned && !event.sponsoredVenue && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-saffron px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm"
+                title={t('event.featured')}
+              >
+                <Sparkles className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
+                {t('event.featured')}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
+            {event.viewerStatus === 'joined' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-olive px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+                <Check className="h-3 w-3" strokeWidth={2.6} aria-hidden="true" />
+                {t('event.joinedTag')}
+              </span>
+            )}
+            {event.viewerStatus === 'waitlisted' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-saffron px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+                {t('event.waitlistedTag')}
+              </span>
+            )}
             {!event.approvedAt && (
               <span className="inline-flex items-center gap-1 rounded-full bg-saffron px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
                 {t('event.pendingTag')}
@@ -94,13 +114,15 @@ export function EventCard({ event, fromCity }: Props) {
       <div className="p-3.5">
         <h3 className="line-clamp-2 font-display text-h3 font-medium leading-snug text-ink">{event.title}</h3>
         <div className="mt-1.5 flex items-center gap-1.5 text-meta text-ink-soft">
-          {event.locationHidden ? (
+          {event.isOnline ? (
+            <Video className="h-3.5 w-3.5 shrink-0 text-majorelle" strokeWidth={1.6} />
+          ) : event.locationHidden ? (
             <Lock className="h-3.5 w-3.5 shrink-0 text-ink-faint" strokeWidth={1.6} />
           ) : (
             <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
           )}
-          <span className="truncate">{event.resolvedLocation.label}</span>
-          {dist !== null && <span className="shrink-0 text-ink-faint">· {formatDistance(dist)}</span>}
+          <span className="truncate">{event.isOnline ? 'Online' : event.resolvedLocation.label}</span>
+          {!event.isOnline && dist !== null && <span className="shrink-0 text-ink-faint">· {formatDistance(dist)}</span>}
         </div>
 
         <div className="mt-2 flex items-center gap-2 text-meta text-ink-soft">

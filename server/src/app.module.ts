@@ -9,6 +9,7 @@ import { TrustModule } from './trust/trust.module';
 import { StorageModule } from './storage/storage.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ActivityTypesModule } from './activity-types/activity-types.module';
@@ -17,8 +18,10 @@ import { ChatModule } from './chat/chat.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { MonetizationModule } from './monetization/monetization.module';
+import { BusinessModule } from './business/business.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -37,6 +40,7 @@ import { HealthController } from './health/health.controller';
     StorageModule,
     GeocodingModule,
     NotificationsModule,
+    MailModule,
     // Features
     AuthModule,
     UsersModule,
@@ -46,7 +50,11 @@ import { HealthController } from './health/health.controller';
     RatingsModule,
     ReportsModule,
     AdminModule,
+    FeedbackModule,
     MonetizationModule,
+    // After MonetizationModule so its static /businesses/* routes register
+    // before BusinessModule's GET /businesses/:id (Express matches in order).
+    BusinessModule,
     SchedulerModule,
   ],
   controllers: [HealthController],

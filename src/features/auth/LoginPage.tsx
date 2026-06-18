@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle, Bike, Coffee, Dices, Lock, Mail, Mountain, Wand2, Waves } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { DevelopedBy } from '@/components/DevelopedBy';
 import { Input } from '@/components/Field';
 import { login } from '@/api';
 import { useSession } from '@/store/session';
@@ -60,8 +61,8 @@ export function LoginPage() {
         {/* Top brand area */}
         <div className="mx-auto w-full max-w-app px-6 pt-12 animate-fade-in">
           <div className="flex items-center gap-2.5">
-            <img src="/jmaa.svg" alt="Jmaâ" className="h-9 w-9" />
-            <span className="font-display text-h1 font-medium tracking-tight text-white">Jmaâ</span>
+            <img src="/jmaa.svg" alt="hudlgo" className="h-9 w-9" />
+            <span className="font-display text-h1 font-medium tracking-tight text-white">hudlgo</span>
           </div>
 
           <div className="mt-8">
@@ -150,6 +151,8 @@ export function LoginPage() {
                 {t('auth.signup')}
               </Link>
             </p>
+
+            <DevelopedBy className="mt-6" />
           </div>
         </div>
 

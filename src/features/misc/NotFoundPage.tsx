@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Compass } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { DevelopedBy } from '@/components/DevelopedBy';
 
 export function NotFoundPage() {
   const { t } = useTranslation();
@@ -16,6 +17,8 @@ export function NotFoundPage() {
       <Button className="mt-6" size="lg" leftIcon={<Compass className="h-5 w-5" strokeWidth={1.6} />} onClick={() => navigate('/discover')}>
         {t('common.goHome')}
       </Button>
+
+      <DevelopedBy className="mt-10" />
     </div>
   );
 }

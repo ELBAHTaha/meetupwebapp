@@ -61,7 +61,7 @@ const days = (n: number, hour = 18) => {
 const hours = (n: number) => new Date(Date.now() + n * 3_600_000);
 
 async function main() {
-  console.log('Seeding Jmaâ…');
+  console.log('Seeding hudlgo…');
 
   // ---- Idempotent reset ----
   // The seed creates events/ratings/etc. fresh on every run, so clear that
@@ -75,6 +75,10 @@ async function main() {
   await prisma.attendance.deleteMany();
   await prisma.chatThread.deleteMany();
   await prisma.event.deleteMany();
+  // Business-side demo data is recreated each run too (venue slugs are unique).
+  await prisma.venueReview.deleteMany();
+  await prisma.venue.deleteMany(); // cascades venueClaim
+  await prisma.business.deleteMany(); // cascades members, verifications, sponsorships
 
   // ---- Activity catalog ----
   const types: Record<string, string> = {};
@@ -132,11 +136,26 @@ async function main() {
     uid[u.key] = created.id;
   }
 
+  // Demo host-tier subscriptions so pricing/analytics show real Bronze/Silver/Gold tiers.
+  const demoPlans: [string, 'BRONZE' | 'SILVER' | 'GOLD'][] = [
+    ['u1', 'GOLD'],
+    ['u3', 'SILVER'],
+    ['u5', 'BRONZE'],
+  ];
+  for (const [key, plan] of demoPlans) {
+    if (!uid[key]) continue;
+    await prisma.user.update({
+      where: { id: uid[key] },
+      data: { subscriptionPlan: plan, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: new Date(Date.now() + 30 * 86_400_000) },
+    });
+  }
+
   // Helper to create an event (+ chat thread) with attendees.
   async function event(opts: {
     id: string; host: string; type: string; title: string; city: keyof typeof CITY; label: string; address: string;
     startsAt: Date; durationMin: number; max: number; min?: number; price?: number; gender?: 'ANY' | 'WOMEN' | 'MEN';
     desc?: string; attendees?: string[]; status?: 'LIVE' | 'COMPLETED'; chatMessages?: { from: string; text: string; at: Date }[];
+    online?: boolean; meetingUrl?: string;
   }) {
     const c = CITY[opts.city];
     const endsAt = new Date(opts.startsAt.getTime() + opts.durationMin * 60000);
@@ -151,6 +170,8 @@ async function main() {
         lat: c.lat + (Math.random() - 0.5) * 0.04,
         lng: c.lng + (Math.random() - 0.5) * 0.04,
         isPublicPlace: true,
+        isOnline: opts.online ?? false,
+        meetingUrl: opts.online ? opts.meetingUrl ?? 'https://meet.google.com/jmaa-demo' : null,
         startsAt: opts.startsAt,
         endsAt,
         maxAttendees: opts.max,
@@ -175,7 +196,7 @@ async function main() {
   }
 
   // ---- Live future events ----
-  await event({ id: 'e1', host: 'u1', type: 'padel', title: 'Friday night padel', city: 'casablanca', label: 'Padel Club Anfa', address: 'Bd de l’Océan Atlantique, Anfa', startsAt: days(2, 20), durationMin: 90, max: 4, min: 4, price: 120, desc: 'Doubles, courts booked. Cold drinks after.', attendees: ['u5', 'u6'] });
+  const e1 = await event({ id: 'e1', host: 'u1', type: 'padel', title: 'Friday night padel', city: 'casablanca', label: 'Padel Club Anfa', address: 'Bd de l’Océan Atlantique, Anfa', startsAt: days(2, 20), durationMin: 90, max: 4, min: 4, price: 120, desc: 'Doubles, courts booked. Cold drinks after.', attendees: ['u5', 'u6'] });
   await event({ id: 'e2', host: 'u3', type: 'surfing', title: 'Dawn patrol at Anchor Point', city: 'taghazout', label: 'Anchor Point', address: 'Taghazout Bay', startsAt: days(1, 7), durationMin: 120, max: 8, desc: 'Clean lines forecast. All levels who can paddle out.', attendees: ['u9', 'u4', 'u7'] });
   await event({ id: 'e3', host: 'u5', type: 'football', title: '5-a-side Sunday league', city: 'rabat', label: 'Stade Moulay Abdellah', address: 'Av. Al Mansour Addahbi', startsAt: days(3, 18), durationMin: 60, max: 10, min: 8, price: 40, desc: 'Two teams, friendly but competitive.', attendees: ['u1', 'u6', 'u8', 'u7'] });
   await event({ id: 'e4', host: 'u2', type: 'yoga', title: 'Sunrise vinyasa in the Menara', city: 'marrakech', label: 'Menara Gardens', address: 'Av. de la Menara', startsAt: days(1, 7), durationMin: 75, max: 15, price: 80, desc: 'Gentle flow as the sun comes up. Tea after.', gender: 'WOMEN', attendees: ['u4', 'u6'] });
@@ -184,6 +205,7 @@ async function main() {
   await event({ id: 'e7', host: 'u6', type: 'coffee', title: 'Saturday coffee & good conversation', city: 'casablanca', label: 'Café Bahia, Maârif', address: 'Rue Jean Jaurès, Maârif', startsAt: days(2, 11), durationMin: 90, max: 8, desc: 'No agenda — just nice people and good coffee.', attendees: ['u1', 'u4'] });
   await event({ id: 'e8', host: 'u1', type: 'language', title: 'Darija ↔ English language exchange', city: 'casablanca', label: 'Café Bahia, Maârif', address: 'Rue Jean Jaurès, Maârif', startsAt: days(3, 19), durationMin: 90, max: 12, min: 4, desc: 'Swap a language, make a friend.', attendees: ['u4'] });
   await event({ id: 'e9', host: 'u5', type: 'boardgames', title: 'Board game night — Catan & chill', city: 'rabat', label: 'Boardwalk Café', address: 'Av. Fal Ould Oumeir', startsAt: days(4, 20), durationMin: 150, max: 10, min: 4, price: 30, desc: 'Settlers, Codenames, Uno for the brave.', attendees: ['u6'] });
+  await event({ id: 'e-online', host: 'u2', type: 'language', title: 'Online Darija practice (video call)', city: 'casablanca', label: 'Online', address: 'Online', startsAt: days(2, 19), durationMin: 60, max: 12, min: 4, desc: 'Practice Darija over a video call — beginners welcome. Link shared with people who join.', attendees: ['u4', 'u6'], online: true });
   await event({ id: 'e10', host: 'u2', type: 'dinner', title: 'Foodie meetup — street eats crawl', city: 'marrakech', label: 'Jemaa el-Fna', address: 'Place Jemaa el-Fna', startsAt: days(5, 20), durationMin: 150, max: 8, min: 3, price: 150, desc: 'We eat our way across the medina.', attendees: ['u4', 'u10'] });
   await event({ id: 'e11', host: 'u10', type: 'quad', title: 'Sunset quad through the Palmeraie', city: 'marrakech', label: 'Palmeraie', address: 'Circuit de la Palmeraie', startsAt: days(6, 17), durationMin: 120, max: 8, min: 2, price: 350, attendees: ['u4', 'u9'] });
   await event({ id: 'e12', host: 'u4', type: 'photowalk', title: 'Essaouira photo walk — blue & white', city: 'essaouira', label: 'Essaouira ramparts', address: 'Skala de la Ville', startsAt: days(6, 16), durationMin: 120, max: 10, attendees: ['u9', 'u7'] });
@@ -250,8 +272,89 @@ async function main() {
     ],
   });
 
+  // ---- Business side (Foundation) ----
+  // A verified business with a claimed venue + two unclaimed (LISTED) venues,
+  // plus a dedicated business-owner login.
+  const cc = CITY.casablanca;
+  const bizOwner = await prisma.user.upsert({
+    where: { email: 'venue@jmaa.app' },
+    update: {},
+    create: {
+      email: 'venue@jmaa.app',
+      passwordHash: pw,
+      name: 'Anfa Padel Club',
+      bio: 'We run Casablanca’s friendliest padel courts.',
+      neighborhood: 'Anfa',
+      zip: '20050',
+      lat: cc.lat,
+      lng: cc.lng,
+      gender: 'OTHER',
+      lookingFor: 'ACTIVITIES',
+      role: 'BUSINESS',
+      status: 'ACTIVE',
+      verified: false,
+    },
+  });
+
+  const business = await prisma.business.create({
+    data: {
+      name: 'Anfa Padel Club',
+      legalName: 'Anfa Padel Club SARL',
+      category: 'sports_venue',
+      description: 'Indoor and outdoor padel courts, café and pro shop on the Casablanca corniche.',
+      address: 'Bd de l’Océan Atlantique, Anfa, Casablanca',
+      lat: cc.lat,
+      lng: cc.lng,
+      contactEmail: 'venue@jmaa.app',
+      phone: '+212 522 000 000',
+      website: 'https://anfapadel.example',
+      status: 'VERIFIED',
+      verifiedAt: new Date(),
+      businessTosAcceptedAt: new Date(),
+      ownerId: bizOwner.id,
+      members: { create: { userId: bizOwner.id, role: 'OWNER', status: 'ACTIVE' } },
+    },
+  });
+
+  const claimedVenue = await prisma.venue.create({
+    data: {
+      businessId: business.id,
+      name: 'Padel Club Anfa',
+      slug: 'padel-club-anfa',
+      category: 'sports_venue',
+      description: 'Six glass courts, floodlit, with a café overlooking the Atlantic.',
+      address: 'Bd de l’Océan Atlantique, Anfa, Casablanca',
+      lat: cc.lat,
+      lng: cc.lng,
+      amenities: ['Parking', 'Café', 'Showers', 'Pro shop'],
+      hours: { mon: '08:00–23:00', sat: '07:00–00:00', sun: '07:00–22:00' },
+      phone: '+212 522 000 000',
+      website: 'https://anfapadel.example',
+      status: 'VERIFIED',
+    },
+  });
+
+  // Attach the existing padel event to the claimed venue + a review from an attendee.
+  await prisma.event.update({ where: { id: e1 }, data: { venueId: claimedVenue.id } });
+  await prisma.venueReview.create({
+    data: { venueId: claimedVenue.id, userId: uid.u5, rating: 5, text: 'Great courts and a friendly crowd.', attendedEventId: e1 },
+  });
+  {
+    const agg = await prisma.venueReview.aggregate({ where: { venueId: claimedVenue.id, status: 'VISIBLE' }, _avg: { rating: true }, _count: { _all: true } });
+    await prisma.venue.update({ where: { id: claimedVenue.id }, data: { avgRating: agg._avg.rating ?? 0, reviewCount: agg._count._all } });
+  }
+
+  // Two unclaimed LISTED venues that businesses can later claim.
+  await prisma.venue.createMany({
+    data: [
+      { name: 'Boardwalk Café', slug: 'boardwalk-cafe-rabat', category: 'cafe', address: 'Av. Fal Ould Oumeir, Agdal, Rabat', lat: CITY.rabat.lat, lng: CITY.rabat.lng, status: 'LISTED' },
+      { name: 'Menara Gardens Pavilion', slug: 'menara-gardens-pavilion', category: 'outdoor', address: 'Av. de la Menara, Marrakech', lat: CITY.marrakech.lat, lng: CITY.marrakech.lng, status: 'LISTED' },
+    ],
+  });
+
   console.log('\nSeed complete.');
   console.log('Admin login →  email: you@jmaa.app   password: password123');
+  console.log('Business owner →  email: venue@jmaa.app   password: password123');
   console.log('All seed users share the password: password123\n');
 }
 

@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, MapPin, MessageCircle, Plus, User } from 'lucide-react';
+import { Compass, MessageCircle, Plus, User } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -13,7 +13,6 @@ interface Tab {
 
 const tabs: Tab[] = [
   { to: '/discover', icon: Compass, key: 'discover' },
-  { to: '/map', icon: MapPin, key: 'map' },
   { to: '/create', icon: Plus, key: 'create', center: true },
   { to: '/chat', icon: MessageCircle, key: 'chat' },
   { to: '/profile', icon: User, key: 'profile' },

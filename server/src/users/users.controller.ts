@@ -4,15 +4,18 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { UpdateMeDto } from './dto/update-user.dto';
+import { SubmitVerificationDto, UpdateMeDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Public } from '../common/decorators/public.decorator';
+import { ConsumerGuard } from '../common/guards/consumer.guard';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('users')
@@ -44,6 +47,15 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: 5 * 1024 * 1024 } }))
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateMeDto, @UploadedFile() photo?: Express.Multer.File) {
     return this.users.updateMe(user.id, dto, photo);
+  }
+
+  // Identity (selfie) verification is a consumer/dating feature — not for businesses.
+  @Post('me/verification')
+  @UseGuards(ConsumerGuard)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('selfie', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  submitVerification(@CurrentUser() user: AuthUser, @Body() dto: SubmitVerificationDto, @UploadedFile() selfie?: Express.Multer.File) {
+    return this.users.submitVerification(user.id, selfie, dto.pose);
   }
 
   @Public()

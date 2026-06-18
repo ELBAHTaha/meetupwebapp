@@ -20,19 +20,28 @@ export interface AppConfig {
     ttl: number;
     limit: number;
   };
-  stripe: {
-    secretKey?: string;
+  paddle: {
+    apiKey?: string;
     webhookSecret?: string;
+    environment: string;
     currency: string;
-    proPriceId?: string;
-    premiumPriceId?: string;
-    attendeePremiumPriceId?: string;
+    // Host membership tiers (Bronze/Silver/Gold).
+    hostBronzePriceId?: string;
+    hostSilverPriceId?: string;
+    hostGoldPriceId?: string;
+    // Business venue sponsorship tiers (separate from host tiers).
     bronzePriceId?: string;
     silverPriceId?: string;
     goldPriceId?: string;
+    expressPriceId?: string;
+    priorityPriceId?: string;
   };
   turnstile: {
     secretKey?: string;
+  };
+  mail: {
+    apiKey?: string;
+    from: string;
   };
 }
 
@@ -58,18 +67,25 @@ export default (): AppConfig => ({
     ttl: parseInt(process.env.THROTTLE_TTL ?? '60000', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),
   },
-  stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY || undefined,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || undefined,
-    currency: process.env.STRIPE_CURRENCY ?? 'usd',
-    proPriceId: process.env.STRIPE_PRO_PRICE_ID || undefined,
-    premiumPriceId: process.env.STRIPE_PREMIUM_PRICE_ID || undefined,
-    attendeePremiumPriceId: process.env.STRIPE_ATTENDEE_PREMIUM_PRICE_ID || undefined,
-    bronzePriceId: process.env.STRIPE_BRONZE_PRICE_ID || undefined,
-    silverPriceId: process.env.STRIPE_SILVER_PRICE_ID || undefined,
-    goldPriceId: process.env.STRIPE_GOLD_PRICE_ID || undefined,
+  paddle: {
+    apiKey: process.env.PADDLE_API_KEY || undefined,
+    webhookSecret: process.env.PADDLE_WEBHOOK_SECRET || undefined,
+    environment: process.env.PADDLE_ENVIRONMENT ?? 'sandbox',
+    currency: process.env.PADDLE_CURRENCY ?? 'usd',
+    hostBronzePriceId: process.env.PADDLE_HOST_BRONZE_PRICE_ID || undefined,
+    hostSilverPriceId: process.env.PADDLE_HOST_SILVER_PRICE_ID || undefined,
+    hostGoldPriceId: process.env.PADDLE_HOST_GOLD_PRICE_ID || undefined,
+    bronzePriceId: process.env.PADDLE_BRONZE_PRICE_ID || undefined,
+    silverPriceId: process.env.PADDLE_SILVER_PRICE_ID || undefined,
+    goldPriceId: process.env.PADDLE_GOLD_PRICE_ID || undefined,
+    expressPriceId: process.env.PADDLE_EXPRESS_PRICE_ID || undefined,
+    priorityPriceId: process.env.PADDLE_PRIORITY_PRICE_ID || undefined,
   },
   turnstile: {
     secretKey: process.env.TURNSTILE_SECRET_KEY || undefined,
+  },
+  mail: {
+    apiKey: process.env.RESEND_API_KEY || undefined,
+    from: process.env.MAIL_FROM ?? 'hudlgo <onboarding@resend.dev>',
   },
 });

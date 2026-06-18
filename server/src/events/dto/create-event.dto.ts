@@ -60,6 +60,17 @@ export class CreateEventDto {
   @IsBoolean()
   isPublicPlace!: boolean;
 
+  @ApiPropertyOptional({ description: 'Online (virtual) activity — no physical venue.' })
+  @IsOptional()
+  @IsBoolean()
+  isOnline?: boolean;
+
+  @ApiPropertyOptional({ description: 'Meeting link for online activities (revealed after joining).' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  meetingUrl?: string;
+
   @ApiProperty()
   @IsDateString()
   startsAt!: string;
@@ -68,18 +79,18 @@ export class CreateEventDto {
   @IsDateString()
   endsAt!: string;
 
-  @ApiProperty({ minimum: 2, maximum: 12 })
+  @ApiProperty({ minimum: 4, maximum: 12 })
   @Type(() => Number)
   @IsNumber()
-  @Min(2)
+  @Min(4)
   @Max(12)
   maxAttendees!: number;
 
-  @ApiPropertyOptional({ default: 1 })
+  @ApiPropertyOptional({ default: 4, minimum: 4 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(1)
+  @Min(4)
   minPlayers?: number;
 
   @ApiPropertyOptional({ enum: ['any', 'beginner', 'intermediate', 'advanced'] })

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Settings, ShieldAlert } from 'lucide-react';
+import { Pencil, Settings, ShieldAlert, Store } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { ProfileView } from './ProfileView';
@@ -31,10 +31,18 @@ export function ProfilePage() {
           </p>
         </div>
       )}
-      <div className="px-5 pt-3 md:px-0">
+      <div className="space-y-2 px-5 pt-3 md:px-0">
         <Button variant="outline" fullWidth leftIcon={<Pencil className="h-4 w-4" />} onClick={() => navigate('/profile/edit')}>
           {t('profile.edit')}
         </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" fullWidth leftIcon={<Store className="h-4 w-4" />} onClick={() => navigate('/venues')}>
+            {t('venues.browse')}
+          </Button>
+          <Button variant="outline" fullWidth leftIcon={<Store className="h-4 w-4" />} onClick={() => navigate('/business/onboard')}>
+            {t('venues.forBusinesses')}
+          </Button>
+        </div>
       </div>
       <ProfileView user={user} self />
     </div>

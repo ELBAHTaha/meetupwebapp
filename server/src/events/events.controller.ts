@@ -1,14 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { QueryEventsDto } from './dto/query-events.dto';
-import { StartEventDto } from './dto/event-action.dto';
+import { JoinEventDto, StartEventDto } from './dto/event-action.dto';
 import { OptionalAuth } from '../common/decorators/optional-auth.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import { ConsumerGuard } from '../common/guards/consumer.guard';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
+
+// Anti-abuse cap on activity creation: strict in production, relaxed in dev so
+// testing isn't blocked. (NODE_ENV is set to 'production' in Docker/prod.)
+const CREATE_THROTTLE =
+  process.env.NODE_ENV === 'production'
+    ? { limit: 5, ttl: 3_600_000 }
+    : { limit: 200, ttl: 3_600_000 };
 
 @ApiTags('events')
 @Controller('events')
@@ -40,9 +48,9 @@ export class EventsController {
     return this.events.attendees(id);
   }
 
-  // Anti-abuse: cap activity creation at 5 per hour per user.
+  // Anti-abuse: cap activity creation per hour per user (see CREATE_THROTTLE).
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 5, ttl: 3_600_000 } })
+  @Throttle({ default: CREATE_THROTTLE })
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateEventDto) {
     return this.events.create(user.id, dto);
@@ -72,13 +80,16 @@ export class EventsController {
     return this.events.start(id, user.id, dto.hostSpotNote);
   }
 
+  // Joining/leaving is consumer behaviour — business accounts host, not attend.
   @ApiBearerAuth()
+  @UseGuards(ConsumerGuard)
   @Post(':id/join')
-  join(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.events.join(id, user.id);
+  join(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: JoinEventDto) {
+    return this.events.join(id, user.id, dto?.shareContactWithHostBusiness ?? false);
   }
 
   @ApiBearerAuth()
+  @UseGuards(ConsumerGuard)
   @Delete(':id/join')
   leave(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.events.leave(id, user.id);
