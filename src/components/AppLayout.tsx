@@ -18,7 +18,8 @@ export function AppLayout() {
       <BottomTabBar />
       <FeedbackButton />
       <Toaster />
-      <DevPanel />
+      {/* Dev-only lifecycle controls — never shipped in production builds. */}
+      {import.meta.env.DEV && <DevPanel />}
     </div>
   );
 }
