@@ -1,0 +1,26 @@
+# Caddy config for running BEHIND an external TLS-terminating proxy (Traefik).
+# Traefik owns :80/:443 on the host, terminates HTTPS, and forwards plain HTTP
+# to this container. So Caddy must NOT attempt its own certificates — it serves
+# HTTP only and routes by Host header. (Used via docker-compose.traefik.yml.)
+
+{
+	# No automatic HTTPS — TLS is handled upstream by Traefik.
+	auto_https off
+}
+
+# --- Frontend SPA (apex + www) ---
+http://{$DOMAIN}, http://www.{$DOMAIN} {
+	encode gzip zstd
+	root * /srv
+	try_files {path} /index.html
+	file_server
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+}
+
+# --- API → NestJS container on the compose network ---
+http://api.{$DOMAIN} {
+	reverse_proxy api:4000
+}

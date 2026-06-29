@@ -1,0 +1,26 @@
+# ============================================================================
+# Overlay for VPSes that already run a Traefik reverse proxy (e.g. alongside
+# n8n). Instead of our Caddy taking ports 80/443, the existing host-network
+# Traefik terminates TLS (its `letsencrypt` resolver) and forwards plain HTTP
+# to our web container, which serves the SPA and proxies the API.
+#
+# Run WITH the base file:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml \
+#     --env-file .env.prod up -d --build
+#
+# Requires DNS A records for ${DOMAIN}, www.${DOMAIN} and api.${DOMAIN} to point
+# at this VPS (Traefik needs them resolving to issue Let's Encrypt certs).
+# ============================================================================
+services:
+  web:
+    # Traefik owns 80/443 on the host — do not publish them from this container.
+    ports: !reset []
+    # Replace the auto-HTTPS Caddyfile with the HTTP-only one (TLS = Traefik).
+    volumes:
+      - ./Caddyfile.proxy:/etc/caddy/Caddyfile:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hudlgo.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`) || Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.hudlgo.entrypoints=websecure"
+      - "traefik.http.routers.hudlgo.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hudlgo.loadbalancer.server.port=80"
