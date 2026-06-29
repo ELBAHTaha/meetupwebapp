@@ -11,17 +11,20 @@ import type {
   CreateEventInput,
   EnrichedEvent,
   EventFilters,
+  CheckoutSession,
   JmaaEvent,
   LoginInput,
   MyBusiness,
   Rating,
   RatingInput,
+  ReferralSummary,
   Report,
   ReportInput,
   Review,
   SignupInput,
   Spot,
   SponsoredVenue,
+  SponsorshipTier,
   User,
   VenueCard,
   VenueProfile,
@@ -102,6 +105,12 @@ export async function getCurrentUser(): Promise<User> {
   const me = findUser(db.currentUserId)!;
   refreshSuspension(me);
   return delay(me, 120);
+}
+
+export async function getReferral(): Promise<ReferralSummary> {
+  const code = 'DEMO123';
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return delay({ code, link: `${origin}/signup?ref=${code}`, joinedCount: 0, rewardDays: 7 }, 120);
 }
 
 export async function updateProfile(patch: Partial<User>): Promise<User> {
@@ -294,13 +303,15 @@ const FOUR_HOURS = 4 * 60 * 60 * 1000;
 // Host membership tiers — windows, weekly pin quotas and prices mirror the backend.
 // Free 1/3d · Bronze 1/2d · Silver 1/day · Gold unlimited.
 const HOSTING_WINDOW_MS: Record<string, number | null> = {
-  free: 3 * 86_400_000,
+  free: 1 * 86_400_000,
+  pro: null,
+  // legacy host tiers
   bronze: 2 * 86_400_000,
   silver: 1 * 86_400_000,
   gold: null,
 };
-const PIN_QUOTA: Record<string, number> = { free: 0, bronze: 1, silver: 3, gold: Infinity };
-const HOST_PRICE_CENTS: Record<string, number> = { free: 0, bronze: 299, silver: 599, gold: 999 };
+const PIN_QUOTA: Record<string, number> = { free: 0, pro: 7, bronze: 1, silver: 3, gold: Infinity };
+const HOST_PRICE_CENTS: Record<string, number> = { free: 0, pro: 4900, bronze: 2990, silver: 5990, gold: 9990 };
 const PIN_WINDOW_MS = 7 * 86_400_000;
 
 function planOf(userId: string): string {
@@ -450,22 +461,24 @@ export async function getSubscriptionSummary(): Promise<{
   );
 }
 
-export async function createSubscriptionCheckout(planType: 'bronze' | 'silver' | 'gold'): Promise<{ url: string }> {
+// The mock has no Paddle, so every checkout is a simulation: the effect is
+// applied at checkout-create time and the returned session is marked `simulated`
+// (settleCheckout then resolves without opening an overlay). `ref` is the order
+// id an extra-activity purchase carries back to createEvent.
+function simulatedSession(amountCents: number): CheckoutSession {
+  return { ref: nextId('ord-'), amountCents, simulated: true };
+}
+
+export async function createSubscriptionCheckout(planType: 'pro'): Promise<CheckoutSession> {
   const me = findUser(db.currentUserId)!;
   me.subscriptionPlan = planType;
   me.subscriptionStatus = 'active';
   saveDb();
-  return delay({ url: '/pricing?success=true&simulated=true' }, 250);
+  return delay(simulatedSession(4900), 200);
 }
 
-export async function createPremiumUserCheckout(): Promise<{ url: string }> {
-  const me = findUser(db.currentUserId)!;
-  me.isPremiumUser = true;
-  return delay({ url: '/pricing?mockPremium=true' }, 250);
-}
-
-export async function createExpressPaymentIntent(priorityLevel: 'express' | 'priority'): Promise<{ clientSecret: string; amountCents: number; transactionId?: string }> {
-  return delay({ clientSecret: `mock_secret_${priorityLevel}`, amountCents: priorityLevel === 'express' ? 990 : 2990 }, 180);
+export async function createExpressPaymentIntent(priorityLevel: 'express' | 'priority'): Promise<CheckoutSession> {
+  return delay(simulatedSession(priorityLevel === 'express' ? 990 : 1990), 180);
 }
 
 export async function listSponsoredVenues(): Promise<SponsoredVenue[]> {
@@ -485,8 +498,17 @@ export async function registerBusiness(input: {
   return delay({ id: nextId('biz-'), ...input }, 250);
 }
 
-export async function createSponsorshipCheckout(_businessId: string, tier: 'bronze' | 'silver' | 'gold'): Promise<{ url: string }> {
-  return delay({ url: `/business?mockTier=${tier}` }, 250);
+const SPONSOR_MONTHLY_MAD: Record<SponsorshipTier, number> = { starter: 199, bronze: 490, silver: 990, gold: 1990 };
+const INTERVAL_MONTHS: Record<'monthly' | 'quarterly' | 'annual', number> = { monthly: 1, quarterly: 3, annual: 12 };
+const INTERVAL_DISCOUNT: Record<'monthly' | 'quarterly' | 'annual', number> = { monthly: 0, quarterly: 0.1, annual: 0.15 };
+
+export async function createSponsorshipCheckout(
+  _businessId: string,
+  tier: SponsorshipTier,
+  interval: 'monthly' | 'quarterly' | 'annual' = 'monthly',
+): Promise<CheckoutSession> {
+  const amountMad = Math.round(SPONSOR_MONTHLY_MAD[tier] * INTERVAL_MONTHS[interval] * (1 - INTERVAL_DISCOUNT[interval]));
+  return delay(simulatedSession(amountMad * 100), 220);
 }
 
 let MOCK_BUSINESS: MyBusiness = {
@@ -1013,7 +1035,7 @@ export interface AdminAnalytics {
   growth: { newUsers7d: number; newUsers30d: number; newActivities7d: number; joins7d: number; messages7d: number };
   engagement: { avgTrust: number; avgAttendeesPerActivity: number; activeHosts: number };
   moderation: { openReports: number; resolvedReports: number; flaggedUsers: number; underReview: number; pendingApproval: number; suspended: number; banned: number };
-  monetization: { hostBronze: number; hostSilver: number; hostGold: number; paidExtras: number; mrrCents: number; businessTiers: { bronze: number; silver: number; gold: number } };
+  monetization: { hostPro: number; paidExtras: number; mrrCents: number; businessTiers: { starter: number; bronze: number; silver: number; gold: number } };
   activityStatus: { live: number; completed: number; cancelled: number };
   topActivities: NamedCount[];
   topCities: NamedCount[];
@@ -1051,17 +1073,18 @@ export async function adminAnalytics(): Promise<AdminAnalytics> {
   const cancelled = ev.filter((e) => e.lifecycle === 'cancelled').length;
   const attendances = ev.reduce((n, e) => n + e.attendees.length, 0);
 
-  const hostBronze = us.filter((u) => u.subscriptionPlan === 'bronze').length;
-  const hostSilver = us.filter((u) => u.subscriptionPlan === 'silver').length;
-  const hostGold = us.filter((u) => u.subscriptionPlan === 'gold').length;
+  const hostPro = us.filter((u) => u.subscriptionPlan === 'pro').length;
+  // Legacy host tiers still counted toward subscriber totals.
+  const hostLegacy = us.filter((u) => ['bronze', 'silver', 'gold'].includes(u.subscriptionPlan ?? '')).length;
   const paidExtras = ev.filter((e) => e.expressFeePaid).length;
 
-  const tierOf = (t: 'bronze' | 'silver' | 'gold') => MOCK_SPONSORED_VENUES.filter((v) => v.tier === t).length;
+  const tierOf = (t: SponsorshipTier) => MOCK_SPONSORED_VENUES.filter((v) => v.tier === t).length;
+  const starter = tierOf('starter');
   const bronze = tierOf('bronze');
   const silver = tierOf('silver');
   const gold = tierOf('gold');
   const mrrCents =
-    hostBronze * 299 + hostSilver * 599 + hostGold * 999 + bronze * 4900 + silver * 9900 + gold * 19900;
+    hostPro * 4900 + starter * 19900 + bronze * 49000 + silver * 99000 + gold * 199000;
 
   const activityCounts = new Map<string, number>();
   const cityCounts = new Map<string, number>();
@@ -1082,7 +1105,7 @@ export async function adminAnalytics(): Promise<AdminAnalytics> {
         liveActivities: live,
         businesses: MOCK_SPONSORED_VENUES.length,
         approvedBusinesses: MOCK_SPONSORED_VENUES.length,
-        subscribers: hostBronze + hostSilver + hostGold,
+        subscribers: hostPro + hostLegacy,
         attendances,
       },
       growth: {
@@ -1107,12 +1130,10 @@ export async function adminAnalytics(): Promise<AdminAnalytics> {
         banned: us.filter((u) => u.status === 'banned').length,
       },
       monetization: {
-        hostBronze,
-        hostSilver,
-        hostGold,
+        hostPro,
         paidExtras,
         mrrCents,
-        businessTiers: { bronze, silver, gold },
+        businessTiers: { starter, bronze, silver, gold },
       },
       activityStatus: { live, completed, cancelled },
       topActivities: topList(activityCounts),

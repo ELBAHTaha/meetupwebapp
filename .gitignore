@@ -5,3 +5,12 @@ dist-ssr
 .vite
 .DS_Store
 *.log
+
+# Local env files with secrets — never commit these (.example files are tracked).
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# Archives / local build artifacts — never commit (too large for GitHub).
+*.zip

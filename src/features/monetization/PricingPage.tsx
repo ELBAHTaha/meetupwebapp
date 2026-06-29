@@ -1,58 +1,53 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Check, Crown, Zap } from 'lucide-react';
+import { Building2, Check, Crown } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { Tag } from '@/components/Chip';
 import { useAsync } from '@/hooks/useAsync';
 import { createSubscriptionCheckout, getSubscriptionSummary } from '@/api';
+import { settleCheckout } from '@/lib/paddle';
 import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
 
-type Tier = 'bronze' | 'silver' | 'gold';
+type Tier = 'pro';
 
 const hostPlans = [
   {
     id: 'free',
     name: 'Free',
     price: 'Free',
-    sub: '1 activity every 3 days',
-    points: ['1 free activity every 3 days', '9.90 MAD per extra activity (29.90 MAD featured)', 'Join unlimited activities'],
-  },
-  {
-    id: 'bronze',
-    name: 'Bronze',
-    price: '29.90 MAD',
-    sub: '1 activity every 2 days',
-    points: ['Host 1 activity every 2 days', '1 pinned activity per week', 'Join unlimited activities'],
-  },
-  {
-    id: 'silver',
-    name: 'Silver',
-    price: '59.90 MAD',
     sub: '1 activity every day',
-    popular: true,
-    points: ['Host 1 activity every day', '3 pinned activities per week', 'Priority visibility'],
+    points: ['1 free activity every day', '19.90 MAD per extra activity (pinned to the top)', 'Join unlimited activities'],
   },
   {
-    id: 'gold',
-    name: 'Gold',
-    price: '99.90 MAD',
+    id: 'pro',
+    name: 'Pro Host',
+    price: '49 MAD',
     sub: 'Unlimited hosting',
-    points: ['Unlimited activities', 'Unlimited pins — always featured', 'Top placement in the feed'],
+    popular: true,
+    points: ['Host unlimited activities', '7 pinned activities per week', 'Priority visibility & top placement'],
   },
 ] as const;
 
 export function PricingPage() {
   const navigate = useNavigate();
   const summary = useAsync(() => getSubscriptionSummary(), []);
+  const [busy, setBusy] = useState(false);
 
   async function checkout(plan: Tier) {
+    setBusy(true);
     try {
-      const { url } = await createSubscriptionCheckout(plan);
-      if (url.startsWith('/')) navigate(url);
-      else window.location.href = url;
+      const session = await createSubscriptionCheckout(plan);
+      const ok = await settleCheckout(session);
+      if (ok) {
+        toast('You’re on Pro Host — enjoy unlimited hosting!', 'success');
+        summary.reload();
+      }
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not start checkout', 'error');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -78,7 +73,7 @@ export function PricingPage() {
         <h2 className="mt-6 font-display text-h1 font-medium">Membership tiers</h2>
         <p className="mt-1 text-meta text-ink-soft">Host more often and pin your activities to the top.</p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {hostPlans.map((plan) => {
             const isCurrent = (summary.data?.plan ?? 'free') === plan.id;
             const popular = 'popular' in plan && plan.popular;
@@ -103,9 +98,10 @@ export function PricingPage() {
                 <Button
                   className="mt-4"
                   fullWidth
+                  loading={busy && plan.id === 'pro' && !isCurrent}
                   variant={plan.id === 'free' || isCurrent ? 'outline' : 'primary'}
-                  disabled={plan.id === 'free' || isCurrent}
-                  leftIcon={plan.id === 'gold' ? <Crown className="h-4 w-4" /> : plan.id !== 'free' ? <Zap className="h-4 w-4" /> : undefined}
+                  disabled={plan.id === 'free' || isCurrent || busy}
+                  leftIcon={plan.id === 'pro' ? <Crown className="h-4 w-4" /> : undefined}
                   onClick={() => plan.id !== 'free' && !isCurrent && checkout(plan.id as Tier)}
                 >
                   {isCurrent ? 'Current plan' : plan.id === 'free' ? 'Included' : `Get ${plan.name}`}
@@ -118,7 +114,7 @@ export function PricingPage() {
         <div className="mt-6 rounded-card border border-border bg-surface p-4">
           <Building2 className="h-5 w-5 text-majorelle" strokeWidth={1.7} />
           <p className="mt-2 font-display text-h2 font-medium">Sponsor venues</p>
-          <p className="mt-1 text-meta text-ink-soft">Bronze, Silver, and Gold venue sponsorships for local businesses.</p>
+          <p className="mt-1 text-meta text-ink-soft">Starter, Bronze, and Silver venue sponsorships for local businesses.</p>
           <Button className="mt-4" variant="outline" onClick={() => navigate('/business')}>Business signup</Button>
         </div>
       </div>

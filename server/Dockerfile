@@ -9,8 +9,9 @@ RUN npm ci
 RUN npx prisma generate
 COPY . .
 RUN npm run build
-# Compile the seed script too (it lives outside tsconfig.build).
-RUN npx tsc prisma/seed.ts --outDir dist/prisma --module commonjs --target ES2021 \
+# Compile the seed scripts too (they live outside tsconfig.build). seed.prod.ts
+# is the production-safe seed run by docker-compose.prod.yml.
+RUN npx tsc prisma/seed.ts prisma/seed.prod.ts --outDir dist/prisma --module commonjs --target ES2021 \
     --esModuleInterop --skipLibCheck --experimentalDecorators --emitDecoratorMetadata || true
 
 # ---- Runtime stage ----

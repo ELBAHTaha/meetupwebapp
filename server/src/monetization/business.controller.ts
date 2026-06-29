@@ -60,6 +60,6 @@ export class BusinessController {
   @Public()
   @Post(':id/sponsorship-checkout')
   sponsorshipCheckout(@Param('id') id: string, @Body() dto: SponsorshipCheckoutDto) {
-    return this.businesses.createSponsorshipCheckout(id, dto.tier);
+    return this.businesses.createSponsorshipCheckout(id, dto.tier, dto.interval ?? 'monthly');
   }
 }

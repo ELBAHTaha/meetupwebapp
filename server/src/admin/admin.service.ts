@@ -8,8 +8,8 @@ import { ExpressPaymentService } from '../monetization/express-payment.service';
 import { hashContact } from '../auth/auth.service';
 import { nearestCityName } from '../common/utils/area';
 
-const HOST_PRICE_CENTS = { BRONZE: 2990, SILVER: 5990, GOLD: 9990 } as const;
-const TIER_PRICE_CENTS = { BRONZE: 49000, SILVER: 99000, GOLD: 199000 } as const;
+const HOST_PRICE_CENTS = { PRO: 4900 } as const;
+const TIER_PRICE_CENTS = { STARTER: 19900, BRONZE: 49000, SILVER: 99000, GOLD: 199000 } as const;
 
 @Injectable()
 export class AdminService {
@@ -65,9 +65,7 @@ export class AdminService {
       messages7d,
       totalAttendances,
       paidExtras,
-      bronzeCount,
-      silverCount,
-      goldCount,
+      proCount,
       trustAgg,
       hostGroups,
       typeGroups,
@@ -97,9 +95,7 @@ export class AdminService {
       this.prisma.chatMessage.count({ where: { sentAt: { gte: since7 } } }),
       this.prisma.attendance.count(),
       this.prisma.event.count({ where: { expressFeePaid: true } }),
-      this.prisma.user.count({ where: { subscriptionPlan: 'BRONZE', subscriptionStatus: 'ACTIVE' } }),
-      this.prisma.user.count({ where: { subscriptionPlan: 'SILVER', subscriptionStatus: 'ACTIVE' } }),
-      this.prisma.user.count({ where: { subscriptionPlan: 'GOLD', subscriptionStatus: 'ACTIVE' } }),
+      this.prisma.user.count({ where: { subscriptionPlan: 'PRO', subscriptionStatus: 'ACTIVE' } }),
       this.prisma.user.aggregate({ _avg: { trustScore: true } }),
       this.prisma.event.groupBy({ by: ['hostId'], _count: { _all: true } }),
       this.prisma.event.groupBy({ by: ['activityTypeId'], _count: { _all: true } }),
@@ -142,16 +138,16 @@ export class AdminService {
       return [...map.entries()].map(([date, count]) => ({ date, count }));
     };
 
-    const tierCount = (tier: 'BRONZE' | 'SILVER' | 'GOLD') =>
+    const tierCount = (tier: 'STARTER' | 'BRONZE' | 'SILVER' | 'GOLD') =>
       tierGroups.find((g) => g.tier === tier)?._count._all ?? 0;
+    const starter = tierCount('STARTER');
     const bronze = tierCount('BRONZE');
     const silver = tierCount('SILVER');
     const gold = tierCount('GOLD');
 
     const mrrCents =
-      bronzeCount * HOST_PRICE_CENTS.BRONZE +
-      silverCount * HOST_PRICE_CENTS.SILVER +
-      goldCount * HOST_PRICE_CENTS.GOLD +
+      proCount * HOST_PRICE_CENTS.PRO +
+      starter * TIER_PRICE_CENTS.STARTER +
       bronze * TIER_PRICE_CENTS.BRONZE +
       silver * TIER_PRICE_CENTS.SILVER +
       gold * TIER_PRICE_CENTS.GOLD;
@@ -163,7 +159,7 @@ export class AdminService {
         liveActivities,
         businesses: totalBusinesses,
         approvedBusinesses,
-        subscribers: bronzeCount + silverCount + goldCount,
+        subscribers: proCount,
         attendances: totalAttendances,
       },
       growth: {
@@ -188,12 +184,10 @@ export class AdminService {
         banned,
       },
       monetization: {
-        hostBronze: bronzeCount,
-        hostSilver: silverCount,
-        hostGold: goldCount,
+        hostPro: proCount,
         paidExtras,
         mrrCents,
-        businessTiers: { bronze, silver, gold },
+        businessTiers: { starter, bronze, silver, gold },
       },
       activityStatus: { live: liveActivities, completed: completedActivities, cancelled: cancelledActivities },
       topActivities,

@@ -4,6 +4,27 @@
     "tagline": "Gather & go",
     "developedBy": "Developed by"
   },
+  "share": {
+    "title": "Share this activity",
+    "intro": "Invite friends — they can preview it without an account.",
+    "whatsapp": "Share on WhatsApp",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "more": "More options",
+    "joinCta": "Sign up to join",
+    "joinHint": "Free account · takes a minute"
+  },
+  "referral": {
+    "invite": "Invite friends",
+    "title": "Invite friends, get Pro",
+    "subtitle": "You and your friend each get {{days}} days of Pro Host when they join.",
+    "yourLink": "Your invite link",
+    "joined": "{{count}} joined so far",
+    "shareText": "Join me on Jmaâ — we both get {{days}} days of Pro Host:",
+    "whatsapp": "Invite on WhatsApp",
+    "copy": "Copy invite link",
+    "copied": "Invite link copied"
+  },
   "landing": {
     "login": "Log in",
     "signup": "Sign up",
@@ -47,7 +68,10 @@
     "finalTitle": "Ready to meet your city?",
     "finalSubtitle": "It's free to join — your next plan is a tap away.",
     "footerTagline": "Gather & go — meet people across Morocco.",
-    "footerRights": "All rights reserved."
+    "footerRights": "All rights reserved.",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "refunds": "Refunds"
   },
   "nav": {
     "discover": "Discover",
@@ -268,7 +292,7 @@
     "hostPlan": "Your plan",
     "hostingLabel": "Hosting",
     "pinsLabel": "Pins",
-    "cadenceFree": "1 activity every 3 days",
+    "cadenceFree": "1 activity every day",
     "cadenceBronze": "1 activity every 2 days",
     "cadenceSilver": "1 activity every day",
     "cadenceGold": "Unlimited hosting",

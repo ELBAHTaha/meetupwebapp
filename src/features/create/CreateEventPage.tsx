@@ -553,6 +553,7 @@ function PlaceSearch({
 
 const CADENCE_KEY: Record<string, string> = {
   free: 'create.cadenceFree',
+  pro: 'create.cadenceGold', // Pro = unlimited hosting, same cadence copy as the legacy Gold tier.
   bronze: 'create.cadenceBronze',
   silver: 'create.cadenceSilver',
   gold: 'create.cadenceGold',

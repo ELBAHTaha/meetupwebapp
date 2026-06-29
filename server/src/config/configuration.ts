@@ -20,21 +20,21 @@ export interface AppConfig {
     ttl: number;
     limit: number;
   };
+  // Paddle (Billing) — merchant-of-record checkout. The server creates a
+  // transaction with a catalog price id; the frontend opens Paddle.js overlay;
+  // Paddle posts signed webhooks back to fulfil the order.
   paddle: {
-    apiKey?: string;
-    webhookSecret?: string;
-    environment: string;
-    currency: string;
-    // Host membership tiers (Bronze/Silver/Gold).
-    hostBronzePriceId?: string;
-    hostSilverPriceId?: string;
-    hostGoldPriceId?: string;
-    // Business venue sponsorship tiers (separate from host tiers).
-    bronzePriceId?: string;
-    silverPriceId?: string;
-    goldPriceId?: string;
-    expressPriceId?: string;
-    priorityPriceId?: string;
+    apiKey?: string; // server-side API key (pdl_…) — never exposed to the browser
+    environment: 'sandbox' | 'production';
+    webhookSecret?: string; // signing secret used to verify webhook payloads
+    // Catalog price ids (created in the Paddle dashboard).
+    prices: {
+      hostPro?: string; // recurring Pro Host (49 MAD/mo)
+      extraPriority?: string; // one-time pinned extra activity (19.90 MAD)
+      // Recurring business sponsorships, one price id per (tier × billing term).
+      biz: Record<'starter' | 'bronze' | 'silver', Record<'monthly' | 'quarterly' | 'annual', string | undefined>>;
+    };
+    enabled: boolean; // true only when a real (non-placeholder) API key is set
   };
   turnstile: {
     secretKey?: string;
@@ -69,17 +69,32 @@ export default (): AppConfig => ({
   },
   paddle: {
     apiKey: process.env.PADDLE_API_KEY || undefined,
+    environment: process.env.PADDLE_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
     webhookSecret: process.env.PADDLE_WEBHOOK_SECRET || undefined,
-    environment: process.env.PADDLE_ENVIRONMENT ?? 'sandbox',
-    currency: process.env.PADDLE_CURRENCY ?? 'usd',
-    hostBronzePriceId: process.env.PADDLE_HOST_BRONZE_PRICE_ID || undefined,
-    hostSilverPriceId: process.env.PADDLE_HOST_SILVER_PRICE_ID || undefined,
-    hostGoldPriceId: process.env.PADDLE_HOST_GOLD_PRICE_ID || undefined,
-    bronzePriceId: process.env.PADDLE_BRONZE_PRICE_ID || undefined,
-    silverPriceId: process.env.PADDLE_SILVER_PRICE_ID || undefined,
-    goldPriceId: process.env.PADDLE_GOLD_PRICE_ID || undefined,
-    expressPriceId: process.env.PADDLE_EXPRESS_PRICE_ID || undefined,
-    priorityPriceId: process.env.PADDLE_PRIORITY_PRICE_ID || undefined,
+    prices: {
+      hostPro: process.env.PADDLE_HOST_PRO_PRICE_ID || undefined,
+      extraPriority: process.env.PADDLE_EXTRA_PRIORITY_PRICE_ID || undefined,
+      biz: {
+        starter: {
+          monthly: process.env.PADDLE_BIZ_STARTER_MONTHLY_PRICE_ID || undefined,
+          quarterly: process.env.PADDLE_BIZ_STARTER_QUARTERLY_PRICE_ID || undefined,
+          annual: process.env.PADDLE_BIZ_STARTER_ANNUAL_PRICE_ID || undefined,
+        },
+        bronze: {
+          monthly: process.env.PADDLE_BIZ_BRONZE_MONTHLY_PRICE_ID || undefined,
+          quarterly: process.env.PADDLE_BIZ_BRONZE_QUARTERLY_PRICE_ID || undefined,
+          annual: process.env.PADDLE_BIZ_BRONZE_ANNUAL_PRICE_ID || undefined,
+        },
+        silver: {
+          monthly: process.env.PADDLE_BIZ_SILVER_MONTHLY_PRICE_ID || undefined,
+          quarterly: process.env.PADDLE_BIZ_SILVER_QUARTERLY_PRICE_ID || undefined,
+          annual: process.env.PADDLE_BIZ_SILVER_ANNUAL_PRICE_ID || undefined,
+        },
+      },
+    },
+    // A real key is required for live checkout; placeholders ("xxx") fall back to
+    // dev simulation so the flow stays testable without Paddle credentials.
+    enabled: Boolean(process.env.PADDLE_API_KEY && !process.env.PADDLE_API_KEY.includes('xxx')),
   },
   turnstile: {
     secretKey: process.env.TURNSTILE_SECRET_KEY || undefined,

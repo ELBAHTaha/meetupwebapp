@@ -1,30 +1,20 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SponsorshipTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaddleClientService } from './paddle-client.service';
+import { PaymentsService } from '../payments/payments.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterBusinessDto } from './dto/business.dto';
+import { BillingInterval, BizTier, CheckoutSession } from '../payments/payment-gateway.interface';
 
 const MAX_VENUE_PHOTOS = 6;
 
-const TIER_PRICE_CENTS: Record<SponsorshipTier, number> = {
-  BRONZE: 49000,
-  SILVER: 99000,
-  GOLD: 199000,
-};
-
+// Monthly activity quota per sponsorship tier (null = unlimited).
 const TIER_LIMIT: Record<SponsorshipTier, number | null> = {
+  STARTER: 2,
   BRONZE: 5,
   SILVER: 15,
   GOLD: null,
-};
-
-const TIER_PRICE_CONFIG: Record<'bronze' | 'silver' | 'gold', string> = {
-  bronze: 'paddle.bronzePriceId',
-  silver: 'paddle.silverPriceId',
-  gold: 'paddle.goldPriceId',
 };
 
 @Injectable()
@@ -33,10 +23,9 @@ export class BusinessService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
-    private readonly paddleClient: PaddleClientService,
     private readonly storage: StorageService,
     private readonly notifications: NotificationsService,
+    private readonly payments: PaymentsService,
   ) {}
 
   async register(dto: RegisterBusinessDto, ownerId?: string) {
@@ -103,6 +92,8 @@ export class BusinessService {
             limit: limit == null ? 'unlimited' : limit,
             remaining: limit == null ? 'unlimited' : Math.max(0, limit - sponsorship.activitiesUsedThisMonth),
             startDate: sponsorship.startDate.toISOString(),
+            endDate: sponsorship.endDate?.toISOString(),
+            billingInterval: sponsorship.billingInterval.toLowerCase(),
             monthlyPriceCents: sponsorship.monthlyPriceCents,
           }
         : null,
@@ -171,31 +162,20 @@ export class BusinessService {
     return this.myBusiness(userId);
   }
 
-  async createSponsorshipCheckout(businessId: string, tierInput: 'bronze' | 'silver' | 'gold'): Promise<{ url: string }> {
+  /**
+   * Start a sponsorship checkout: opens a Paddle transaction and returns the
+   * checkout session. The frontend completes it in the Paddle.js overlay; the
+   * order is fulfilled (business verified + sponsorship created) on Paddle's
+   * `transaction.completed` webhook.
+   */
+  async createSponsorshipCheckout(
+    businessId: string,
+    tierInput: BizTier,
+    interval: BillingInterval = 'monthly',
+  ): Promise<CheckoutSession> {
     const business = await this.prisma.business.findUnique({ where: { id: businessId } });
     if (!business) throw new NotFoundException('Business not found.');
-    const price = this.config.get<string>(TIER_PRICE_CONFIG[tierInput]);
-    if (!this.paddleReady(price)) return this.simulateSponsorship(businessId, tierInput);
-
-    let customerId = business.paddleCustomerId;
-    if (!customerId) {
-      const customer = await this.paddleClient.paddle.customers.create({
-        email: business.contactEmail,
-        name: business.name,
-      });
-      customerId = customer.id;
-      await this.prisma.business.update({ where: { id: businessId }, data: { paddleCustomerId: customerId } });
-    }
-
-    const txn = await this.paddleClient.paddle.transactions.create({
-      items: [{ priceId: price!, quantity: 1 }],
-      customerId,
-      customData: { businessId, kind: 'business_sponsorship', tier: tierInput },
-      checkout: { url: `${this.config.get<string>('frontendUrl')}/business?success=true&business=${businessId}` },
-    });
-    const url = txn.checkout?.url;
-    if (!url) throw new BadRequestException('Paddle did not return a checkout URL.');
-    return { url };
+    return this.payments.createSponsorshipCheckout(businessId, tierInput, interval);
   }
 
   async sponsoredVenues(): Promise<unknown[]> {
@@ -278,31 +258,6 @@ export class BusinessService {
       include: { sponsorships: { orderBy: { createdAt: 'desc' }, take: 1 } },
       orderBy: { createdAt: 'desc' },
     });
-  }
-
-  /** Real Paddle is only usable with a non-placeholder API key and a price id. */
-  private paddleReady(price?: string): boolean {
-    return this.paddleClient.configured && !!price;
-  }
-
-  /**
-   * Dev fallback when Paddle isn't configured: approve the business and create
-   * an active sponsorship directly so it shows up as a sponsored venue at once.
-   */
-  private async simulateSponsorship(businessId: string, tierInput: 'bronze' | 'silver' | 'gold'): Promise<{ url: string }> {
-    const tier = tierInput.toUpperCase() as SponsorshipTier;
-    await this.prisma.business.update({ where: { id: businessId }, data: { status: 'VERIFIED', verifiedAt: new Date() } });
-    await this.prisma.sponsorship.create({
-      data: {
-        businessId,
-        tier,
-        monthlyPriceCents: TIER_PRICE_CENTS[tier],
-        startDate: new Date(),
-        status: 'ACTIVE',
-      },
-    });
-    this.logger.warn(`Paddle not configured — simulated ${tierInput} sponsorship for business ${businessId}.`);
-    return { url: `${this.config.get<string>('frontendUrl')}/business?success=true&simulated=true&business=${businessId}` };
   }
 
   private couponCode(): string {

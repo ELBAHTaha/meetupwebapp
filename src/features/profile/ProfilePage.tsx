@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Settings, ShieldAlert, Store } from 'lucide-react';
+import { Gift, Pencil, Settings, ShieldAlert, Store } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
+import { InviteSheet } from '@/components/InviteSheet';
 import { ProfileView } from './ProfileView';
 import { useSession } from '@/store/session';
 
@@ -10,6 +12,7 @@ export function ProfilePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useSession((s) => s.user);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   if (!user) return null;
 
@@ -35,6 +38,9 @@ export function ProfilePage() {
         <Button variant="outline" fullWidth leftIcon={<Pencil className="h-4 w-4" />} onClick={() => navigate('/profile/edit')}>
           {t('profile.edit')}
         </Button>
+        <Button fullWidth leftIcon={<Gift className="h-4 w-4" />} onClick={() => setInviteOpen(true)}>
+          {t('referral.invite')}
+        </Button>
         <div className="flex gap-2">
           <Button variant="outline" fullWidth leftIcon={<Store className="h-4 w-4" />} onClick={() => navigate('/venues')}>
             {t('venues.browse')}
@@ -45,6 +51,7 @@ export function ProfilePage() {
         </div>
       </div>
       <ProfileView user={user} self />
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   );
 }

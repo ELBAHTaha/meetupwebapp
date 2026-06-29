@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { AuthBackdrop } from '@/components/AuthBackdrop';
 import { DevelopedBy } from '@/components/DevelopedBy';
 import { SmartImage } from '@/components/SmartImage';
 import { ActivityIcon, resolveIcon } from '@/components/ActivityIcon';
@@ -44,7 +45,7 @@ export function LandingPage() {
     <div className="min-h-[100dvh] bg-bg">
       {/* ---------- Hero (always dark, independent of theme) ---------- */}
       <header className="relative isolate overflow-hidden bg-[#171410]">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1c1712] via-[#171410] to-[#2e1d14]" aria-hidden="true" />
+        <AuthBackdrop className="absolute inset-0" />
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-clay/30 blur-[120px]" aria-hidden="true" />
         <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-majorelle/25 blur-[120px]" aria-hidden="true" />
         <div className="relative mx-auto flex min-h-[88dvh] max-w-shell flex-col px-6 py-6 text-white">
@@ -218,9 +219,9 @@ export function LandingPage() {
           {/* Tier cards */}
           <div className="grid gap-3 sm:grid-cols-3">
             {[
+              { name: 'Starter', price: '199 MAD', Icon: Store },
               { name: 'Bronze', price: '490 MAD', Icon: Store },
               { name: 'Silver', price: '990 MAD', Icon: BadgeCheck },
-              { name: 'Gold', price: '1990 MAD', Icon: Sparkles },
             ].map((tier) => (
               <div key={tier.name} className="rounded-card border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
                 <tier.Icon className="h-6 w-6 text-saffron" strokeWidth={1.6} />
@@ -261,6 +262,9 @@ export function LandingPage() {
             <Link to="/login" className="hover:text-ink">{t('landing.login')}</Link>
             <Link to="/signup" className="hover:text-ink">{t('landing.signup')}</Link>
             <Link to="/business" className="hover:text-ink">{t('landing.ctaBusiness')}</Link>
+            <Link to="/terms" className="hover:text-ink">{t('landing.terms')}</Link>
+            <Link to="/privacy" className="hover:text-ink">{t('landing.privacy')}</Link>
+            <Link to="/refunds" className="hover:text-ink">{t('landing.refunds')}</Link>
           </div>
         </div>
         <div className="border-t border-border py-4">

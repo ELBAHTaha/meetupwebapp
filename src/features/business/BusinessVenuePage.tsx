@@ -14,7 +14,7 @@ import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
 import type { MyBusiness, SponsorshipTier } from '@/types';
 
-const tierIcon: Record<SponsorshipTier, LucideIcon> = { bronze: Store, silver: Star, gold: Crown };
+const tierIcon: Record<SponsorshipTier, LucideIcon> = { starter: Store, bronze: Store, silver: Star, gold: Crown };
 
 const MAX_PHOTOS = 6;
 

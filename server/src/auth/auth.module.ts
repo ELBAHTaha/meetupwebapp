@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { TokensService } from './tokens.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { ReferralModule } from '../referral/referral.module';
 
 // Only register the Google strategy when credentials are present.
 const googleProvider: Provider = {
@@ -15,7 +16,7 @@ const googleProvider: Provider = {
 };
 
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [JwtModule.register({}), ReferralModule],
   controllers: [AuthController],
   providers: [AuthService, TokensService, JwtStrategy, googleProvider],
   exports: [AuthService, TokensService],

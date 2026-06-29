@@ -34,6 +34,7 @@ import { Sheet } from '@/components/Sheet';
 import { Textarea } from '@/components/Field';
 import { ReportSheet } from '@/components/ReportSheet';
 import { RatingSheet } from '@/components/RatingSheet';
+import { ShareSheet } from '@/components/ShareSheet';
 import { useAsync } from '@/hooks/useAsync';
 import { canStart, cancelActivity, confirmActivity, getConditions, getEvent, joinEvent, leaveEvent, startActivity } from '@/api';
 import { useSession } from '@/store/session';
@@ -53,8 +54,8 @@ export function EventDetailPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [spotNote, setSpotNote] = useState('');
-  const [shareContact, setShareContact] = useState(false);
 
   const { data: event, loading, reload } = useAsync(() => getEvent(id), [id, dataVersion]);
   const showConditions = !!event?.activity.outdoor && !!event?.spotId;
@@ -84,25 +85,11 @@ export function EventDetailPage() {
   const waitlist = event.attendees.filter((a) => a.status === 'waitlisted');
   const isFull = event.openSpots <= 0;
 
-  // §7: when an event is hosted at a business venue, let attendees opt in to
-  // sharing their contact with that business (default off).
-  const businessOptIn = event.sponsoredVenue ? (
-    <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-card border border-border bg-surface-sunk/40 px-3 py-2 text-meta text-ink-soft">
-      <input
-        type="checkbox"
-        checked={shareContact}
-        onChange={(e) => setShareContact(e.target.checked)}
-        className="mt-0.5 h-4 w-4 accent-clay"
-      />
-      <span>{t('event.shareContactWithBusiness', { business: event.sponsoredVenue.name })}</span>
-    </label>
-  ) : null;
-
   async function handleJoin() {
     if (!user) return;
     setActing(true);
     try {
-      const updated = await joinEvent(event!.id, shareContact);
+      const updated = await joinEvent(event!.id);
       bumpData();
       reload();
       if (updated.viewerStatus === 'waitlisted') {
@@ -174,14 +161,6 @@ export function EventDetailPage() {
     }
   }
 
-  function handleShare() {
-    const url = window.location.href;
-    if (navigator.share) navigator.share({ title: event!.title, url }).catch(() => {});
-    else {
-      navigator.clipboard?.writeText(url);
-      toast('Link copied to clipboard', 'success');
-    }
-  }
 
   return (
     <div className="pb-28 md:pb-10">
@@ -190,7 +169,7 @@ export function EventDetailPage() {
         <button onClick={() => navigate(-1)} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink hover:bg-surface-sunk cursor-pointer transition-colors">
           <ChevronLeft className="h-5 w-5" strokeWidth={1.6} />
         </button>
-        <button onClick={handleShare} aria-label={t('event.share')} className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink hover:bg-surface-sunk cursor-pointer transition-colors">
+        <button onClick={() => setShareOpen(true)} aria-label={t('event.share')} className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink hover:bg-surface-sunk cursor-pointer transition-colors">
           <Share2 className="h-[18px] w-[18px]" strokeWidth={1.6} />
         </button>
       </div>
@@ -389,19 +368,16 @@ export function EventDetailPage() {
                   {t('event.fullNoLocation')}
                 </p>
               ) : (
-                <>
-                  {businessOptIn}
-                  <Button
-                    className="mt-3"
-                    fullWidth
-                    variant="outline"
-                    loading={acting}
-                    leftIcon={<Lock className="h-4 w-4" strokeWidth={1.7} />}
-                    onClick={handleJoin}
-                  >
-                    {t('event.joinToSeeLocation')}
-                  </Button>
-                </>
+                <Button
+                  className="mt-3"
+                  fullWidth
+                  variant="outline"
+                  loading={acting}
+                  leftIcon={<Lock className="h-4 w-4" strokeWidth={1.7} />}
+                  onClick={handleJoin}
+                >
+                  {t('event.joinToSeeLocation')}
+                </Button>
               )}
             </>
           ) : (
@@ -481,17 +457,15 @@ export function EventDetailPage() {
               </Button>
             )}
             {status === 'not_joined' && (
-              <>
-                {businessOptIn}
-                <Button size="lg" fullWidth loading={acting} onClick={handleJoin}>
-                  {isFull ? t('event.joinWaitlist') : t('event.join')}
-                </Button>
-              </>
+              <Button size="lg" fullWidth loading={acting} onClick={handleJoin}>
+                {isFull ? t('event.joinWaitlist') : t('event.join')}
+              </Button>
             )}
           </div>
         </div>
       )}
 
+      <ShareSheet open={shareOpen} onClose={() => setShareOpen(false)} activityId={event.id} title={event.title} />
       <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} targetType="activity" targetId={event.id} chatThreadId={event.id} />
       <RatingSheet eventId={event.id} open={rateOpen} onClose={() => setRateOpen(false)} onDone={() => bumpData()} />
 

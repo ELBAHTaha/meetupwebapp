@@ -4,6 +4,27 @@
     "tagline": "Rassemble-toi & vas-y",
     "developedBy": "Développé par"
   },
+  "share": {
+    "title": "Partager cette activité",
+    "intro": "Invitez des amis — ils peuvent la voir sans compte.",
+    "whatsapp": "Partager sur WhatsApp",
+    "copy": "Copier le lien",
+    "copied": "Lien copié",
+    "more": "Plus d'options",
+    "joinCta": "Inscrivez-vous pour rejoindre",
+    "joinHint": "Compte gratuit · une minute"
+  },
+  "referral": {
+    "invite": "Inviter des amis",
+    "title": "Invitez des amis, gagnez Pro",
+    "subtitle": "Vous et votre ami recevez chacun {{days}} jours de Pro Host à son inscription.",
+    "yourLink": "Votre lien d'invitation",
+    "joined": "{{count}} inscrit(s) jusqu'à présent",
+    "shareText": "Rejoins-moi sur Jmaâ — on reçoit chacun {{days}} jours de Pro Host :",
+    "whatsapp": "Inviter sur WhatsApp",
+    "copy": "Copier le lien d'invitation",
+    "copied": "Lien d'invitation copié"
+  },
   "landing": {
     "login": "Se connecter",
     "signup": "S'inscrire",
@@ -47,7 +68,10 @@
     "finalTitle": "Prêt à rencontrer ta ville ?",
     "finalSubtitle": "C'est gratuit — ton prochain plan est à un clic.",
     "footerTagline": "Rassemble-toi & vas-y — rencontre du monde au Maroc.",
-    "footerRights": "Tous droits réservés."
+    "footerRights": "Tous droits réservés.",
+    "terms": "Conditions",
+    "privacy": "Confidentialité",
+    "refunds": "Remboursements"
   },
   "nav": {
     "discover": "Découvrir",
@@ -268,7 +292,7 @@
     "hostPlan": "Ton offre",
     "hostingLabel": "Hébergement",
     "pinsLabel": "Épingles",
-    "cadenceFree": "1 activité tous les 3 jours",
+    "cadenceFree": "1 activité par jour",
     "cadenceBronze": "1 activité tous les 2 jours",
     "cadenceSilver": "1 activité par jour",
     "cadenceGold": "Hébergement illimité",

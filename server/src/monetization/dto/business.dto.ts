@@ -35,8 +35,12 @@ export class RegisterBusinessDto {
 }
 
 export class SponsorshipCheckoutDto {
-  @IsEnum(['bronze', 'silver', 'gold'])
-  tier!: 'bronze' | 'silver' | 'gold';
+  @IsEnum(['starter', 'bronze', 'silver'])
+  tier!: 'starter' | 'bronze' | 'silver';
+
+  @IsOptional()
+  @IsEnum(['monthly', 'quarterly', 'annual'])
+  interval?: 'monthly' | 'quarterly' | 'annual';
 }
 
 export class RemovePhotoDto {

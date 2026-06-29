@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>hudlgo · Instagram carousel (3 × 1080×1080)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --canvas:#171410; --bone:#FBF8F2; --ink:#2B2620;
+    --clay:#C2502E; --clay-press:#A8401F; --saffron:#D89A34;
+    --olive:#8A9164; --majorelle:#2E5A87; --hair:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0e0c0a;font-family:'Inter',system-ui,sans-serif;min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;padding:24px;gap:20px}
+  .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .toolbar p{color:#b7ad9d;font-size:13px;max-width:620px;text-align:center;line-height:1.5}
+  .btn{appearance:none;border:none;cursor:pointer;font:inherit;font-weight:600;font-size:14px;
+    background:var(--clay);color:#fff;padding:10px 18px;border-radius:10px;transition:background .2s}
+  .btn:hover{background:var(--clay-press)}
+  .btn.ghost{background:rgba(255,255,255,.1);color:#eadfce}
+  .slidewrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .slidewrap .lbl{color:#9c9384;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .scaler{transform-origin:top left}
+
+  /* ===== shared slide canvas (1080×1080) ===== */
+  .slide{position:relative;width:1080px;height:1080px;overflow:hidden;background:var(--canvas);color:#fff;
+    font-family:'Inter',system-ui,sans-serif;isolation:isolate}
+  .slide .glow{position:absolute;border-radius:50%;filter:blur(120px);z-index:0}
+  .slide .g1{width:620px;height:620px;right:-180px;top:-200px;background:rgba(194,80,46,.42)}
+  .slide .g2{width:560px;height:560px;left:-160px;bottom:-180px;background:rgba(46,90,135,.40)}
+  .slide .g3{width:420px;height:420px;left:50%;top:46%;transform:translate(-50%,-50%);background:rgba(216,154,52,.13)}
+  .slide .weave{position:absolute;inset:0;z-index:0;opacity:.06;
+    background-image:repeating-linear-gradient(135deg,#fff 0,#fff 1px,transparent 1px,transparent 26px),
+                     repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 1px,transparent 26px)}
+  .slide .frame{position:absolute;inset:40px;border:1px solid var(--hair);border-radius:18px;z-index:1;pointer-events:none}
+  .slide .content{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:92px 88px}
+
+  .slide .head{display:flex;align-items:center;justify-content:space-between}
+  .slide .brand{display:flex;align-items:center;gap:15px}
+  .slide .mark{width:60px;height:60px;border-radius:15px;background:var(--clay);display:grid;place-items:center;
+    font-family:'Fraunces',serif;font-weight:600;font-size:34px;color:var(--bone);box-shadow:0 8px 28px rgba(194,80,46,.45)}
+  .slide .word{font-family:'Fraunces',serif;font-weight:500;font-size:36px;letter-spacing:-.5px}
+  .slide .dots{display:flex;gap:10px}
+  .slide .dots i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.28)}
+  .slide .dots i.on{background:var(--saffron);width:30px;border-radius:6px}
+
+  .slide .kicker{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--hair);
+    background:rgba(255,255,255,.07);padding:10px 18px;border-radius:999px;font-size:18px;font-weight:600;
+    letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.82)}
+  .slide h1{font-family:'Fraunces',serif;font-weight:500;letter-spacing:-1.5px;line-height:.98}
+  .slide h1 .accent{color:var(--saffron)}
+  .slide .sub{font-size:27px;line-height:1.5;color:rgba(255,255,255,.78);max-width:760px}
+
+  .slide .chips{display:flex;flex-wrap:wrap;gap:13px}
+  .slide .chip{display:inline-flex;align-items:center;gap:11px;border:1px solid var(--hair);
+    background:rgba(255,255,255,.08);padding:13px 21px;border-radius:999px;font-size:22px;font-weight:600;color:#fff}
+  .slide svg.ic{stroke:var(--saffron);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .slide .chip svg{width:25px;height:25px}
+
+  /* steps (slide 2) */
+  .slide .steps{display:flex;flex-direction:column;gap:30px}
+  .slide .step{display:flex;align-items:flex-start;gap:24px}
+  .slide .num{flex:none;width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,.08);
+    border:1px solid var(--hair);display:grid;place-items:center;font-family:'Fraunces',serif;font-weight:600;font-size:32px;color:var(--saffron)}
+  .slide .step h3{font-family:'Fraunces',serif;font-weight:500;font-size:38px;letter-spacing:-.5px}
+  .slide .step p{font-size:24px;color:rgba(255,255,255,.72);margin-top:4px;max-width:680px;line-height:1.45}
+
+  .slide .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+  .slide .handle{font-size:22px;color:rgba(255,255,255,.7);font-weight:500}
+  .slide .swipe{display:inline-flex;align-items:center;gap:12px;font-size:24px;font-weight:600;color:rgba(255,255,255,.85)}
+  .slide .swipe svg{width:30px;height:30px;stroke:var(--saffron);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .slide .stats{display:flex;align-items:center;gap:18px;font-size:24px;color:rgba(255,255,255,.85);font-weight:500}
+  .slide .stats b{font-family:'Fraunces',serif;font-weight:600;color:#fff}
+  .slide .sep{width:6px;height:6px;border-radius:50%;background:var(--saffron);opacity:.8}
+  .slide .cta{display:inline-flex;align-items:center;gap:14px;background:var(--clay);color:#fff;
+    font-size:32px;font-weight:700;padding:24px 44px;border-radius:16px;box-shadow:0 14px 40px rgba(194,80,46,.5)}
+  .slide .cta svg{width:30px;height:30px;stroke:#fff;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn" id="dlall">Download all 3 PNGs</button>
+    <p>Post them in order (1 → 2 → 3) as a carousel. Each is exactly 1080×1080. Offline? Screenshot each framed square. Swap <b>@hudlgo / hudlgo.app</b> for your real handle &amp; domain.</p>
+  </div>
+
+  <!-- ===================== SLIDE 1 — HOOK ===================== -->
+  <div class="slidewrap"><span class="lbl">Slide 1 — Hook</span>
+  <div class="scaler"><div class="slide" id="s1">
+    <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div><div class="weave"></div><div class="frame"></div>
+    <div class="content">
+      <div class="head">
+        <div class="brand"><div class="mark">h</div><div class="word">hudlgo</div></div>
+        <div class="dots"><i class="on"></i><i></i><i></i></div>
+      </div>
+      <div>
+        <span class="kicker">For when you’re bored in Morocco</span>
+        <h1 style="font-size:106px;margin-top:28px">Meet people.<br><span class="accent">Beat the boredom.</span></h1>
+        <p class="sub" style="margin-top:26px">Real plans with real people near you — coffee, padel, surf, hikes, board games &amp; more.</p>
+        <div class="chips" style="margin-top:36px">
+          <span class="chip"><svg class="ic" viewBox="0 0 24 24"><path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3v2M11.5 3v2"/></svg>Coffee</span>
+          <span class="chip"><svg class="ic" viewBox="0 0 24 24"><path d="M2 7c.7.6 1.4 1 2.6 1C7 8 7 6 9.5 6s2.4 2 5 2 2.4-2 5-2c1.2 0 1.9.4 2.5 1"/><path d="M2 13c.7.6 1.4 1 2.6 1 2.5 0 2.5-2 5-2s2.4 2 5 2 2.4-2 5-2c1.2 0 1.9.4 2.5 1"/><path d="M2 19c.7.6 1.4 1 2.6 1 2.5 0 2.5-2 5-2s2.4 2 5 2 2.4-2 5-2c1.2 0 1.9.4 2.5 1"/></svg>Surf</span>
+          <span class="chip"><svg class="ic" viewBox="0 0 24 24"><path d="M3 19 L9 7 L13 15 L16 10 L21 19 Z"/></svg>Hikes</span>
+          <span class="chip"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 L4 14 h6 l-1 8 9-12 h-6 z"/></svg>Padel</span>
+          <span class="chip"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.1"/><circle cx="15" cy="15" r="1.1"/><circle cx="9" cy="15" r="1.1"/><circle cx="15" cy="9" r="1.1"/></svg>Board games</span>
+        </div>
+      </div>
+      <div class="foot">
+        <div class="handle">hudlgo.app · @hudlgo</div>
+        <span class="swipe">Swipe <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+      </div>
+    </div>
+  </div></div></div>
+
+  <!-- ===================== SLIDE 2 — HOW IT WORKS ===================== -->
+  <div class="slidewrap"><span class="lbl">Slide 2 — How it works</span>
+  <div class="scaler"><div class="slide" id="s2">
+    <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div><div class="weave"></div><div class="frame"></div>
+    <div class="content">
+      <div class="head">
+        <div class="brand"><div class="mark">h</div><div class="word">hudlgo</div></div>
+        <div class="dots"><i></i><i class="on"></i><i></i></div>
+      </div>
+      <div>
+        <span class="kicker">How it works</span>
+        <h1 style="font-size:80px;margin-top:24px">Three taps to<br><span class="accent">a new crew.</span></h1>
+        <div class="steps" style="margin-top:48px">
+          <div class="step">
+            <div class="num">1</div>
+            <div><h3>Pick an activity</h3><p>Coffee, padel, surf, a hike — or host your own in minutes.</p></div>
+          </div>
+          <div class="step">
+            <div class="num">2</div>
+            <div><h3>Join or host</h3><p>See who’s going and where. Spots fill fast — grab yours.</p></div>
+          </div>
+          <div class="step">
+            <div class="num">3</div>
+            <div><h3>Show up &amp; meet people</h3><p>Real faces, real plans, near you. That’s the whole point.</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot">
+        <div class="handle">hudlgo.app · @hudlgo</div>
+        <span class="swipe">Swipe <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+      </div>
+    </div>
+  </div></div></div>
+
+  <!-- ===================== SLIDE 3 — JOIN CTA ===================== -->
+  <div class="slidewrap"><span class="lbl">Slide 3 — Join CTA</span>
+  <div class="scaler"><div class="slide" id="s3">
+    <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div><div class="weave"></div><div class="frame"></div>
+    <div class="content">
+      <div class="head">
+        <div class="brand"><div class="mark">h</div><div class="word">hudlgo</div></div>
+        <div class="dots"><i></i><i></i><i class="on"></i></div>
+      </div>
+      <div>
+        <span class="kicker">Your people are already out there</span>
+        <h1 style="font-size:110px;margin-top:28px">Join free<br><span class="accent">today.</span></h1>
+        <p class="sub" style="margin-top:26px">Free forever. No approval needed. Verified members — you choose who you meet.</p>
+        <div class="stats" style="margin-top:40px"><span><b>22</b> cities</span><span class="sep"></span><span><b>27</b> activities</span><span class="sep"></span><span><b>100%</b> free</span></div>
+      </div>
+      <div class="foot">
+        <span class="cta">Join free <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+        <div class="handle" style="padding-bottom:8px">hudlgo.app<br>@hudlgo</div>
+      </div>
+    </div>
+  </div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+  <script>
+    const ids = ['s1','s2','s3'];
+    function fit(){
+      const s = Math.min(1, (window.innerWidth - 48) / 1080);
+      document.querySelectorAll('.scaler').forEach(el=>{
+        el.style.transform='scale('+s+')'; el.style.width=(1080*s)+'px'; el.style.height=(1080*s)+'px';
+      });
+    }
+    window.addEventListener('resize', fit); fit();
+
+    async function exportNode(id, name){
+      const node=document.getElementById(id);
+      if(!window.htmlToImage){alert('Export library not loaded (offline?). Screenshot the framed squares instead — each is 1080×1080.');return false;}
+      const url=await window.htmlToImage.toPng(node,{width:1080,height:1080,pixelRatio:1,cacheBust:true});
+      const a=document.createElement('a');a.download=name;a.href=url;a.click();return true;
+    }
+    document.getElementById('dlall').addEventListener('click', async ()=>{
+      for(let i=0;i<ids.length;i++){ const ok=await exportNode(ids[i],'hudlgo-carousel-'+(i+1)+'.png'); if(!ok)break; await new Promise(r=>setTimeout(r,400)); }
+    });
+  </script>
+</body>
+</html>

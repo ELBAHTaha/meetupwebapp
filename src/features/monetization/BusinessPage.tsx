@@ -1,22 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, Building2, Check, Crown, Lock, Mail, MapPin, Phone, Star, Store, Users } from 'lucide-react';
+import { ArrowLeft, BarChart3, Building2, Check, Lock, Mail, MapPin, Phone, Star, Store, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { DevelopedBy } from '@/components/DevelopedBy';
 import { Input, Textarea } from '@/components/Field';
 import { Tag } from '@/components/Chip';
 import { createSponsorshipCheckout, registerBusiness, signupBusiness } from '@/api';
+import { settleCheckout } from '@/lib/paddle';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
-import { WELCOME_IMAGE } from '@/lib/imagery';
+import { AuthBackdrop } from '@/components/AuthBackdrop';
 import { cn } from '@/lib/cn';
-import type { SponsorshipTier } from '@/types';
+import type { BillingInterval, SponsorshipTier } from '@/types';
 
 const tiers: {
   id: SponsorshipTier;
   name: string;
-  price: string;
+  monthlyMad: number;
   tagline: string;
   limit: string;
   icon: LucideIcon;
@@ -24,12 +25,25 @@ const tiers: {
   points: string[];
 }[] = [
   {
+    id: 'starter',
+    name: 'Starter',
+    monthlyMad: 199,
+    tagline: 'Test the waters',
+    limit: '2 sponsored activities / month',
+    icon: Store,
+    points: [
+      'Sponsored label on your venue in the map & venue picker',
+      'Listed when hosts search for a place',
+      'Great for small or new venues',
+    ],
+  },
+  {
     id: 'bronze',
     name: 'Bronze',
-    price: '490 MAD',
+    monthlyMad: 490,
     tagline: 'Get discovered by locals',
     limit: '5 sponsored activities / month',
-    icon: Store,
+    icon: Building2,
     points: [
       'Sponsored label on your venue in the map & venue picker',
       'Listed when hosts search for a place',
@@ -39,7 +53,7 @@ const tiers: {
   {
     id: 'silver',
     name: 'Silver',
-    price: '990 MAD',
+    monthlyMad: 990,
     tagline: 'Grow steady foot traffic',
     limit: '15 sponsored activities / month',
     icon: Star,
@@ -48,24 +62,19 @@ const tiers: {
       'Everything in Bronze',
       'Full business profile page',
       'Unique coupon codes for attendees',
-      'Priority placement above Bronze venues',
-    ],
-  },
-  {
-    id: 'gold',
-    name: 'Gold',
-    price: '1990 MAD',
-    tagline: 'Become an official partner',
-    limit: 'Unlimited sponsored activities',
-    icon: Crown,
-    points: [
-      'Everything in Silver',
-      'Official partner badge',
-      '50 MAD host credit for every activity at your venue',
       'Top placement in the venue picker',
     ],
   },
 ];
+
+// Prepaid terms: discount off the monthly rate for committing longer.
+const INTERVALS: { id: BillingInterval; label: string; months: number; discount: number; save?: string }[] = [
+  { id: 'monthly', label: 'Monthly', months: 1, discount: 0 },
+  { id: 'quarterly', label: 'Quarterly', months: 3, discount: 0.1, save: 'Save 10%' },
+  { id: 'annual', label: 'Annual', months: 12, discount: 0.15, save: 'Save 15%' },
+];
+
+const TERM_NOUN: Record<BillingInterval, string> = { monthly: 'mo', quarterly: 'quarter', annual: 'year' };
 
 const benefits: { icon: LucideIcon; label: string }[] = [
   { icon: Users, label: 'Reach active locals' },
@@ -77,10 +86,14 @@ export function BusinessPage() {
   const navigate = useNavigate();
   const setLogin = useSession((s) => s.login);
   const [tier, setTier] = useState<SponsorshipTier>('silver');
+  const [interval, setInterval] = useState<BillingInterval>('monthly');
   const [form, setForm] = useState({ name: '', description: '', address: '', contactEmail: '', phone: '', password: '' });
   const [saving, setSaving] = useState(false);
 
   const selected = tiers.find((x) => x.id === tier)!;
+  const intervalCfg = INTERVALS.find((i) => i.id === interval)!;
+  // Discounted amount charged up front for the chosen term.
+  const termTotal = Math.round(selected.monthlyMad * intervalCfg.months * (1 - intervalCfg.discount));
 
   async function submit() {
     if (form.password.length < 8) {
@@ -108,16 +121,13 @@ export function BusinessPage() {
         contactEmail: form.contactEmail,
         phone: form.phone,
       })) as { id: string };
-      const { url } = await createSponsorshipCheckout(business.id, tier);
-
-      // Real Paddle → redirect to external checkout. Dev simulation → the plan is
-      // already active, so head into the app instead of looping back here.
-      if (url.startsWith('http') && !url.includes('simulated')) {
-        window.location.href = url;
-        return;
+      // 3. Open the Paddle sponsorship checkout; on success head into the app.
+      const session = await createSponsorshipCheckout(business.id, tier, interval);
+      const ok = await settleCheckout(session);
+      if (ok) {
+        toast('Your venue is registered — welcome to hudlgo! 🎉', 'success');
+        navigate('/onboarding', { state: { business: true } });
       }
-      toast('Your venue is registered — welcome to hudlgo! 🎉', 'success');
-      navigate('/onboarding', { state: { business: true } });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not register business', 'error');
     } finally {
@@ -127,11 +137,8 @@ export function BusinessPage() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Fixed background — stays in place while the card scrolls */}
-      <div className="fixed inset-0 -z-10">
-        <img src={WELCOME_IMAGE} alt="" className="h-full w-full object-cover opacity-60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-ink/20 to-ink/80" />
-      </div>
+      {/* Fixed photo-mosaic background — stays in place while the card scrolls */}
+      <AuthBackdrop className="fixed inset-0 -z-10" />
 
       <div className="flex min-h-screen flex-col pb-10">
         {/* Top brand area */}
@@ -179,7 +186,25 @@ export function BusinessPage() {
         <div className="mx-auto mt-6 w-full max-w-2xl px-4 animate-[sheet-up_0.35s_cubic-bezier(0.16,1,0.3,1)_both]">
           <div className="rounded-[28px] bg-bg px-6 pb-10 pt-7 shadow-[0_-4px_40px_rgba(43,38,32,.18)]">
             <h2 className="font-display text-h1 font-medium text-ink">Choose your sponsorship</h2>
-            <p className="mt-1 text-meta text-ink-faint">Billed monthly · cancel anytime · limits reset on the 1st.</p>
+            <p className="mt-1 text-meta text-ink-faint">Monthly, or prepay a quarter/year for a discount · limits reset on the 1st.</p>
+
+            {/* Billing term toggle */}
+            <div className="mt-4 inline-flex rounded-full border border-border bg-surface p-1">
+              {INTERVALS.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setInterval(opt.id)}
+                  aria-pressed={interval === opt.id}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors cursor-pointer',
+                    interval === opt.id ? 'bg-clay text-white' : 'text-ink-soft hover:text-ink',
+                  )}
+                >
+                  {opt.label}
+                  {opt.save && <span className={cn('ml-1', interval === opt.id ? 'text-white/85' : 'text-olive')}>· {opt.save}</span>}
+                </button>
+              ))}
+            </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               {tiers.map((item) => {
@@ -216,7 +241,7 @@ export function BusinessPage() {
                     <p className="text-[12px] text-ink-soft">{item.tagline}</p>
 
                     <p className="mt-2 font-display text-h1 font-medium text-ink">
-                      {item.price}
+                      {item.monthlyMad} MAD
                       <span className="text-[12px] font-normal text-ink-soft">/mo</span>
                     </p>
                     <p className="mt-2 rounded-input bg-surface-sunk px-2.5 py-1.5 text-[11px] font-medium text-ink-soft">
@@ -256,7 +281,11 @@ export function BusinessPage() {
               </div>
 
               <div className="rounded-input border border-border bg-surface px-4 py-3 text-meta text-ink-soft">
-                Selected plan: <span className="font-semibold text-ink">{selected.name}</span> · {selected.price}/mo · {selected.limit}
+                Selected plan: <span className="font-semibold text-ink">{selected.name}</span> · {selected.limit}
+                <span className="mt-0.5 block">
+                  You pay <span className="font-semibold text-ink">{termTotal} MAD</span> / {TERM_NOUN[interval]}
+                  {interval !== 'monthly' && <span className="text-olive"> ({intervalCfg.save})</span>}
+                </span>
               </div>
 
               <Button

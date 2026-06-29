@@ -67,6 +67,20 @@ const SPOT_IMAGES: Record<string, string> = {
 export const CITY_IMAGE = img('1539020140153-e479b8c22e70'); // warm medina
 export const WELCOME_IMAGE = img('1597212618440-806262de4f6b'); // marrakech rooftops
 
+// Auth-screen photo mosaic — what the app is about: people meeting through
+// activities (social + outdoor + sport + venues). Tighter crop than `img` since
+// each is shown as a small tile. Order is tuned so the grid reads well.
+const PM = '?auto=format&fit=crop&w=500&q=65';
+const imgM = (id: string) => `${U}${id}${PM}`;
+export const WELCOME_MOSAIC: string[] = [
+  imgM('1495474472287-4d71bcdd2085'), // coffee meetup
+  imgM('1502680390469-be75c86b636f'), // surf
+  imgM('1414235077428-338989a2e8c0'), // dinner / foodie
+  imgM('1610890716171-6b1bb98ffd09'), // board game night
+  imgM('1551632811-561732d1e306'), // hiking
+  imgM('1511671782779-c97d3d27a1d4'), // live music
+];
+
 export function activityImage(activityId: string, group: ActivityGroup): string {
   return ACTIVITY_IMAGES[activityId] ?? GROUP_IMAGES[group];
 }

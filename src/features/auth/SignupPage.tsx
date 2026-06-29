@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, Bike, Building2, Camera, Coffee, Dices, Lock, Mail, MapPin, Mountain, Phone, User as UserIcon, Waves } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Turnstile, isTurnstileEnabled } from '@/components/Turnstile';
 import { signup } from '@/api';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
-import { WELCOME_IMAGE } from '@/lib/imagery';
+import { AuthBackdrop } from '@/components/AuthBackdrop';
 import { cn } from '@/lib/cn';
 
 const ACTIVITY_CHIPS: { icon: LucideIcon; label: string }[] = [
@@ -35,6 +35,14 @@ export function SignupPage() {
   const navigate = useNavigate();
   const setLogin = useSession((s) => s.login);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Capture a referral code from the invite link (?ref=...) and remember it, so
+  // it survives navigating between login/signup before the account is created.
+  const [searchParams] = useSearchParams();
+  const refFromUrl = searchParams.get('ref');
+  useEffect(() => {
+    if (refFromUrl) localStorage.setItem('jmaa-ref', refFromUrl);
+  }, [refFromUrl]);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -79,7 +87,9 @@ export function SignupPage() {
         gender: gender ?? undefined,
         phone: phone || undefined,
         turnstileToken: turnstileToken || undefined,
+        referralCode: refFromUrl || localStorage.getItem('jmaa-ref') || undefined,
       });
+      localStorage.removeItem('jmaa-ref');
       setLogin(user);
       toast(t('auth.activeNote'), 'success');
       navigate('/onboarding');
@@ -93,15 +103,8 @@ export function SignupPage() {
   return (
     <div className="relative min-h-screen">
 
-      {/* Fixed background — stays in place while form scrolls */}
-      <div className="fixed inset-0 -z-10">
-        <img
-          src={WELCOME_IMAGE}
-          alt=""
-          className="h-full w-full object-cover opacity-60"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-ink/20 to-ink/80" />
-      </div>
+      {/* Fixed photo-mosaic background — stays in place while the form scrolls */}
+      <AuthBackdrop className="fixed inset-0 -z-10" />
 
       <div className="flex min-h-screen flex-col pb-10">
 

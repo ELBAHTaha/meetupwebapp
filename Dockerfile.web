@@ -1,0 +1,18 @@
+# ---- Build the React/Vite SPA ----
+FROM node:20-slim AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+# VITE_* values are baked into the static bundle at BUILD time (not runtime),
+# so they must be passed as build args. docker-compose.prod.yml supplies them.
+ARG VITE_API_URL
+ARG VITE_TURNSTILE_SITE_KEY
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
+RUN npm run build
+
+# ---- Serve the SPA + reverse-proxy the API via Caddy (automatic HTTPS) ----
+FROM caddy:2-alpine AS runtime
+COPY --from=build /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile

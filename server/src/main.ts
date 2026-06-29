@@ -14,8 +14,15 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
 
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // FRONTEND_URL may be a single origin or a comma-separated allow-list, e.g.
+  // "https://hudlgo.com,https://www.hudlgo.com". Whitespace is tolerated. When an
+  // array is passed, the cors middleware reflects the request Origin if it matches.
+  const allowedOrigins = (config.get<string>('frontendUrl') ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: config.get<string>('frontendUrl'),
+    origin: allowedOrigins,
     credentials: true,
   });
 

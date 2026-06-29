@@ -1,0 +1,28 @@
+# Caddy edge for the production stack. Automatic HTTPS (Let's Encrypt) for every
+# site block below — just point DNS A records at this server and Caddy handles
+# certificates. {$DOMAIN} is read from the container environment (set in compose).
+
+# --- Frontend SPA (apex domain) ---
+{$DOMAIN} {
+	encode gzip zstd
+	root * /srv
+	# Single-page app: serve the requested file, else fall back to index.html
+	# so client-side routes (React Router) resolve.
+	try_files {path} /index.html
+	file_server
+
+	# Cache hashed build assets aggressively; never cache the HTML shell.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+}
+
+# --- www → apex redirect ---
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# --- API (api subdomain) → NestJS container on the compose network ---
+api.{$DOMAIN} {
+	reverse_proxy api:4000
+}

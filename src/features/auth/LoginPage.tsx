@@ -8,7 +8,7 @@ import { DevelopedBy } from '@/components/DevelopedBy';
 import { Input } from '@/components/Field';
 import { login } from '@/api';
 import { useSession } from '@/store/session';
-import { WELCOME_IMAGE } from '@/lib/imagery';
+import { AuthBackdrop } from '@/components/AuthBackdrop';
 
 const ACTIVITY_CHIPS: { icon: LucideIcon; label: string }[] = [
   { icon: Coffee, label: 'Coffee' },
@@ -45,15 +45,8 @@ export function LoginPage() {
   return (
     <div className="relative min-h-[100dvh] bg-ink overflow-hidden">
 
-      {/* Hero image */}
-      <div className="absolute inset-0">
-        <img
-          src={WELCOME_IMAGE}
-          alt=""
-          className="h-full w-full object-cover opacity-60"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-ink/20 to-ink/80" />
-      </div>
+      {/* Hero — photo mosaic of activities (meeting people IRL) */}
+      <AuthBackdrop className="absolute inset-0" />
 
       {/* Content */}
       <div className="relative flex min-h-[100dvh] flex-col pb-10">

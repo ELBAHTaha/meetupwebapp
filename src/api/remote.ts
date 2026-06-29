@@ -17,6 +17,8 @@ import type {
   AppNotification,
   BusinessOrg,
   ChatMessage,
+  BillingInterval,
+  CheckoutSession,
   ChatThread,
   CreateActivityInput,
   CreateEventInput,
@@ -26,9 +28,11 @@ import type {
   MyBusiness,
   Rating,
   RatingInput,
+  ReferralSummary,
   ReportInput,
   Review,
   SponsoredVenue,
+  SponsorshipTier,
   User,
   VenueCard,
   VenueProfile,
@@ -58,6 +62,7 @@ export async function signup(input: {
   gender?: string;
   lookingFor?: string;
   turnstileToken?: string;
+  referralCode?: string;
   /** base64 data URL captured from the file picker; uploaded as `photo`. */
   avatar?: string;
 }): Promise<User> {
@@ -74,6 +79,7 @@ export async function signup(input: {
   if (input.gender) form.set('gender', input.gender);
   if (input.lookingFor) form.set('lookingFor', input.lookingFor);
   if (input.turnstileToken) form.set('turnstileToken', input.turnstileToken);
+  if (input.referralCode) form.set('referralCode', input.referralCode);
   if (input.avatar) {
     const blob = await fetch(input.avatar).then((r) => r.blob());
     form.set('photo', blob, 'avatar.jpg');
@@ -98,6 +104,10 @@ export async function signupBusiness(input: {
 
 export function getCurrentUser(): Promise<User> {
   return api.get<User>('/auth/me');
+}
+
+export function getReferral(): Promise<ReferralSummary> {
+  return api.get<ReferralSummary>('/referral');
 }
 
 export function updateProfile(patch: Partial<User>): Promise<User> {
@@ -200,14 +210,11 @@ export const getSubscriptionSummary = () =>
     pinQuota: number | 'unlimited';
   }>('/subscriptions/me');
 
-export const createSubscriptionCheckout = (planType: 'bronze' | 'silver' | 'gold') =>
-  api.post<{ url: string }>('/subscriptions/checkout', { planType });
-
-export const createPremiumUserCheckout = () =>
-  api.post<{ url: string }>('/subscriptions/premium-checkout', { planType: 'attendee' });
+export const createSubscriptionCheckout = (planType: 'pro') =>
+  api.post<CheckoutSession>('/subscriptions/checkout', { planType });
 
 export const createExpressPaymentIntent = (priorityLevel: 'express' | 'priority') =>
-  api.post<{ clientSecret: string; amountCents: number; transactionId?: string }>('/payments/express-intent', { priorityLevel });
+  api.post<CheckoutSession>('/payments/express-intent', { priorityLevel });
 
 export const listSponsoredVenues = () => api.get<SponsoredVenue[]>('/businesses/sponsored-venues');
 
@@ -221,8 +228,11 @@ export const registerBusiness = (input: {
   phone?: string;
 }) => api.post('/businesses/register', input);
 
-export const createSponsorshipCheckout = (businessId: string, tier: 'bronze' | 'silver' | 'gold') =>
-  api.post<{ url: string }>(`/businesses/${businessId}/sponsorship-checkout`, { tier });
+export const createSponsorshipCheckout = (
+  businessId: string,
+  tier: SponsorshipTier,
+  interval: BillingInterval = 'monthly',
+) => api.post<CheckoutSession>(`/businesses/${businessId}/sponsorship-checkout`, { tier, interval });
 
 export const getMyBusiness = () => api.get<MyBusiness>('/businesses/mine');
 

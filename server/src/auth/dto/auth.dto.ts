@@ -59,6 +59,12 @@ export class SignupDto {
   @IsOptional()
   @IsString()
   turnstileToken?: string;
+
+  @ApiPropertyOptional({ description: 'Referral code from an invite link (?ref=...).' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  referralCode?: string;
 }
 
 /**

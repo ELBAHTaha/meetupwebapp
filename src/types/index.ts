@@ -42,10 +42,23 @@ export type Visibility = 'public' | 'invite';
 export type UserStatus = 'active' | 'suspended' | 'banned';
 
 export type UserRole = 'user' | 'admin' | 'business';
-export type HostPlan = 'free' | 'bronze' | 'silver' | 'gold';
+// 'pro' is the single live paid host plan; bronze/silver/gold are legacy.
+export type HostPlan = 'free' | 'pro' | 'bronze' | 'silver' | 'gold';
 export type SubscriptionStatus = 'inactive' | 'active' | 'past_due' | 'canceled';
 export type PriorityLevel = 'standard' | 'express' | 'priority';
-export type SponsorshipTier = 'bronze' | 'silver' | 'gold';
+export type SponsorshipTier = 'starter' | 'bronze' | 'silver' | 'gold';
+export type BillingInterval = 'monthly' | 'quarterly' | 'annual';
+
+// --- Paddle checkout ---
+/** Returned by the *-checkout endpoints. Either a Paddle transaction to open in
+ * the overlay (`transactionId`), or a dev-simulated session already applied
+ * server-side (`simulated`). `ref` is the order id used to verify one-off buys. */
+export interface CheckoutSession {
+  ref: string;
+  amountCents: number;
+  transactionId?: string;
+  simulated?: boolean;
+}
 
 /** Per-user relationship to an event, derived for the current viewer. */
 export type ViewerRsvp = 'not_joined' | 'joined' | 'waitlisted' | 'host' | 'past';
@@ -141,6 +154,8 @@ export interface MyBusiness {
     limit: number | 'unlimited';
     remaining: number | 'unlimited';
     startDate: string;
+    endDate?: string;
+    billingInterval?: BillingInterval;
     monthlyPriceCents: number;
   } | null;
   activities: MyBusinessActivity[];
@@ -498,6 +513,16 @@ export interface SignupInput {
   google?: boolean;
   /** Cloudflare Turnstile token (sent when the CAPTCHA is configured). */
   turnstileToken?: string;
+  /** Referral code from an invite link (?ref=...). Credits both users with Pro days. */
+  referralCode?: string;
+}
+
+/** A user's invite link + how many friends have joined via it. */
+export interface ReferralSummary {
+  code: string;
+  link: string;
+  joinedCount: number;
+  rewardDays: number;
 }
 
 export interface RatingInput {

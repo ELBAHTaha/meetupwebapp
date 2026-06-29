@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { MailService } from '../mail/mail.service';
+import { ReferralService } from '../referral/referral.service';
 import { TokensService, TokenPair } from './tokens.service';
 import { BusinessSignupDto, LoginDto, SignupDto } from './dto/auth.dto';
 import { age } from '../common/utils/private-place';
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly geocoding: GeocodingService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly referral: ReferralService,
   ) {}
 
   private async withUser(userId: string) {
@@ -86,6 +88,10 @@ export class AuthService {
         status: 'ACTIVE', // active immediately — no approval gating
       },
     });
+
+    // Credit the referral (grants both users Pro trial days) before we serialize
+    // the response, so the new user immediately sees their Pro perk. Best-effort.
+    await this.referral.applyOnSignup(user.id, dto.referralCode);
 
     // Welcome email (fire-and-forget — never block signup on email delivery).
     void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);

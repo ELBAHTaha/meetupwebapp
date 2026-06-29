@@ -14,6 +14,7 @@ import { SettingsPage } from '@/features/profile/SettingsPage';
 import { EditProfilePage } from '@/features/profile/EditProfilePage';
 import { VerifyPage } from '@/features/profile/VerifyPage';
 import { EventDetailPage } from '@/features/event/EventDetailPage';
+import { PublicActivityPage } from '@/features/event/PublicActivityPage';
 import { UserProfilePage } from '@/features/profile/UserProfilePage';
 import { NotificationsPage } from '@/features/notifications/NotificationsPage';
 import { AdminPage } from '@/features/admin/AdminPage';
@@ -31,6 +32,9 @@ import { BusinessChatThreadPage } from '@/features/business/BusinessChatThreadPa
 import { BusinessOnboardPage } from '@/features/business/BusinessOnboardPage';
 import { VenuesPage } from '@/features/venues/VenuesPage';
 import { VenueDetailPage } from '@/features/venues/VenueDetailPage';
+import { TermsPage } from '@/features/legal/TermsPage';
+import { PrivacyPage } from '@/features/legal/PrivacyPage';
+import { RefundPolicyPage } from '@/features/legal/RefundPolicyPage';
 
 function Protected({ children, business }: { children: React.ReactNode; business?: boolean }) {
   const { isAuthed, onboarded, user } = useSession.getState();
@@ -55,9 +59,16 @@ export const router = createBrowserRouter([
   { path: '/login', element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: '/signup', element: <PublicOnly><SignupPage /></PublicOnly> },
   { path: '/onboarding', element: <OnboardingPage /> },
+  // Public, read-only activity preview from a shared link. Logged-out visitors
+  // see the safe details + a sign-up CTA; members are redirected to /event/:id.
+  { path: '/a/:id', element: <PublicActivityPage /> },
   // Public: businesses can register/sponsor without a user account (the signup
   // page links here). Renders standalone — no app nav chrome required.
   { path: '/business', element: <BusinessPage /> },
+  // Public legal pages — viewable signed-in or out (Paddle requires public URLs).
+  { path: '/terms', element: <TermsPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/refunds', element: <RefundPolicyPage /> },
   {
     element: (
       <Protected>

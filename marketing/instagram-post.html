@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>hudlgo · Instagram post (1080×1080)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Jmaâ brand tokens (from src/styles/index.css) */
+  :root{
+    --canvas:#171410; --bone:#FBF8F2; --ink:#2B2620;
+    --clay:#C2502E; --clay-press:#A8401F; --saffron:#D89A34;
+    --olive:#8A9164; --majorelle:#2E5A87; --majorelle-lt:#6E96C4;
+    --hair:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#0e0c0a; color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:24px; gap:18px;
+  }
+
+  /* --- on-screen toolbar (NOT part of the exported image) --- */
+  .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .toolbar p{color:#b7ad9d;font-size:13px;max-width:560px;text-align:center;line-height:1.5}
+  .btn{
+    appearance:none;border:none;cursor:pointer;font:inherit;font-weight:600;font-size:14px;
+    background:var(--clay);color:#fff;padding:10px 18px;border-radius:10px;transition:background .2s;
+  }
+  .btn:hover{background:var(--clay-press)}
+
+  /* --- preview scaler (keeps the poster at a true 1080px for export) --- */
+  .scaler{transform-origin:top left}
+
+  /* ====================== THE POSTER (1080×1080) ====================== */
+  #poster{
+    position:relative; width:1080px; height:1080px; overflow:hidden;
+    background:var(--canvas); color:#fff;
+    font-family:'Inter',system-ui,sans-serif;
+    isolation:isolate;
+  }
+  /* warm brand glows */
+  #poster .glow{position:absolute;border-radius:50%;filter:blur(120px);z-index:0}
+  #poster .g1{width:620px;height:620px;right:-180px;top:-200px;background:rgba(194,80,46,.42)}
+  #poster .g2{width:560px;height:560px;left:-160px;bottom:-180px;background:rgba(46,90,135,.40)}
+  #poster .g3{width:420px;height:420px;left:50%;top:46%;transform:translate(-50%,-50%);background:rgba(216,154,52,.14)}
+  /* faint zellige diagonal weave */
+  #poster .weave{
+    position:absolute;inset:0;z-index:0;opacity:.06;
+    background-image:repeating-linear-gradient(135deg,#fff 0,#fff 1px,transparent 1px,transparent 26px),
+                     repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 1px,transparent 26px);
+  }
+  /* hairline inset frame */
+  #poster .frame{position:absolute;inset:40px;border:1px solid var(--hair);border-radius:18px;z-index:1;pointer-events:none}
+  #poster .star{position:absolute;z-index:2;opacity:.35;color:var(--saffron)}
+  #poster .star.tl{left:60px;top:60px}
+  #poster .star.br{right:60px;bottom:60px}
+
+  #poster .content{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:96px 92px}
+
+  /* header */
+  #poster .head{display:flex;align-items:center;justify-content:space-between}
+  #poster .brand{display:flex;align-items:center;gap:16px}
+  #poster .mark{width:64px;height:64px;border-radius:16px;background:var(--clay);display:grid;place-items:center;
+    font-family:'Fraunces',serif;font-weight:600;font-size:38px;color:var(--bone);box-shadow:0 8px 30px rgba(194,80,46,.45)}
+  #poster .word{font-family:'Fraunces',serif;font-weight:500;font-size:40px;letter-spacing:-.5px}
+  #poster .pill{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--hair);
+    background:rgba(255,255,255,.08);padding:11px 18px;border-radius:999px;font-size:18px;font-weight:600;color:rgba(255,255,255,.9)}
+  #poster .dot{width:9px;height:9px;border-radius:50%;background:var(--olive)}
+
+  /* middle */
+  #poster .kicker{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--hair);
+    background:rgba(255,255,255,.07);padding:10px 18px;border-radius:999px;font-size:18px;font-weight:600;
+    letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.82)}
+  #poster h1{font-family:'Fraunces',serif;font-weight:500;font-size:104px;line-height:.98;letter-spacing:-1.5px;margin-top:30px}
+  #poster h1 .accent{color:var(--saffron)}
+  #poster .sub{margin-top:26px;font-size:28px;line-height:1.5;color:rgba(255,255,255,.78);max-width:780px}
+
+  /* activity chips */
+  #poster .chips{display:flex;flex-wrap:wrap;gap:14px;margin-top:38px}
+  #poster .chip{display:inline-flex;align-items:center;gap:11px;border:1px solid var(--hair);
+    background:rgba(255,255,255,.08);padding:14px 22px;border-radius:999px;font-size:23px;font-weight:600;color:#fff}
+  #poster .chip svg{width:26px;height:26px;stroke:var(--saffron);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* footer */
+  #poster .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+  #poster .stats{display:flex;align-items:center;gap:18px;font-size:24px;color:rgba(255,255,255,.85);font-weight:500}
+  #poster .stats b{font-family:'Fraunces',serif;font-weight:600;color:#fff}
+  #poster .sep{width:6px;height:6px;border-radius:50%;background:var(--saffron);opacity:.8}
+  #poster .ctaWrap{text-align:right}
+  #poster .cta{display:inline-flex;align-items:center;gap:14px;background:var(--clay);color:#fff;
+    font-size:30px;font-weight:700;padding:22px 38px;border-radius:16px;box-shadow:0 14px 40px rgba(194,80,46,.5)}
+  #poster .cta svg{width:28px;height:28px;stroke:#fff;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  #poster .handle{margin-top:16px;font-size:22px;color:rgba(255,255,255,.7);font-weight:500}
+  #poster .trust{margin-top:30px;font-size:19px;color:rgba(255,255,255,.55);letter-spacing:.02em}
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn" id="dl">Download PNG (1080×1080)</button>
+    <p>Tip: if the button can’t reach the export library offline, just open this file in your browser and screenshot the framed square — it’s exactly 1080×1080.</p>
+  </div>
+
+  <div class="scaler" id="scaler">
+    <!-- ===================== EXPORT NODE ===================== -->
+    <div id="poster">
+      <div class="glow g1"></div>
+      <div class="glow g2"></div>
+      <div class="glow g3"></div>
+      <div class="weave"></div>
+      <div class="frame"></div>
+
+      <!-- 8-point Moroccan star ornaments -->
+      <svg class="star tl" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+        <rect x="9" y="9" width="30" height="30"/><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)"/>
+      </svg>
+      <svg class="star br" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+        <rect x="9" y="9" width="30" height="30"/><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)"/>
+      </svg>
+
+      <div class="content">
+        <!-- header -->
+        <div class="head">
+          <div class="brand">
+            <div class="mark">h</div>
+            <div class="word">hudlgo</div>
+          </div>
+          <div class="pill"><span class="dot"></span> Morocco</div>
+        </div>
+
+        <!-- middle -->
+        <div class="mid">
+          <span class="kicker">For when you’re bored in Morocco</span>
+          <h1>Meet people.<br><span class="accent">Beat the boredom.</span></h1>
+          <p class="sub">Coffee, padel, surf, hikes, board games, language exchange — real plans with real people near you.</p>
+
+          <div class="chips">
+            <span class="chip">
+              <svg viewBox="0 0 24 24"><path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3v2M11.5 3v2"/></svg>Coffee
+            </span>
+            <span class="chip">
+              <svg viewBox="0 0 24 24"><path d="M2 7c.7.6 1.4 1 2.6 1C7 8 7 6 9.5 6s2.4 2 5 2 2.4-2 5-2c1.2 0 1.9.4 2.5 1"/><path d="M2 13c.7.6 1.4 1 2.6 1 2.5 0 2.5-2 5-2s2.4 2 5 2 2.4-2 5-2c1.2 0 1.9.4 2.5 1"/><path d="M2 19c.7.6 1.4 1 2.6 1 2.5 0 2.5-2 5-2s2.4 2 5 2 2.4-2 5-2c1.2 0 1.9.4 2.5 1"/></svg>Surf
+            </span>
+            <span class="chip">
+              <svg viewBox="0 0 24 24"><path d="M3 19 L9 7 L13 15 L16 10 L21 19 Z"/></svg>Hikes
+            </span>
+            <span class="chip">
+              <svg viewBox="0 0 24 24"><path d="M13 2 L4 14 h6 l-1 8 9-12 h-6 z"/></svg>Padel
+            </span>
+            <span class="chip">
+              <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.1"/><circle cx="15" cy="15" r="1.1"/><circle cx="9" cy="15" r="1.1"/><circle cx="15" cy="9" r="1.1"/></svg>Board games
+            </span>
+            <span class="chip">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg>Language
+            </span>
+          </div>
+        </div>
+
+        <!-- footer -->
+        <div class="foot">
+          <div>
+            <div class="stats"><span><b>22</b> cities</span><span class="sep"></span><span><b>27</b> activities</span><span class="sep"></span><span><b>100%</b> free</span></div>
+            <div class="trust">Verified members · you choose who you meet</div>
+          </div>
+          <div class="ctaWrap">
+            <span class="cta">Join free <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+            <div class="handle">hudlgo.app · @hudlgo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- =================== /EXPORT NODE =================== -->
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+  <script>
+    // Scale the preview to fit the window while keeping #poster intrinsically 1080px.
+    const poster = document.getElementById('poster');
+    const scaler = document.getElementById('scaler');
+    function fit(){
+      const s = Math.min(1, (window.innerWidth - 48) / 1080);
+      scaler.style.transform = 'scale(' + s + ')';
+      scaler.style.width = (1080 * s) + 'px';
+      scaler.style.height = (1080 * s) + 'px';
+    }
+    window.addEventListener('resize', fit); fit();
+
+    document.getElementById('dl').addEventListener('click', async () => {
+      if (!window.htmlToImage) { alert('Export library not loaded (offline?). Screenshot the framed square instead — it is exactly 1080×1080.'); return; }
+      try {
+        const dataUrl = await window.htmlToImage.toPng(poster, { width: 1080, height: 1080, pixelRatio: 1, cacheBust: true });
+        const a = document.createElement('a'); a.download = 'hudlgo-instagram-1080.png'; a.href = dataUrl; a.click();
+      } catch (e) {
+        alert('Could not auto-export (' + e.message + '). Screenshot the framed square instead — it is exactly 1080×1080.');
+      }
+    });
+  </script>
+</body>
+</html>

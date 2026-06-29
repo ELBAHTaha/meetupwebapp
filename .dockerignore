@@ -1,0 +1,15 @@
+# Build context for Dockerfile.web (the frontend SPA). Keep it lean: the server
+# and all node_modules are not needed to build the React bundle.
+node_modules
+dist
+dist-ssr
+.vite
+server
+.git
+.github
+*.log
+.env
+.env.*
+!.env.example
+ARCHITECTURE.md
+DEPLOY.md

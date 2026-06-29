@@ -1,0 +1,101 @@
+# ============================================================================
+# Production stack — single VPS, soft launch (payments in dev-simulation).
+#
+#   web    Caddy edge: serves the built SPA at https://${DOMAIN}, reverse-proxies
+#          https://api.${DOMAIN} → api, and gets automatic HTTPS certificates.
+#   api    NestJS backend (internal only; reached via the api subdomain).
+#   mysql  MySQL 8 (internal only; data persisted in a named volume).
+#
+# Config lives in .env.prod (copy from .env.prod.example). Run with:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# ============================================================================
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # Not published to the host — only the api container reaches it.
+    healthcheck:
+      # Use 127.0.0.1 (TCP), not localhost (socket): during first-boot data-dir
+      # init MySQL answers the socket before its network port is ready, so a
+      # socket ping reports "healthy" too early and the api races ahead.
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-p${MYSQL_ROOT_PASSWORD}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      FRONTEND_URL: https://${DOMAIN}
+      PUBLIC_URL: https://api.${DOMAIN}
+      UPLOADS_DIR: uploads
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: 900s
+      JWT_REFRESH_TTL: 30d
+      # First admin account, bootstrapped by seed.prod (idempotent).
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      # Email (Resend). Leave RESEND_API_KEY as re_xxx to log emails instead of sending.
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_xxx}
+      MAIL_FROM: ${MAIL_FROM:-Jmaa <onboarding@resend.dev>}
+      # Optional Google OAuth (blank → disabled).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: https://api.${DOMAIN}/auth/google/callback
+      # Optional Turnstile CAPTCHA secret (blank → verification bypassed).
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      THROTTLE_TTL: 60000
+      THROTTLE_LIMIT: 120
+      # NOTE: PADDLE_* intentionally unset → dev-simulation (no real charges).
+      # To take real payments later, add the PADDLE_* vars here. See DEPLOY.md.
+    volumes:
+      - uploads:/app/uploads
+    # Apply migrations, run the PRODUCTION seed (catalog + admin, no demo data),
+    # then start. The `until` loop retries migrate until the DB is reachable and
+    # migrations actually apply — so the app can never boot against an empty
+    # schema (a fresh-volume first-boot race). seed.prod failing must not block
+    # boot, hence `;` before node. (No `$` here → safe from compose interpolation.)
+    command: sh -c "until npx prisma migrate deploy; do echo 'waiting for database to be ready…'; sleep 3; done; node dist/prisma/seed.prod.js; node dist/main.js"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        # Baked into the SPA at build time → the browser calls the api subdomain.
+        VITE_API_URL: https://api.${DOMAIN}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Consumed by Caddyfile ({$DOMAIN}).
+      DOMAIN: ${DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  mysql_data:
+  uploads:
+  caddy_data:
+  caddy_config:

@@ -419,7 +419,7 @@ function AnalyticsDashboard({ data }: { data: AdminAnalytics }) {
         <Kpi icon={CalendarRange} label="Activities" value={totals.activities.toLocaleString()} sub={`${totals.liveActivities} live now`} />
         <Kpi icon={DollarSign} label="Est. MRR" value={money(monetization.mrrCents)} sub={`${totals.subscribers} subscribers`} accent />
         <Kpi icon={TrendingUp} label="Joins / week" value={growth.joins7d.toLocaleString()} sub={`${growth.messages7d} messages`} />
-        <Kpi icon={Crown} label="Paid members" value={(monetization.hostBronze + monetization.hostSilver + monetization.hostGold).toLocaleString()} sub={`${monetization.hostBronze}B · ${monetization.hostSilver}S · ${monetization.hostGold}G`} />
+        <Kpi icon={Crown} label="Pro hosts" value={monetization.hostPro.toLocaleString()} sub="49 MAD/mo" />
         <Kpi icon={Store} label="Businesses" value={totals.businesses.toLocaleString()} sub={`${totals.approvedBusinesses} approved`} />
         <Kpi icon={ShieldCheck} label="Avg trust" value={engagement.avgTrust.toFixed(2)} sub={`${engagement.activeHosts} active hosts`} />
         <Kpi icon={Activity} label="Avg / activity" value={engagement.avgAttendeesPerActivity.toFixed(1)} sub={`${totals.attendances} total joins`} />
@@ -441,11 +441,10 @@ function AnalyticsDashboard({ data }: { data: AdminAnalytics }) {
           <p className="font-display text-h3 font-medium">Revenue</p>
           <p className="mt-1 font-display text-display font-medium leading-none text-olive">{money(monetization.mrrCents)}<span className="ml-1.5 text-meta font-normal text-ink-soft">/mo est.</span></p>
           <div className="mt-3 space-y-1.5">
-            <Line label="Bronze members (29.90 MAD)" value={monetization.hostBronze} />
-            <Line label="Silver members (59.90 MAD)" value={monetization.hostSilver} />
-            <Line label="Gold members (99.90 MAD)" value={monetization.hostGold} />
-            <Line label="Paid extra activities" value={monetization.paidExtras} />
+            <Line label="Pro hosts (49 MAD)" value={monetization.hostPro} />
+            <Line label="Paid extra activities (19.90 MAD)" value={monetization.paidExtras} />
             <div className="!mt-2.5 border-t border-border pt-2.5">
+              <Line label="Starter venues (199 MAD)" value={monetization.businessTiers.starter} />
               <Line label="Bronze venues (490 MAD)" value={monetization.businessTiers.bronze} />
               <Line label="Silver venues (990 MAD)" value={monetization.businessTiers.silver} />
               <Line label="Gold venues (1990 MAD)" value={monetization.businessTiers.gold} />

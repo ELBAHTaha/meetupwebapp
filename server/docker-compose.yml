@@ -25,7 +25,7 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    # Loads Paddle keys/price ids (and anything else) from server/.env. The
+    # Loads Paddle keys (and anything else) from server/.env. The
     # explicit `environment` block below overrides what the container needs
     # (e.g. DATABASE_URL points at the mysql service, not localhost).
     env_file:
