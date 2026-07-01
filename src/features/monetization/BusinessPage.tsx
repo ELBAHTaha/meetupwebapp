@@ -7,7 +7,7 @@ import { DevelopedBy } from '@/components/DevelopedBy';
 import { Input, Textarea } from '@/components/Field';
 import { Tag } from '@/components/Chip';
 import { createSponsorshipCheckout, registerBusiness, signupBusiness } from '@/api';
-import { settleCheckout } from '@/lib/paddle';
+import { settleCheckout, paymentsEnabled } from '@/lib/paddle';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { AuthBackdrop } from '@/components/AuthBackdrop';
@@ -122,6 +122,13 @@ export function BusinessPage() {
         phone: form.phone,
       })) as { id: string };
       // 3. Open the Paddle sponsorship checkout; on success head into the app.
+      //    While payments are disabled, skip checkout — the venue is registered
+      //    and awaits review; sponsorship can be set up once payments are live.
+      if (!paymentsEnabled) {
+        toast('Your venue is registered and awaiting review — welcome to hudlgo! 🎉', 'success');
+        navigate('/onboarding', { state: { business: true } });
+        return;
+      }
       const session = await createSponsorshipCheckout(business.id, tier, interval);
       const ok = await settleCheckout(session);
       if (ok) {
@@ -283,8 +290,14 @@ export function BusinessPage() {
               <div className="rounded-input border border-border bg-surface px-4 py-3 text-meta text-ink-soft">
                 Selected plan: <span className="font-semibold text-ink">{selected.name}</span> · {selected.limit}
                 <span className="mt-0.5 block">
-                  You pay <span className="font-semibold text-ink">{termTotal} MAD</span> / {TERM_NOUN[interval]}
-                  {interval !== 'monthly' && <span className="text-olive"> ({intervalCfg.save})</span>}
+                  {paymentsEnabled ? (
+                    <>
+                      You pay <span className="font-semibold text-ink">{termTotal} MAD</span> / {TERM_NOUN[interval]}
+                      {interval !== 'monthly' && <span className="text-olive"> ({intervalCfg.save})</span>}
+                    </>
+                  ) : (
+                    <>Payments aren’t live yet — you can register now at no charge and set up sponsorship later.</>
+                  )}
                 </span>
               </div>
 

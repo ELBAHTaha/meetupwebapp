@@ -6,7 +6,7 @@ import { Button } from '@/components/Button';
 import { Tag } from '@/components/Chip';
 import { useAsync } from '@/hooks/useAsync';
 import { createSubscriptionCheckout, getSubscriptionSummary } from '@/api';
-import { settleCheckout } from '@/lib/paddle';
+import { settleCheckout, paymentsEnabled } from '@/lib/paddle';
 import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
 
@@ -73,6 +73,12 @@ export function PricingPage() {
         <h2 className="mt-6 font-display text-h1 font-medium">Membership tiers</h2>
         <p className="mt-1 text-meta text-ink-soft">Host more often and pin your activities to the top.</p>
 
+        {!paymentsEnabled && (
+          <p className="mt-3 rounded-card border border-border bg-saffron-soft px-4 py-3 text-meta text-ink-soft">
+            Paid plans are coming soon — payments aren’t available just yet. Everything in the Free plan works as normal.
+          </p>
+        )}
+
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {hostPlans.map((plan) => {
             const isCurrent = (summary.data?.plan ?? 'free') === plan.id;
@@ -100,11 +106,17 @@ export function PricingPage() {
                   fullWidth
                   loading={busy && plan.id === 'pro' && !isCurrent}
                   variant={plan.id === 'free' || isCurrent ? 'outline' : 'primary'}
-                  disabled={plan.id === 'free' || isCurrent || busy}
+                  disabled={plan.id === 'free' || isCurrent || busy || (plan.id === 'pro' && !paymentsEnabled)}
                   leftIcon={plan.id === 'pro' ? <Crown className="h-4 w-4" /> : undefined}
                   onClick={() => plan.id !== 'free' && !isCurrent && checkout(plan.id as Tier)}
                 >
-                  {isCurrent ? 'Current plan' : plan.id === 'free' ? 'Included' : `Get ${plan.name}`}
+                  {isCurrent
+                    ? 'Current plan'
+                    : plan.id === 'free'
+                      ? 'Included'
+                      : !paymentsEnabled
+                        ? 'Coming soon'
+                        : `Get ${plan.name}`}
                 </Button>
               </div>
             );

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BillingInterval as PrismaBillingInterval, PlanType, SponsorshipTier } from '@prisma/client';
 import type { EventEntity } from '@paddle/paddle-node-sdk';
@@ -45,6 +45,11 @@ export class PaymentsService {
 
   configured(): boolean {
     return this.paddle.configured;
+  }
+
+  /** Global kill switch — payments stay blocked until PAYMENTS_ENABLED=true. */
+  private get enabled(): boolean {
+    return this.config.get<boolean>('payments.enabled') ?? false;
   }
 
   // --- Start a checkout (the frontend opens the Paddle overlay) -------------
@@ -110,6 +115,12 @@ export class PaymentsService {
     userId?: string;
     customer: { kind: 'user' | 'business'; id: string };
   }): Promise<CheckoutSession> {
+    // Hard block while payments are disabled — before the dev-simulation path,
+    // so nothing can be granted (paid or free) until Paddle is live.
+    if (!this.enabled) {
+      throw new ServiceUnavailableException('Payments are temporarily unavailable.');
+    }
+
     const oid = `ord_${Date.now()}${crypto.randomBytes(6).toString('hex')}`;
     const userId = input.userId ?? (input.customer.kind === 'user' ? input.customer.id : undefined);
 

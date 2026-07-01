@@ -43,6 +43,13 @@ export interface AppConfig {
     apiKey?: string;
     from: string;
   };
+  // Global payments kill switch. While false, all checkout creation (host
+  // subscriptions, business sponsorships, one-off extra activities) is refused —
+  // including the dev-simulation auto-grant. Flip on (PAYMENTS_ENABLED=true) once
+  // the Paddle account is approved and live price ids are configured.
+  payments: {
+    enabled: boolean;
+  };
 }
 
 export default (): AppConfig => ({
@@ -102,5 +109,9 @@ export default (): AppConfig => ({
   mail: {
     apiKey: process.env.RESEND_API_KEY || undefined,
     from: process.env.MAIL_FROM ?? 'hudlgo <onboarding@resend.dev>',
+  },
+  // Off unless explicitly enabled, so payments stay blocked until Paddle is live.
+  payments: {
+    enabled: process.env.PAYMENTS_ENABLED === 'true',
   },
 });

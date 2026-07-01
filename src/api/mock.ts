@@ -56,6 +56,7 @@ import {
 } from './store';
 import { distanceKm } from '@/lib/format';
 import { CITIES } from './catalog';
+import { paymentsEnabled } from '@/lib/paddle';
 
 // Artificial latency so loading states are exercised.
 const delay = <T>(value: T, ms = 320): Promise<T> =>
@@ -469,7 +470,14 @@ function simulatedSession(amountCents: number): CheckoutSession {
   return { ref: nextId('ord-'), amountCents, simulated: true };
 }
 
+// Global kill switch — refuse every checkout while payments are disabled, so the
+// mock can't auto-grant Pro/sponsorships/extra activities either.
+function assertPaymentsEnabled(): void {
+  if (!paymentsEnabled) throw new Error('Payments are temporarily unavailable.');
+}
+
 export async function createSubscriptionCheckout(planType: 'pro'): Promise<CheckoutSession> {
+  assertPaymentsEnabled();
   const me = findUser(db.currentUserId)!;
   me.subscriptionPlan = planType;
   me.subscriptionStatus = 'active';
@@ -478,6 +486,7 @@ export async function createSubscriptionCheckout(planType: 'pro'): Promise<Check
 }
 
 export async function createExpressPaymentIntent(priorityLevel: 'express' | 'priority'): Promise<CheckoutSession> {
+  assertPaymentsEnabled();
   return delay(simulatedSession(priorityLevel === 'express' ? 990 : 1990), 180);
 }
 
@@ -507,6 +516,7 @@ export async function createSponsorshipCheckout(
   tier: SponsorshipTier,
   interval: 'monthly' | 'quarterly' | 'annual' = 'monthly',
 ): Promise<CheckoutSession> {
+  assertPaymentsEnabled();
   const amountMad = Math.round(SPONSOR_MONTHLY_MAD[tier] * INTERVAL_MONTHS[interval] * (1 - INTERVAL_DISCOUNT[interval]));
   return delay(simulatedSession(amountMad * 100), 220);
 }

@@ -2,7 +2,6 @@ import { Outlet } from 'react-router-dom';
 import { BottomTabBar } from './BottomTabBar';
 import { TopNav } from './TopNav';
 import { Toaster } from './Toaster';
-import { DevPanel } from './DevPanel';
 import { DevelopedBy } from './DevelopedBy';
 import { FeedbackButton } from './FeedbackButton';
 
@@ -18,8 +17,6 @@ export function AppLayout() {
       <BottomTabBar />
       <FeedbackButton />
       <Toaster />
-      {/* Dev-only lifecycle controls — never shipped in production builds. */}
-      {import.meta.env.DEV && <DevPanel />}
     </div>
   );
 }

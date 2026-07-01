@@ -15,6 +15,13 @@ const ENV = (import.meta.env.VITE_PADDLE_ENV as 'sandbox' | 'production' | undef
 /** True when a Paddle client-side token is configured (live overlay available). */
 export const paddleConfigured = Boolean(TOKEN);
 
+/**
+ * Global payments kill switch for the client UI. While false, purchase buttons
+ * are hidden/disabled so users don't hit the server's 503. Mirrors the server's
+ * PAYMENTS_ENABLED flag — keep both off until Paddle is approved and live.
+ */
+export const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
+
 let paddlePromise: Promise<Paddle | undefined> | null = null;
 // Resolvers awaiting a given transaction's overlay outcome, keyed by txn id.
 const pending = new Map<string, (completed: boolean) => void>();

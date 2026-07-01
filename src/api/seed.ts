@@ -11,6 +11,7 @@ import type {
   Spot,
   User,
 } from '@/types';
+import { CITIES } from './catalog';
 
 // ---------------------------------------------------------------------------
 // Helpers to build "upcoming" dates relative to now so the feed always feels live.
@@ -250,7 +251,7 @@ export const SEED_REPORTS: Report[] = [
   { id: 'rp3', reporterId: 'u4', targetType: 'activity', targetId: 'e3', reason: 'Location looks like a private address.', status: 'open', createdAt: at(-2, 10) },
 ];
 
-export const SEED_SPOTS: Spot[] = [
+const BASE_SPOTS: Spot[] = [
   // Casablanca
   { id: 's1', name: 'Padel Club Anfa', city: 'Casablanca', lat: 33.5869, lng: -7.6516, activityIds: ['padel'] },
   { id: 's2', name: 'Aïn Diab Corniche', city: 'Casablanca', lat: 33.5953, lng: -7.6786, activityIds: ['running', 'cycling', 'surfing'] },
@@ -289,7 +290,7 @@ const hostOf = (userId: string) => ({
   joinedAt: addHours(now, -120).toISOString(),
 });
 
-export const SEED_EVENTS: JmaaEvent[] = [
+const BASE_EVENTS: JmaaEvent[] = [
   {
     id: 'e1',
     activityId: 'padel',
@@ -873,6 +874,159 @@ export const SEED_EVENTS: JmaaEvent[] = [
     status: 'PAST',
   },
 ];
+
+// ---------------------------------------------------------------------------
+// City coverage — guarantee every city in the catalog has at least three
+// different activities to join. Each generated activity gets its own venue spot
+// (with the correct `city`, so the discover city filter — which keys on
+// spot.city — resolves it to the right place) located at the city centre.
+// ---------------------------------------------------------------------------
+type CityFill = [
+  activityId: string,
+  title: string,
+  venue: string,
+  day: number,
+  hour: number,
+  price: number,
+  desc: string,
+];
+
+const CITY_FILL: Record<string, CityFill[]> = {
+  sale: [
+    ['running', 'Bouregreg riverside morning run', 'Bouregreg riverside', 1, 8, 0, 'Easy 7k along the river, all paces welcome. Coffee after by the marina.'],
+    ['football', 'Salé 5-a-side kickabout', 'Salé sports complex', 3, 19, 40, 'Friendly 5-a-side on the astro. Bibs provided — just bring your boots.'],
+    ['coffee', 'Salé medina coffee meetup', 'Bab Bou Haja café', 2, 11, 0, 'Relaxed coffee and good chat near the medina gate. New faces welcome.'],
+  ],
+  kenitra: [
+    ['running', 'Kenitra corniche run', 'Kenitra corniche', 2, 8, 0, 'Steady 6k by the water, all levels. We regroup and grab coffee after.'],
+    ['football', 'Kenitra pick-up football', 'Municipal pitch', 4, 19, 30, 'Casual 7-a-side, friendly and inclusive. Turn up and get a game.'],
+    ['coffee', 'Kenitra newcomers coffee', 'City centre café', 3, 17, 0, 'New in town or just want to meet people? Easy coffee, zero pressure.'],
+  ],
+  mohammedia: [
+    ['beachvolley', 'Mohammedia beach volley', 'Mohammedia beach', 2, 17, 0, '2v2 ladder on the sand, sunset games. All levels, plenty of laughs.'],
+    ['padel', 'Mohammedia padel doubles', 'Padel club Mohammedia', 4, 20, 120, 'Friendly doubles, courts booked. We rotate so everyone plays.'],
+    ['coffee', 'Mohammedia marina coffee', 'Marina café', 3, 11, 0, 'Weekend coffee by the marina. Come say hi and meet the locals.'],
+  ],
+  fes: [
+    ['citywalk', 'Fès el-Bali medina walk', 'Bab Boujloud', 2, 16, 0, 'Wander the old medina’s alleys and tanneries together. Ends with mint tea.'],
+    ['football', 'Fès 5-a-side', 'Fès sports complex', 4, 19, 30, 'Friendly games on the astro. All welcome, bibs provided.'],
+    ['coffee', 'Fès coffee & conversation', 'Talaa Kebira café', 3, 17, 0, 'Slow coffee and good chat near the medina. Newcomers very welcome.'],
+  ],
+  meknes: [
+    ['running', 'Meknès ville nouvelle run', 'Hamria park', 1, 8, 0, 'Easy 6k loop, all paces. Friendly crew, coffee after.'],
+    ['football', 'Meknès pick-up football', 'Municipal stadium', 4, 19, 30, 'Casual kickabout, friendly and inclusive. Just bring your boots.'],
+    ['coffee', 'Meknès Place el-Hedim coffee', 'Place el-Hedim café', 2, 17, 0, 'Coffee on the square, watch the world go by, make a friend.'],
+  ],
+  tangier: [
+    ['beachvolley', 'Tangier beach volley', 'Malabata beach', 2, 17, 0, 'Sunset 2v2 on the sand. All levels welcome, super relaxed.'],
+    ['citywalk', 'Tangier kasbah walk', 'Kasbah gate', 3, 16, 0, 'Stroll the kasbah and medina as the light turns gold. Tea at the end.'],
+    ['coffee', 'Tangier Petit Socco coffee', 'Petit Socco café', 4, 11, 0, 'Classic café meetup in the heart of the old town. Come as you are.'],
+  ],
+  tetouan: [
+    ['hiking', 'Rif foothills day hike', 'Rif foothills trailhead', 5, 8, 0, 'Rolling hike above town with big views. Bring water and good shoes.'],
+    ['citywalk', 'Tétouan medina walk', 'Place Hassan II', 2, 16, 0, 'Explore the UNESCO medina’s white lanes together. Mint tea after.'],
+    ['coffee', 'Tétouan coffee meetup', 'Place Hassan II café', 3, 17, 0, 'Easy coffee on the main square. New faces always welcome.'],
+  ],
+  chefchaouen: [
+    ['hiking', 'Akchour waterfalls hike', 'Akchour trailhead', 6, 8, 0, 'Beautiful river hike to the falls. Moderate, bring 1.5L water.'],
+    ['photowalk', 'Blue medina photo walk', 'Plaza Uta el-Hammam', 2, 16, 0, 'Chase the blue streets and golden light. Phones or cameras, all welcome.'],
+    ['coffee', 'Chefchaouen plaza coffee', 'Plaza Uta el-Hammam café', 3, 11, 0, 'Coffee on the main plaza under the mountains. Relaxed and friendly.'],
+  ],
+  oujda: [
+    ['football', 'Oujda pick-up football', 'Municipal pitch', 4, 19, 30, 'Friendly 7-a-side, all levels. Turn up and get a game.'],
+    ['running', 'Lalla Aicha park run', 'Lalla Aicha park', 2, 8, 0, 'Easy 5k in the park, all paces. Coffee after for whoever’s up for it.'],
+    ['coffee', 'Oujda city centre coffee', 'City centre café', 3, 17, 0, 'Laid-back coffee and chat. A nice way to meet new people in town.'],
+  ],
+  nador: [
+    ['beachvolley', 'Marchica lagoon beach volley', 'Marchica lagoon beach', 2, 17, 0, 'Sunset 2v2 by the lagoon. All levels, good vibes only.'],
+    ['running', 'Nador corniche run', 'Nador corniche', 1, 8, 0, 'Flat 6k along the water, all paces. Friendly group, coffee after.'],
+    ['coffee', 'Nador lagoon coffee', 'Marchica café', 3, 11, 0, 'Weekend coffee by the lagoon. Come meet the locals.'],
+  ],
+  eljadida: [
+    ['citywalk', 'Cité Portugaise walk', 'Cité Portugaise gate', 2, 16, 0, 'Explore the Portuguese cistern and ramparts together. Ends by the sea.'],
+    ['football', 'El Jadida beach football', 'El Jadida beach', 4, 17, 0, 'Barefoot football on the sand. Jumpers for goalposts, pure fun.'],
+    ['coffee', 'El Jadida medina coffee', 'Medina café', 3, 17, 0, 'Relaxed coffee in the old town. New faces very welcome.'],
+  ],
+  essaouira: [
+    ['surfing', 'Essaouira beach surf session', 'Essaouira main beach', 2, 9, 200, 'Mellow beach break, great for learning. Boards and wetsuits sorted.'],
+    ['yoga', 'Sunrise rampart yoga', 'Skala ramparts', 1, 7, 80, 'Gentle flow as the sun rises over the ocean. Mats provided, tea after.'],
+    ['coffee', 'Essaouira port coffee', 'Skala café', 3, 11, 0, 'Coffee by the ramparts, salty air and good chat. Come say hi.'],
+  ],
+  taghazout: [
+    ['yoga', 'Clifftop sunset yoga', 'Taghazout clifftop', 2, 18, 80, 'Slow flow over the ocean as the sun drops. All levels, mats provided.'],
+    ['hiking', 'Taghazout hills coastal walk', 'Taghazout hills trail', 4, 8, 0, 'Easy coastal hike with ocean views and a tea stop. All welcome.'],
+    ['coffee', 'Taghazout village coffee', 'Village café', 3, 11, 0, 'Post-surf coffee with the crew. Travellers and locals all welcome.'],
+  ],
+  ifrane: [
+    ['hiking', 'Cedar forest hike', 'Cèdre Gouraud forest', 5, 9, 0, 'Cool forest hike among the cedars — watch for Barbary macaques. Easy pace.'],
+    ['trail', 'Mischliffen trail run', 'Mischliffen', 2, 8, 0, 'Punchy trail loop in the highlands. Bring water and trail shoes.'],
+    ['coffee', 'Ifrane town centre coffee', 'Town centre café', 3, 11, 0, 'Coffee in the alpine town. Relaxed meetup, new faces welcome.'],
+  ],
+  benimellal: [
+    ['hiking', 'Aïn Asserdoun springs hike', 'Aïn Asserdoun', 5, 8, 0, 'Hike up to the springs and Borj Ras el-Aïn for the views. Moderate.'],
+    ['football', 'Beni Mellal pick-up football', 'Municipal pitch', 4, 19, 30, 'Friendly 7-a-side, all levels. Just turn up and play.'],
+    ['coffee', 'Beni Mellal city coffee', 'City centre café', 3, 17, 0, 'Easy coffee and chat downtown. A good way to meet people.'],
+  ],
+  ouarzazate: [
+    ['quad', 'Desert dunes quad ride', 'Ouarzazate desert edge', 6, 16, 350, 'Golden-hour quad ride across the desert flats. Mint tea stop included.'],
+    ['hiking', 'Aït Benhaddou walk', 'Aït Benhaddou ksar', 5, 8, 0, 'Walk the famous kasbah and riverbed at the film city. Easy, scenic.'],
+    ['photowalk', 'Ouarzazate kasbah photo walk', 'Taourirt kasbah', 2, 16, 0, 'Earthen walls and big desert light. Phones or cameras, all welcome.'],
+  ],
+  dakhla: [
+    ['kitesurf', 'Dakhla lagoon kite session', 'Dakhla lagoon', 2, 14, 0, 'Flat-water paradise, steady wind. Independent riders, all welcome.'],
+    ['beachvolley', 'Lagoon beach volley', 'Dakhla lagoon beach', 4, 17, 0, 'Sunset 2v2 on the sand by the lagoon. Relaxed, all levels.'],
+    ['coffee', 'Dakhla lagoon coffee', 'Lagoon café', 3, 11, 0, 'Coffee by the water with the kite crew. Travellers welcome.'],
+  ],
+  laayoune: [
+    ['football', 'Laâyoune pick-up football', 'Municipal pitch', 4, 19, 30, 'Friendly kickabout, all levels. Turn up and get a game.'],
+    ['running', 'Saguia evening run', 'Saguia el-Hamra', 2, 18, 0, 'Easy 5k as it cools down, all paces. Coffee after for the keen.'],
+    ['coffee', 'Laâyoune city coffee', 'City centre café', 3, 17, 0, 'Laid-back coffee and chat. A nice way to meet new people in town.'],
+  ],
+};
+
+const FILL_HOSTS = ['u1', 'u2', 'u5', 'u6', 'u8', 'u10', 'u7', 'u3', 'u4'];
+
+const CITY_FILL_SPOTS: Spot[] = [];
+const CITY_FILL_EVENTS: JmaaEvent[] = [];
+let fillSeq = 0;
+for (const city of CITIES) {
+  const specs = CITY_FILL[city.id];
+  if (!specs) continue;
+  specs.forEach(([activityId, title, venue, day, hour, price, desc], i) => {
+    const spotId = `cs-${city.id}-${i + 1}`;
+    // Small offset so multiple venues in one city don't stack on the same pin.
+    const lat = city.lat + (i - 1) * 0.01;
+    const lng = city.lng + (i - 1) * 0.012;
+    CITY_FILL_SPOTS.push({ id: spotId, name: venue, city: city.name, lat, lng, activityIds: [activityId] });
+
+    const host = FILL_HOSTS[fillSeq % FILL_HOSTS.length];
+    const g1 = FILL_HOSTS[(fillSeq + 3) % FILL_HOSTS.length];
+    const g2 = FILL_HOSTS[(fillSeq + 5) % FILL_HOSTS.length];
+    fillSeq += 1;
+
+    CITY_FILL_EVENTS.push({
+      id: `ce-${city.id}-${i + 1}`,
+      activityId,
+      title,
+      hostId: host,
+      spotId,
+      startsAt: at(day, hour),
+      durationMins: 90,
+      capacity: 12,
+      minPlayers: 1,
+      skillLevel: 'any',
+      price,
+      description: desc,
+      travelersWelcome: true,
+      visibility: 'public',
+      attendees: [hostOf(host), going(g1), going(g2)],
+      status: 'CONFIRMED',
+    });
+  });
+}
+
+export const SEED_SPOTS: Spot[] = [...BASE_SPOTS, ...CITY_FILL_SPOTS];
+export const SEED_EVENTS: JmaaEvent[] = [...BASE_EVENTS, ...CITY_FILL_EVENTS];
 
 export const SEED_CONDITIONS: Conditions[] = [
   { spotId: 's11', activityType: 'water', updatedAt: now.toISOString(), fields: { swellM: 1.8, windKts: 8, tempC: 22, waterTempC: 19, summary: 'Clean & glassy', icon: 'Waves' } },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Crown, Zap } from 'lucide-react';
 import { createExpressPaymentIntent } from '@/api';
-import { settleCheckout } from '@/lib/paddle';
+import { settleCheckout, paymentsEnabled } from '@/lib/paddle';
 import { toast } from '@/store/toast';
 import type { PriorityLevel } from '@/types';
 import { cn } from '@/lib/cn';
@@ -31,7 +31,10 @@ export function ExpressPaymentBox({
   freeAvailable: boolean;
   onChange: (priority: PriorityLevel, paymentIntentId?: string) => void;
 }) {
-  const options = freeAvailable ? FREE_OPTIONS : EXTRA_OPTIONS;
+  // While payments are disabled, only the free/standard option is offered.
+  const options = (freeAvailable ? FREE_OPTIONS : EXTRA_OPTIONS).filter(
+    (item) => paymentsEnabled || item.id === 'standard',
+  );
   const [loading, setLoading] = useState(false);
 
   async function choose(priority: PriorityLevel) {
@@ -86,6 +89,13 @@ export function ExpressPaymentBox({
           </button>
         ))}
       </div>
+      {!paymentsEnabled && (
+        <p className="mt-2 text-[12px] text-ink-faint">
+          {freeAvailable
+            ? 'Paid pinning is coming soon — your free activity works as normal.'
+            : 'You’ve used today’s free activity. Extra paid activities are coming soon — try again tomorrow.'}
+        </p>
+      )}
       {loading && <p className="mt-2 text-[12px] text-ink-faint">Opening secure checkout...</p>}
       {value !== 'standard' && paymentIntentId && <p className="mt-2 text-[12px] font-medium text-olive">Extra-activity payment ready.</p>}
     </div>
