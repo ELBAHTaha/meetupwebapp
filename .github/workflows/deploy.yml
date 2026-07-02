@@ -1,0 +1,42 @@
+name: Deploy to VPS
+
+# Zero-touch deploy: every push to main (or a manual run) SSHes into the
+# Hostinger VPS and runs ./deploy.sh, which pulls main and rebuilds the stack.
+#
+# Requires three repository secrets (Settings → Secrets and variables → Actions):
+#   VPS_HOST    the server IP or hostname   (e.g. 2.24.210.201)
+#   VPS_USER    the SSH user                (e.g. root)
+#   VPS_SSH_KEY a PRIVATE SSH key whose public half is in the VPS's
+#               ~/.ssh/authorized_keys. Use a DEDICATED deploy key, not your
+#               personal key. Paste the full key including the BEGIN/END lines.
+#
+# Runs only on pushes to main and manual dispatch — never on fork PRs — so the
+# secrets are never exposed to untrusted code.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Never run two deploys at once; cancel an in-flight one if a newer push lands.
+concurrency:
+  group: vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" \
+            'cd ~/meetupwebapp && bash deploy.sh'

@@ -161,6 +161,43 @@ without charging). When you're ready to charge real money:
 5. Paddle is the **merchant of record** — no card data touches your servers (no
    PCI-DSS SAQ-D scope); Paddle also handles VAT/tax.
 
+## 11. One-command & automatic deploys
+
+> The live **hudlgo.com** box runs behind a shared, host-mode Traefik (alongside
+> n8n), so it deploys with **both** compose files, not just `docker-compose.prod.yml`.
+> `deploy.sh` already uses the correct two-file command.
+
+**One command (on the VPS):**
+```bash
+cd ~/meetupwebapp && bash deploy.sh
+```
+`deploy.sh` fast-forwards `main`, rebuilds + restarts the stack
+(`docker-compose.prod.yml` + `docker-compose.traefik.yml` + `.env.prod`), and
+prunes dangling images. `.env.prod` is gitignored, so secrets are never touched.
+
+**Zero-touch (on every push to `main`):** `.github/workflows/deploy.yml` SSHes in
+and runs `deploy.sh`. Add three repository secrets
+(**Settings → Secrets and variables → Actions**):
+
+| Secret | Value |
+|--------|-------|
+| `VPS_HOST` | server IP/hostname (e.g. `2.24.210.201`) |
+| `VPS_USER` | SSH user (e.g. `root`) |
+| `VPS_SSH_KEY` | a **dedicated** deploy **private** key (full text, incl. BEGIN/END) |
+
+Create the deploy key and authorize it on the VPS (run locally):
+```bash
+ssh-keygen -t ed25519 -C hudlgo-deploy -f deploy_key -N ''
+# put the PUBLIC half on the server:
+ssh-copy-id -i deploy_key.pub <VPS_USER>@<VPS_HOST>
+#   …or append the contents of deploy_key.pub to the VPS's ~/.ssh/authorized_keys
+# paste the PRIVATE half (the file `deploy_key`) into the VPS_SSH_KEY secret,
+# then delete both local files.
+```
+The workflow runs only on pushes to `main` and manual **Actions → Run workflow**
+(`workflow_dispatch`) — never on fork PRs — so the secrets stay safe. Use a
+dedicated key (not your personal one) so you can revoke it independently.
+
 ---
 
 ### Notes & optional hardening
