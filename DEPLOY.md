@@ -81,7 +81,8 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 
 First build takes a few minutes. On boot the api container runs
 `prisma migrate deploy` (creates all tables) then `seed.prod` (loads the activity
-catalog and your admin account — **no demo data, no deletes**).
+catalog, your admin account, and a set of **community starter activities** — four
+per city so the discover feed is populated from day one. **No deletes.**).
 
 Watch it come up:
 
@@ -96,9 +97,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f
 - Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` → the **Admin** link appears in the
   top nav; you can approve activities and moderate.
 
-> Note: until you have real users, the discover feed will be empty (the demo seed
-> is intentionally **not** used in production). Create a couple of activities from
-> your admin/host account to populate it for early users.
+> Note: the discover feed is pre-populated with community starter activities (four
+> per known city, hosted by verified `*.community@hudlgo.com` accounts) so early
+> users never see an empty feed. They refresh automatically on each boot — expired
+> ones are replaced, live ones (and any real joins) are left untouched. The full
+> demo seed (`seed.ts`) is still intentionally **not** used in production.
 
 ## 8. Email (recommended before real users)
 
