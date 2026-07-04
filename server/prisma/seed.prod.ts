@@ -12,7 +12,6 @@
 // ---------------------------------------------------------------------------
 import { ActivityCategory, PrismaClient, Vibe } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -67,6 +66,7 @@ async function main() {
   }
   console.log(`  catalog ready (${CATALOG.length} activity types).`);
 
+  let adminId: string | undefined;
   const email = process.env.ADMIN_EMAIL?.trim();
   const password = process.env.ADMIN_PASSWORD;
   if (email && password) {
@@ -78,12 +78,13 @@ async function main() {
       update: { role: 'ADMIN', status: 'ACTIVE' },
       create: { email, name: 'Admin', passwordHash, role: 'ADMIN', status: 'ACTIVE' },
     });
+    adminId = admin.id;
     console.log(`  admin ready → ${admin.email}`);
   } else {
     console.warn('  ADMIN_EMAIL / ADMIN_PASSWORD not set — skipping admin bootstrap.');
   }
 
-  await seedCommunityActivities(typeIds);
+  await seedCommunityActivities(typeIds, adminId);
 
   console.log('Production seed complete.');
 }
@@ -92,27 +93,29 @@ async function main() {
 // COMMUNITY activities — starter content so a brand-new user in any Moroccan
 // city opens a populated discover feed instead of an empty one.
 //
+// Every one of these is hosted by the real ADMIN account — no fake personas.
+//
 // This is idempotent AND self-refreshing across reboots, without ever deleting
 // real user data:
-//   • A small roster of verified "community host" accounts is upserted (their
-//     passwords are random — they are display/host accounts, not logins).
-//   • For every city × slot we look for an *upcoming* activity by that host with
+//   • For every city × slot we look for an *upcoming* admin-hosted activity with
 //     the same title. If one exists we leave it (and any real joins) untouched;
-//     if none does, we create a fresh one dated a few days out. So expired
+//     if none does, we create a fresh one dated 3 days out. So expired
 //     activities are never resurrected and never duplicated while live.
 // ---------------------------------------------------------------------------
-type Gender = 'MALE' | 'FEMALE';
 type GenderPref = 'ANY' | 'WOMEN' | 'MEN';
 
-const COMMUNITY_HOSTS: { email: string; name: string; neighborhood: string; gender: Gender }[] = [
-  { email: 'sara.community@hudlgo.com', name: 'Sara Bennani', neighborhood: 'Casablanca', gender: 'FEMALE' },
-  { email: 'youssef.community@hudlgo.com', name: 'Youssef Amrani', neighborhood: 'Rabat', gender: 'MALE' },
-  { email: 'imane.community@hudlgo.com', name: 'Imane Idrissi', neighborhood: 'Marrakech', gender: 'FEMALE' },
-  { email: 'reda.community@hudlgo.com', name: 'Reda El Alaoui', neighborhood: 'Tangier', gender: 'MALE' },
-  { email: 'salma.community@hudlgo.com', name: 'Salma Berrada', neighborhood: 'Agadir', gender: 'FEMALE' },
-  { email: 'anas.community@hudlgo.com', name: 'Anas Fassi', neighborhood: 'Fès', gender: 'MALE' },
-  { email: 'khadija.community@hudlgo.com', name: 'Khadija Ouazzani', neighborhood: 'Essaouira', gender: 'FEMALE' },
-  { email: 'mehdi.community@hudlgo.com', name: 'Mehdi Sqalli', neighborhood: 'Meknès', gender: 'MALE' },
+// Legacy fake "community host" accounts from earlier seeds. We reassign any
+// activities they host to the admin, then remove the accounts. Kept here only
+// so the migration can find and clean them up on boot.
+const LEGACY_COMMUNITY_HOST_EMAILS = [
+  'sara.community@hudlgo.com',
+  'youssef.community@hudlgo.com',
+  'imane.community@hudlgo.com',
+  'reda.community@hudlgo.com',
+  'salma.community@hudlgo.com',
+  'anas.community@hudlgo.com',
+  'khadija.community@hudlgo.com',
+  'mehdi.community@hudlgo.com',
 ];
 
 interface ActBuilder {
@@ -169,31 +172,29 @@ const CITIES: { name: string; lat: number; lng: number; acts: string[] }[] = [
   { name: 'Laâyoune', lat: 27.1253, lng: -13.1625, acts: ['football', 'coffee', 'running', 'citywalk'] },
 ];
 
-async function seedCommunityActivities(typeIds: Record<string, string>) {
-  console.log('Production seed: ensuring community activities…');
+async function seedCommunityActivities(typeIds: Record<string, string>, adminId?: string) {
+  if (!adminId) {
+    console.warn('  no admin account — skipping community activities (they are hosted by admin).');
+    return;
+  }
+  console.log('Production seed: ensuring community activities (hosted by admin)…');
 
-  // Host accounts. Random password → nobody can log in as them; we only ever
-  // read their public host card. Re-ensure ACTIVE + verified if they existed.
-  const randomPw = await bcrypt.hash(randomBytes(24).toString('hex'), 10);
-  const hostId: Record<string, string> = {};
-  for (const h of COMMUNITY_HOSTS) {
-    const u = await prisma.user.upsert({
-      where: { email: h.email },
-      update: { status: 'ACTIVE', verified: true },
-      create: {
-        email: h.email,
-        passwordHash: randomPw,
-        name: h.name,
-        bio: 'Local host helping people meet up across Morocco. 👋',
-        neighborhood: h.neighborhood,
-        gender: h.gender,
-        lookingFor: 'BOTH',
-        role: 'USER',
-        status: 'ACTIVE',
-        verified: true,
-      },
+  // Migrate away from the old fake "community host" personas: reassign every
+  // activity they host to the admin, then delete the accounts. onDelete is
+  // Cascade on Event.host, so we MUST reassign before deleting — otherwise the
+  // activities (and any real joins) would be wiped along with the account.
+  const legacyHosts = await prisma.user.findMany({
+    where: { email: { in: LEGACY_COMMUNITY_HOST_EMAILS } },
+    select: { id: true },
+  });
+  if (legacyHosts.length) {
+    const legacyIds = legacyHosts.map((u) => u.id);
+    const reassigned = await prisma.event.updateMany({
+      where: { hostId: { in: legacyIds } },
+      data: { hostId: adminId },
     });
-    hostId[h.email] = u.id;
+    await prisma.user.deleteMany({ where: { id: { in: legacyIds } } });
+    console.log(`  migrated ${reassigned.count} activities off ${legacyIds.length} legacy host account(s) → admin.`);
   }
 
   const now = new Date();
@@ -210,30 +211,32 @@ async function seedCommunityActivities(typeIds: Record<string, string>) {
     const city = CITIES[ci];
     for (let slot = 0; slot < city.acts.length; slot++) {
       const b = ACT[city.acts[slot]];
-      const host = COMMUNITY_HOSTS[(ci * 4 + slot) % COMMUNITY_HOSTS.length];
-      const hid = hostId[host.email];
+      const hid = adminId;
       const title = b.title(city.name);
 
-      // Already have this activity upcoming? Leave it (and any real joins) alone.
+      // All community activities start 3 days from now (each at its own hour).
+      const startsAt = daysAt(3, b.hour);
+      const endsAt = new Date(startsAt.getTime() + b.durationMin * 60000);
+      const chatExpiresAt = new Date(endsAt.getTime() + 86_400_000);
+
+      // Already have this activity upcoming? Keep the same row (so any real joins
+      // survive) but refresh its date to 3 days out and re-assert feed-visibility.
       const existing = await prisma.event.findFirst({
         where: { hostId: hid, title, endsAt: { gt: now } },
-        select: { id: true, approvedAt: true, status: true, visibility: true, underReview: true },
+        select: { id: true },
       });
       if (existing) {
-        // Make sure it's actually feed-visible (approved, live, public).
-        if (!existing.approvedAt || existing.status !== 'LIVE' || existing.visibility !== 'PUBLIC' || existing.underReview) {
-          await prisma.event.update({
-            where: { id: existing.id },
-            data: { approvedAt: existing.approvedAt ?? now, status: 'LIVE', visibility: 'PUBLIC', underReview: false },
-          });
-        }
+        await prisma.event.update({
+          where: { id: existing.id },
+          data: { startsAt, endsAt, approvedAt: now, status: 'LIVE', visibility: 'PUBLIC', underReview: false },
+        });
+        // Keep the chat window in step with the refreshed date (updateMany so a
+        // missing thread is a no-op instead of a throw).
+        await prisma.chatThread.updateMany({ where: { eventId: existing.id }, data: { expiresAt: chatExpiresAt } });
         kept++;
         continue;
       }
 
-      // Stagger dates a few days out so a city's four activities aren't all at once.
-      const startsAt = daysAt(2 + slot + (ci % 4), b.hour);
-      const endsAt = new Date(startsAt.getTime() + b.durationMin * 60000);
       await prisma.event.create({
         data: {
           hostId: hid,
@@ -255,7 +258,7 @@ async function seedCommunityActivities(typeIds: Record<string, string>) {
           visibility: 'PUBLIC',
           status: 'LIVE',
           approvedAt: now, // pre-approved starter content
-          chatThread: { create: { expiresAt: new Date(endsAt.getTime() + 86_400_000) } },
+          chatThread: { create: { expiresAt: chatExpiresAt } },
         },
       });
       created++;
