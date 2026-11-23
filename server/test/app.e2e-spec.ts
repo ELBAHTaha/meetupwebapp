@@ -4,6 +4,8 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { markVerified } from './helpers';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 /**
  * Smoke test for the critical paths: signup → login → create event → join →
@@ -54,9 +56,11 @@ describe('hudlgo API (e2e)', () => {
         gender: 'MALE',
       })
       .expect(201);
-    expect(res.body.user.status).toBe('ACTIVE');
+    expect(res.body.user.status).toBe('active');
     expect(res.body.accessToken).toBeDefined();
     access = res.body.accessToken;
+    // Email verification gates hosting/joining — covered in auth-recovery.e2e-spec.
+    await markVerified(app, email);
   });
 
   it('rejects under-18 signup with 422', async () => {
@@ -133,7 +137,17 @@ describe('hudlgo API (e2e)', () => {
       .expect(422);
   });
 
-  it('seeded user can join the event', async () => {
+  it('seeded user can join the event once an admin approves it', async () => {
+    // Normal users' activities wait for admin approval before they're joinable.
+    const admin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'you@jmaa.app', password: 'password123' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/admin/activities/${eventId}/approve`)
+      .set('Authorization', `Bearer ${admin.body.accessToken}`)
+      .expect(201);
+
     const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'lena@jmaa.app', password: 'password123' })
@@ -257,9 +271,10 @@ describe('hudlgo business side (e2e)', () => {
   });
 
   it('claim flow: claim a LISTED venue → admin approve → venue CLAIMED', async () => {
-    const venues = await request(app.getHttpServer()).get('/venues').expect(200);
-    const listed = venues.body.find((v: { status: string }) => v.status === 'listed');
-    expect(listed).toBeDefined();
+    // Create a fresh unclaimed venue so the test is repeatable (each run claims one).
+    const listed = await app.get(PrismaService).venue.create({
+      data: { name: `Unclaimed ${rnd}`, slug: `unclaimed-${rnd}`, address: 'Casablanca', lat: 33.58, lng: -7.62, status: 'LISTED' },
+    });
 
     await request(app.getHttpServer())
       .post(`/venues/${listed.id}/claim`)

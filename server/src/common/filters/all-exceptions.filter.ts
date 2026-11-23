@@ -13,6 +13,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
+    // Optional machine-readable code (e.g. EMAIL_NOT_VERIFIED) the frontend can switch on.
+    let code: string | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -23,6 +25,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const b = body as Record<string, unknown>;
         message = (b.message as string | string[]) ?? exception.message;
         error = (b.error as string) ?? exception.name;
+        if (typeof b.code === 'string') code = b.code;
       }
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       // Unique constraint, missing record, etc.
@@ -47,6 +50,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(exception instanceof Error ? exception.stack : String(exception));
     }
 
-    res.status(status).json({ statusCode: status, message, error });
+    res.status(status).json({ statusCode: status, message, error, ...(code ? { code } : {}) });
   }
 }

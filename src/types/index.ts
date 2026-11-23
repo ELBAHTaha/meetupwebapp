@@ -115,6 +115,10 @@ export interface User {
   creditAmountCents?: number;
   /** Whether the user receives email mirrors of their in-app notifications. */
   emailNotifications?: boolean;
+  /** False until the user confirms their email (can browse, but not host/join/chat). */
+  emailVerified?: boolean;
+  /** Preferred UI language, synced to the backend to localize emails. */
+  locale?: string;
   /** Set when this account owns a sponsored venue — switches to the business UI. */
   businessId?: string;
 }
@@ -515,6 +519,8 @@ export interface SignupInput {
   turnstileToken?: string;
   /** Referral code from an invite link (?ref=...). Credits both users with Pro days. */
   referralCode?: string;
+  /** UI language at signup — localizes the verification email. */
+  locale?: string;
 }
 
 /** A user's invite link + how many friends have joined via it. */

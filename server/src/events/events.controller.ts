@@ -9,6 +9,7 @@ import { JoinEventDto, StartEventDto } from './dto/event-action.dto';
 import { OptionalAuth } from '../common/decorators/optional-auth.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ConsumerGuard } from '../common/guards/consumer.guard';
+import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
 // Anti-abuse cap on activity creation: strict in production, relaxed in dev so
@@ -51,6 +52,7 @@ export class EventsController {
   // Anti-abuse: cap activity creation per hour per user (see CREATE_THROTTLE).
   @ApiBearerAuth()
   @Throttle({ default: CREATE_THROTTLE })
+  @UseGuards(EmailVerifiedGuard)
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateEventDto) {
     return this.events.create(user.id, dto);
@@ -82,7 +84,7 @@ export class EventsController {
 
   // Joining/leaving is consumer behaviour — business accounts host, not attend.
   @ApiBearerAuth()
-  @UseGuards(ConsumerGuard)
+  @UseGuards(ConsumerGuard, EmailVerifiedGuard)
   @Post(':id/join')
   join(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: JoinEventDto) {
     return this.events.join(id, user.id, dto?.shareContactWithHostBusiness ?? false);

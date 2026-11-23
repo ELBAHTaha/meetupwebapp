@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
 
 @ApiTags('chat')
 @ApiBearerAuth()
@@ -18,6 +19,7 @@ export class ChatController {
 
   // Rate limit: 10 messages per minute per user.
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @UseGuards(EmailVerifiedGuard)
   @Post('messages')
   send(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SendMessageDto) {
     return this.chat.sendMessage(id, user.id, dto.text);

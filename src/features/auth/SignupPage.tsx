@@ -31,7 +31,7 @@ function ageFrom(birthday: string): number {
 }
 
 export function SignupPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const setLogin = useSession((s) => s.login);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -88,6 +88,7 @@ export function SignupPage() {
         phone: phone || undefined,
         turnstileToken: turnstileToken || undefined,
         referralCode: refFromUrl || localStorage.getItem('jmaa-ref') || undefined,
+        locale: i18n.language,
       });
       localStorage.removeItem('jmaa-ref');
       setLogin(user);

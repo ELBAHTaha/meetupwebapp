@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { TokensService } from './tokens.service';
+import { AuthTokensService } from './auth-tokens.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { ReferralModule } from '../referral/referral.module';
@@ -18,7 +19,7 @@ const googleProvider: Provider = {
 @Module({
   imports: [JwtModule.register({}), ReferralModule],
   controllers: [AuthController],
-  providers: [AuthService, TokensService, JwtStrategy, googleProvider],
-  exports: [AuthService, TokensService],
+  providers: [AuthService, TokensService, AuthTokensService, JwtStrategy, googleProvider],
+  exports: [AuthService, TokensService, AuthTokensService],
 })
 export class AuthModule {}

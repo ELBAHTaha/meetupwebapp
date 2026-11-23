@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -65,6 +66,11 @@ export class SignupDto {
   @IsString()
   @MaxLength(16)
   referralCode?: string;
+
+  @ApiPropertyOptional({ enum: ['en', 'fr', 'ar'], description: 'UI language (localizes emails).' })
+  @IsOptional()
+  @IsIn(['en', 'fr', 'ar'])
+  locale?: string;
 }
 
 /**
@@ -97,6 +103,11 @@ export class BusinessSignupDto {
   @IsOptional()
   @IsString()
   turnstileToken?: string;
+
+  @ApiPropertyOptional({ enum: ['en', 'fr', 'ar'], description: 'UI language (localizes emails).' })
+  @IsOptional()
+  @IsIn(['en', 'fr', 'ar'])
+  locale?: string;
 }
 
 export class LoginDto {
@@ -113,4 +124,39 @@ export class RefreshDto {
   @ApiProperty()
   @IsString()
   refreshToken!: string;
+}
+
+const LOCALES = ['en', 'fr', 'ar'] as const;
+
+export class ForgotPasswordDto {
+  @ApiProperty()
+  @IsEmail()
+  @MaxLength(191)
+  email!: string;
+
+  @ApiPropertyOptional({ enum: LOCALES, description: 'UI language for the email (falls back to the stored one).' })
+  @IsOptional()
+  @IsIn(LOCALES as unknown as string[])
+  locale?: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(200)
+  token!: string;
+
+  // Same password rules as signup.
+  @ApiProperty({ minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(72)
+  newPassword!: string;
+}
+
+export class VerifyEmailDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(200)
+  token!: string;
 }

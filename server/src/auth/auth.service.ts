@@ -1,4 +1,12 @@
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
@@ -8,7 +16,8 @@ import { GeocodingService } from '../geocoding/geocoding.service';
 import { MailService } from '../mail/mail.service';
 import { ReferralService } from '../referral/referral.service';
 import { TokensService, TokenPair } from './tokens.service';
-import { BusinessSignupDto, LoginDto, SignupDto } from './dto/auth.dto';
+import { AuthTokensService, EMAIL_VERIFY_TTL_MS, PASSWORD_RESET_TTL_MS } from './auth-tokens.service';
+import { BusinessSignupDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, SignupDto } from './dto/auth.dto';
 import { age } from '../common/utils/private-place';
 import { lookingForIn, meUser, userPublicInclude } from '../common/serializers/user.serializer';
 import { GoogleProfile } from './strategies/google.strategy';
@@ -28,6 +37,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly mail: MailService,
     private readonly referral: ReferralService,
+    private readonly authTokens: AuthTokensService,
   ) {}
 
   private async withUser(userId: string) {
@@ -85,7 +95,9 @@ export class AuthService {
         gender: dto.gender,
         phone: dto.phone,
         lookingFor: lookingForIn(dto.lookingFor) ?? 'BOTH',
+        locale: dto.locale,
         status: 'ACTIVE', // active immediately — no approval gating
+        // emailVerifiedAt stays null until the emailed link is used.
       },
     });
 
@@ -93,8 +105,9 @@ export class AuthService {
     // the response, so the new user immediately sees their Pro perk. Best-effort.
     await this.referral.applyOnSignup(user.id, dto.referralCode);
 
-    // Welcome email (fire-and-forget — never block signup on email delivery).
+    // Welcome + verification emails (fire-and-forget — never block signup on email delivery).
     void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);
+    void this.sendVerification(user).catch(() => undefined);
 
     const pair = await this.tokens.issue(user);
     return { user: meUser(await this.withUser(user.id)), ...pair };
@@ -123,10 +136,12 @@ export class AuthService {
         phone: dto.phone,
         role: 'BUSINESS',
         status: 'ACTIVE',
+        locale: dto.locale,
       },
     });
 
     void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);
+    void this.sendVerification(user).catch(() => undefined);
 
     const pair = await this.tokens.issue(user);
     return { user: meUser(await this.withUser(user.id)), ...pair };
@@ -155,11 +170,16 @@ export class AuthService {
           name: profile.name,
           photoUrl: profile.photoUrl,
           status: 'ACTIVE',
+          // Google has already verified ownership of this address.
+          emailVerifiedAt: new Date(),
         },
       });
       void this.mail.sendWelcome({ email: user.email, name: user.name }).catch(() => undefined);
-    } else if (!user.googleId) {
-      user = await this.prisma.user.update({ where: { id: user.id }, data: { googleId: profile.googleId } });
+    } else if (!user.googleId || !user.emailVerifiedAt) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { googleId: profile.googleId, emailVerifiedAt: user.emailVerifiedAt ?? new Date() },
+      });
     }
     return this.tokens.issue(user);
   }
@@ -180,4 +200,93 @@ export class AuthService {
   async me(userId: string): Promise<unknown> {
     return meUser(await this.withUser(userId));
   }
+
+  // ---- Password reset ------------------------------------------------------
+
+  /**
+   * Always resolves with the same generic body, whether or not the account
+   * exists (no account enumeration). Beyond the per-IP route throttle, each
+   * account gets at most RESET_MAX_PER_WINDOW reset emails per window.
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ success: true; message: string }> {
+    const generic = {
+      success: true as const,
+      message: 'If an account exists for that email, we’ve sent a link to reset the password.',
+    };
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({ where: { email } });
+    if (!user || user.status === 'BANNED') return generic;
+
+    const recent = await this.authTokens.countRecent(user.id, 'PASSWORD_RESET', EMAIL_WINDOW_MS);
+    if (recent >= EMAIL_MAX_PER_WINDOW) return generic;
+
+    const token = await this.authTokens.issue(user.id, 'PASSWORD_RESET', PASSWORD_RESET_TTL_MS);
+    void this.mail
+      .sendPasswordReset({ email: user.email, name: user.name, locale: dto.locale ?? user.locale }, token, !!user.passwordHash)
+      .catch(() => undefined);
+    return generic;
+  }
+
+  /**
+   * Consume a reset token and set a new password. Also works for Google-only
+   * accounts (no password yet). Revokes every refresh token so all sessions are
+   * signed out, and — since the user proved inbox access — marks the email verified.
+   */
+  async resetPassword(dto: ResetPasswordDto): Promise<{ success: true }> {
+    const invalid = () =>
+      new BadRequestException({ message: 'This reset link is invalid or has expired.', code: 'INVALID_TOKEN' });
+    const userId = await this.authTokens.consume(dto.token, 'PASSWORD_RESET');
+    if (!userId) throw invalid();
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!existing || existing.status === 'BANNED') throw invalid();
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: await bcrypt.hash(dto.newPassword, 10),
+        emailVerifiedAt: existing.emailVerifiedAt ?? new Date(),
+      },
+    });
+    await this.prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true } });
+    await this.authTokens.revokeAll(userId, 'PASSWORD_RESET');
+    void this.mail.sendPasswordChanged({ email: user.email, name: user.name, locale: user.locale }).catch(() => undefined);
+    return { success: true };
+  }
+
+  // ---- Email verification ---------------------------------------------------
+
+  private async sendVerification(user: { id: string; email: string; name: string; locale?: string | null }): Promise<void> {
+    const token = await this.authTokens.issue(user.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
+    await this.mail.sendEmailVerification({ email: user.email, name: user.name, locale: user.locale }, token);
+  }
+
+  async verifyEmail(token: string): Promise<{ success: true }> {
+    const userId = await this.authTokens.consume(token, 'EMAIL_VERIFY');
+    if (!userId) {
+      throw new BadRequestException({ message: 'This verification link is invalid or has expired.', code: 'INVALID_TOKEN' });
+    }
+    await this.prisma.user.updateMany({
+      where: { id: userId, emailVerifiedAt: null },
+      data: { emailVerifiedAt: new Date() },
+    });
+    return { success: true };
+  }
+
+  async resendVerification(userId: string): Promise<{ success: true; alreadyVerified: boolean }> {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (user.emailVerifiedAt) return { success: true, alreadyVerified: true };
+    const recent = await this.authTokens.countRecent(user.id, 'EMAIL_VERIFY', EMAIL_WINDOW_MS);
+    if (recent >= EMAIL_MAX_PER_WINDOW) {
+      throw new HttpException(
+        { message: 'Too many verification emails. Please wait a few minutes and try again.', code: 'TOO_MANY_REQUESTS' },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    await this.sendVerification(user);
+    return { success: true, alreadyVerified: false };
+  }
 }
+
+/** Per-account cap on reset/verification emails (on top of the per-IP route throttle). */
+const EMAIL_WINDOW_MS = 15 * 60 * 1000;
+const EMAIL_MAX_PER_WINDOW = 3;

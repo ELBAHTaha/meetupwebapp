@@ -229,6 +229,11 @@ model User {
   // Referrals: a short shareable code (lazily generated) + who invited me.
   referralCode String?   @unique
   referredById String?
+  // Email ownership. Null = unverified (can browse, can't host/join/chat).
+  // Backfilled to createdAt for every account that existed before verification.
+  emailVerifiedAt DateTime?
+  // Preferred UI language ("en" | "fr" | "ar") — used to localize emails.
+  locale       String?    @db.VarChar(5)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -246,6 +251,7 @@ model User {
   moderationsAgainst ModerationAction[] @relation("AgainstActions")
   notifications    Notification[]
   refreshTokens    RefreshToken[]
+  authTokens       AuthToken[]
   userActivities   UserActivity[]
   subscriptionEvents SubscriptionEvent[]
   businessesOwned  Business[]         @relation("BusinessOwner")
@@ -516,6 +522,26 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+enum AuthTokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+// One-time tokens emailed to the user (password reset, email verification).
+// Only a SHA-256 hash is stored; the raw token lives only in the email link.
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, type])
 }
 
 model Business {

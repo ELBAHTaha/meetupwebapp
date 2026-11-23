@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
+import { MailLocale, mailLocale, mt } from './mail-i18n';
 
 export interface MailMessage {
   to: string;
@@ -60,7 +61,7 @@ export class MailService {
   constructor(config: ConfigService) {
     const key = config.get<string>('mail.apiKey');
     this.from = config.get<string>('mail.from') ?? 'hudlgo <onboarding@resend.dev>';
-    this.appUrl = config.get<string>('frontendUrl') ?? 'http://localhost:5173';
+    this.appUrl = config.get<string>('appUrl') ?? 'http://localhost:5173';
     this.enabled = !!key && !key.includes('xxx');
     if (this.enabled) this.resend = new Resend(key);
   }
@@ -122,16 +123,103 @@ export class MailService {
     });
   }
 
+  /** Email-verification link (48h). */
+  async sendEmailVerification(user: MailRecipient & { locale?: string | null }, token: string): Promise<void> {
+    const l = mailLocale(user.locale);
+    const url = `${this.appUrl}/verify-email?token=${encodeURIComponent(token)}`;
+    await this.send({
+      to: user.email,
+      subject: mt(l, 'verifySubject'),
+      html: this.layout({
+        locale: l,
+        heading: mt(l, 'verifyHeading'),
+        bodyHtml: this.authBody(l, user.name, [mt(l, 'verifyBody')], mt(l, 'verifyExpiry'), url),
+        cta: { text: mt(l, 'verifyCta'), url },
+        preheader: mt(l, 'verifyBody'),
+      }),
+    });
+    this.devLink('verify-email', user.email, url);
+  }
+
+  /** Password-reset link (1h, single use). `hasPassword=false` → Google-only account setting a first password. */
+  async sendPasswordReset(
+    user: MailRecipient & { locale?: string | null },
+    token: string,
+    hasPassword: boolean,
+  ): Promise<void> {
+    const l = mailLocale(user.locale);
+    const url = `${this.appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    const body = mt(l, hasPassword ? 'resetBody' : 'resetBodyNoPassword');
+    await this.send({
+      to: user.email,
+      subject: mt(l, 'resetSubject'),
+      html: this.layout({
+        locale: l,
+        heading: mt(l, 'resetHeading'),
+        bodyHtml: this.authBody(l, user.name, [body], `${mt(l, 'resetExpiry')} ${mt(l, 'ignore')}`, url),
+        cta: { text: mt(l, 'resetCta'), url },
+        preheader: body,
+      }),
+    });
+    this.devLink('reset-password', user.email, url);
+  }
+
+  /** Security notice after a successful password reset. */
+  async sendPasswordChanged(user: MailRecipient & { locale?: string | null }): Promise<void> {
+    const l = mailLocale(user.locale);
+    const url = `${this.appUrl}/login`;
+    await this.send({
+      to: user.email,
+      subject: mt(l, 'changedSubject'),
+      html: this.layout({
+        locale: l,
+        heading: mt(l, 'changedHeading'),
+        bodyHtml: this.authBody(l, user.name, [mt(l, 'changedBody'), mt(l, 'changedWarn')]),
+        cta: { text: mt(l, 'changedCta'), url },
+        preheader: mt(l, 'changedBody'),
+      }),
+    });
+  }
+
+  private authBody(l: MailLocale, name: string, paragraphs: string[], note?: string, linkUrl?: string): string {
+    const first = name?.split(' ')[0] || '';
+    const parts = [
+      `<p style="${P}">${escape(mt(l, 'greeting', { name: first }))}</p>`,
+      ...paragraphs.map((p) => `<p style="${P}">${escape(p)}</p>`),
+    ];
+    if (note) parts.push(`<p style="${P}font-size:13px">${escape(note)}</p>`);
+    if (linkUrl) {
+      parts.push(
+        `<p style="${P}font-size:12px;word-break:break-all">${escape(mt(l, 'linkFallback'))}<br>` +
+          `<a href="${escape(linkUrl)}" style="color:${COLORS.clay}">${escape(linkUrl)}</a></p>`,
+      );
+    }
+    return parts.join('');
+  }
+
+  /** In dev-simulation (no Resend key) print the actionable link so flows are testable locally. */
+  private devLink(kind: string, to: string, url: string): void {
+    if (!this.enabled) this.logger.log(`[mail:dev] ${kind} link for ${to}: ${url}`);
+  }
+
   // --- Branded HTML layout -------------------------------------------------
-  private layout(opts: { heading: string; bodyHtml: string; cta?: { text: string; url: string }; preheader?: string }): string {
+  private layout(opts: {
+    heading: string;
+    bodyHtml: string;
+    cta?: { text: string; url: string };
+    preheader?: string;
+    locale?: MailLocale;
+  }): string {
     const { heading, bodyHtml, cta, preheader } = opts;
+    const l = opts.locale ?? 'en';
+    const dir = l === 'ar' ? 'rtl' : 'ltr';
     const button = cta
       ? `<a href="${cta.url}" style="display:inline-block;background:${COLORS.clay};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:999px">${escape(cta.text)}</a>`
       : '';
     return `<!doctype html>
-<html lang="en">
+<html lang="${l}" dir="${dir}">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-  <body style="margin:0;padding:0;background:${COLORS.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.ink}">
+  <body dir="${dir}" style="margin:0;padding:0;background:${COLORS.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.ink}">
     <span style="display:none;max-height:0;overflow:hidden;opacity:0">${escape(preheader ?? '')}</span>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${COLORS.pageBg}">
       <tr><td align="center" style="padding:32px 16px">
@@ -146,8 +234,8 @@ export class MailService {
           </td></tr>
           <tr><td style="padding:18px 4px 0 4px;text-align:center">
             <p style="margin:0 0 4px 0;font-size:12px;color:${COLORS.inkFaint}">
-              You're receiving this because you have a hudlgo account.
-              Manage email preferences in <a href="${this.appUrl}/settings" style="color:${COLORS.inkSoft}">Settings</a>.
+              ${escape(mt(l, 'footerReason'))}
+              ${escape(mt(l, 'footerPrefs'))} <a href="${this.appUrl}/settings" style="color:${COLORS.inkSoft}">${escape(mt(l, 'footerSettings'))}</a>.
             </p>
             <p style="margin:0;font-size:12px;color:${COLORS.inkFaint}">
               Developed by <a href="https://keyinov.com" style="color:${COLORS.inkSoft};font-weight:600">keyinov</a>

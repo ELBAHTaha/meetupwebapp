@@ -36,8 +36,8 @@ export function LoginPage() {
       setLogin(user);
       useSession.getState().completeOnboarding();
       navigate('/discover');
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : t('authFlow.genericError'));
       setLoading(false);
     }
   }
@@ -112,6 +112,11 @@ export function LoginPage() {
                 leftIcon={<Lock className="h-5 w-5" />}
                 required
               />
+              <div className="-mt-2 text-end">
+                <Link to="/forgot-password" className="text-meta font-medium text-clay hover:text-clay-press transition-colors">
+                  {t('authFlow.forgotLink')}
+                </Link>
+              </div>
 
               <button
                 type="button"

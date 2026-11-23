@@ -34,7 +34,7 @@ export class ReferralService {
   /** Invite link + how many friends joined + the per-referral reward. */
   async summary(userId: string): Promise<{ code: string; link: string; joinedCount: number; rewardDays: number }> {
     const code = await this.codeFor(userId);
-    const frontendUrl = (this.config.get<string>('frontendUrl') ?? '').replace(/\/$/, '');
+    const frontendUrl = this.config.get<string>('appUrl') ?? '';
     const joinedCount = await this.prisma.user.count({ where: { referredById: userId } });
     return { code, link: `${frontendUrl}/signup?ref=${code}`, joinedCount, rewardDays: REWARD_DAYS };
   }

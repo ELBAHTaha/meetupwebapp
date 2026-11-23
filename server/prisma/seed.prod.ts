@@ -76,8 +76,10 @@ async function main() {
     const admin = await prisma.user.upsert({
       where: { email },
       update: { role: 'ADMIN', status: 'ACTIVE' },
-      create: { email, name: 'Admin', passwordHash, role: 'ADMIN', status: 'ACTIVE' },
+      create: { email, name: 'Admin', passwordHash, role: 'ADMIN', status: 'ACTIVE', emailVerifiedAt: new Date() },
     });
+    // The admin must never be blocked by email verification.
+    await prisma.user.updateMany({ where: { id: admin.id, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
     adminId = admin.id;
     console.log(`  admin ready → ${admin.email}`);
   } else {

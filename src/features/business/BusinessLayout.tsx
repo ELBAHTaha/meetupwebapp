@@ -3,6 +3,8 @@ import { LayoutDashboard, LogOut, MessageCircle, Plus, Store } from 'lucide-reac
 import { Toaster } from '@/components/Toaster';
 import { DevelopedBy } from '@/components/DevelopedBy';
 import { FeedbackButton } from '@/components/FeedbackButton';
+import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
+import { useLocaleSync } from '@/hooks/useLocaleSync';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
@@ -17,6 +19,7 @@ const links = [
 export function BusinessLayout() {
   const navigate = useNavigate();
   const logout = useSession((s) => s.logout);
+  useLocaleSync();
 
   return (
     <div className="min-h-screen bg-bg">
@@ -61,6 +64,7 @@ export function BusinessLayout() {
           </button>
         </div>
       </header>
+      <VerifyEmailBanner />
 
       <main className="mx-auto w-full max-w-shell px-5 pb-16 pt-5 md:px-6">
         <Outlet />

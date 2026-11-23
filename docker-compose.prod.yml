@@ -42,6 +42,8 @@ services:
       PORT: 4000
       DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
       FRONTEND_URL: https://${DOMAIN}
+      # Base URL for links inside emails (defaults to the apex domain).
+      APP_URL: ${APP_URL:-https://${DOMAIN}}
       PUBLIC_URL: https://api.${DOMAIN}
       UPLOADS_DIR: uploads
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
@@ -53,7 +55,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       # Email (Resend). Leave RESEND_API_KEY as re_xxx to log emails instead of sending.
       RESEND_API_KEY: ${RESEND_API_KEY:-re_xxx}
-      MAIL_FROM: ${MAIL_FROM:-Jmaa <onboarding@resend.dev>}
+      MAIL_FROM: ${MAIL_FROM:-hudlgo <onboarding@resend.dev>}
       # Optional Google OAuth (blank → disabled).
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}

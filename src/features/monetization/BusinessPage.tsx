@@ -9,6 +9,7 @@ import { Tag } from '@/components/Chip';
 import { createSponsorshipCheckout, registerBusiness, signupBusiness } from '@/api';
 import { settleCheckout, paymentsEnabled } from '@/lib/paddle';
 import { useSession } from '@/store/session';
+import i18n from '@/i18n';
 import { toast } from '@/store/toast';
 import { AuthBackdrop } from '@/components/AuthBackdrop';
 import { cn } from '@/lib/cn';
@@ -110,6 +111,7 @@ export function BusinessPage() {
         email: form.contactEmail,
         password: form.password,
         phone: form.phone || undefined,
+        locale: i18n.language,
       });
       setLogin(user);
 

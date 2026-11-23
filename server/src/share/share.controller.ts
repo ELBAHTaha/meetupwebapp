@@ -26,7 +26,7 @@ export class ShareController {
   @Public()
   @Get('e/:id')
   async event(@Param('id') id: string, @Res() res: Response): Promise<void> {
-    const frontendUrl = (this.config.get<string>('frontendUrl') ?? '').replace(/\/$/, '');
+    const frontendUrl = this.config.get<string>('appUrl') ?? '';
     const publicUrl = (this.config.get<string>('publicUrl') ?? '').replace(/\/$/, '');
     const canonical = `${publicUrl}/share/e/${encodeURIComponent(id)}`;
     const appUrl = `${frontendUrl}/a/${encodeURIComponent(id)}`;

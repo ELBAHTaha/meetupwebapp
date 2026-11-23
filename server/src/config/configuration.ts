@@ -2,6 +2,8 @@ export interface AppConfig {
   nodeEnv: string;
   port: number;
   frontendUrl: string;
+  /** Canonical frontend base URL used in email links (single origin). */
+  appUrl: string;
   publicUrl: string;
   uploadsDir: string;
   jwt: {
@@ -56,6 +58,12 @@ export default (): AppConfig => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '4000', 10),
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  // FRONTEND_URL may be a comma-separated CORS allow-list, so links in emails use
+  // APP_URL (falls back to the first FRONTEND_URL origin).
+  appUrl: (
+    process.env.APP_URL ||
+    (process.env.FRONTEND_URL ?? 'http://localhost:5173').split(',')[0].trim()
+  ).replace(/\/$/, ''),
   publicUrl: process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? '4000'}`,
   uploadsDir: process.env.UPLOADS_DIR ?? 'uploads',
   jwt: {

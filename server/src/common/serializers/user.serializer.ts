@@ -83,6 +83,8 @@ export function meUser(u: UserWithRels) {
     suspendedUntil: u.suspendedUntil ? u.suspendedUntil.toISOString() : undefined,
     verificationStatus: u.verificationStatus.toLowerCase() as 'none' | 'pending' | 'approved' | 'rejected',
     emailNotifications: u.emailNotifications,
+    emailVerified: !!u.emailVerifiedAt,
+    locale: u.locale ?? undefined,
     // Present when this account owns a sponsored venue — drives the business UI.
     businessId: u.businessesOwned?.[0]?.id ?? undefined,
   };

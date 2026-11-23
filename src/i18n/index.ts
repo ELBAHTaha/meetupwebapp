@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './en.json';
 import fr from './fr.json';
 import ar from './ar.json';
+import { setErrorCodeTranslator } from '@/api/http';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
@@ -31,6 +32,12 @@ i18n.use(initReactI18next).init({
 });
 
 applyDir(stored ?? 'en');
+
+// Friendly, localized messages for backend error codes (falls back to the server text).
+setErrorCodeTranslator((code, fallback) => {
+  const key = `errors.${code}`;
+  return i18n.exists(key) ? i18n.t(key) : fallback;
+});
 
 export function setLanguage(code: string) {
   i18n.changeLanguage(code);

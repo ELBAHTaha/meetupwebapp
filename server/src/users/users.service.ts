@@ -68,6 +68,7 @@ export class UsersService {
         zip: dto.zip,
         phone: dto.phone,
         lookingFor: lookingForIn(dto.lookingFor),
+        locale: dto.locale,
         ...(dto.emailNotifications !== undefined ? { emailNotifications: dto.emailNotifications } : {}),
         ...(photoUrl ? { photoUrl } : {}),
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),

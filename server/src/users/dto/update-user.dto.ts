@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateMeDto {
   @ApiPropertyOptional()
@@ -41,6 +41,11 @@ export class UpdateMeDto {
   @IsOptional()
   @IsBoolean()
   emailNotifications?: boolean;
+
+  @ApiPropertyOptional({ enum: ['en', 'fr', 'ar'] })
+  @IsOptional()
+  @IsIn(['en', 'fr', 'ar'])
+  locale?: string;
 }
 
 export class SubmitVerificationDto {

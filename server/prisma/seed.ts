@@ -131,6 +131,7 @@ async function main() {
         role: u.admin ? 'ADMIN' : 'USER',
         status: 'ACTIVE',
         verified: u.verified ?? false,
+        emailVerifiedAt: new Date(),
       },
     });
     uid[u.key] = created.id;
@@ -293,6 +294,7 @@ async function main() {
       role: 'BUSINESS',
       status: 'ACTIVE',
       verified: false,
+      emailVerifiedAt: new Date(),
     },
   });
 

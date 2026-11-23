@@ -91,6 +91,7 @@ export async function signupBusiness(input: {
   email: string;
   password: string;
   phone?: string;
+  locale?: string;
 }): Promise<User> {
   const me = findUser(db.currentUserId)!;
   me.name = input.name;
@@ -106,6 +107,30 @@ export async function getCurrentUser(): Promise<User> {
   const me = findUser(db.currentUserId)!;
   refreshSuspension(me);
   return delay(me, 120);
+}
+
+// ---- Password reset & email verification (mock: always succeeds) -----------
+
+export async function forgotPassword(_email: string, _locale?: string): Promise<{ success: true }> {
+  return delay({ success: true }, 400);
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ success: true }> {
+  if (!token) throw new Error('This reset link is invalid or has expired.');
+  if (newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
+  return delay({ success: true }, 400);
+}
+
+export async function verifyEmail(token: string): Promise<{ success: true }> {
+  if (!token) throw new Error('This verification link is invalid or has expired.');
+  const me = findUser(db.currentUserId);
+  if (me) me.emailVerified = true;
+  return delay({ success: true }, 300);
+}
+
+export async function resendVerification(): Promise<{ success: true; alreadyVerified: boolean }> {
+  const me = findUser(db.currentUserId);
+  return delay({ success: true, alreadyVerified: me?.emailVerified !== false }, 300);
 }
 
 export async function getReferral(): Promise<ReferralSummary> {

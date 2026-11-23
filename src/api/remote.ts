@@ -65,6 +65,7 @@ export async function signup(input: {
   referralCode?: string;
   /** base64 data URL captured from the file picker; uploaded as `photo`. */
   avatar?: string;
+  locale?: string;
 }): Promise<User> {
   // The backend's /auth/signup is multipart: JSON fields + an optional `photo`
   // file. Build a FormData so the avatar actually reaches the server.
@@ -80,6 +81,7 @@ export async function signup(input: {
   if (input.lookingFor) form.set('lookingFor', input.lookingFor);
   if (input.turnstileToken) form.set('turnstileToken', input.turnstileToken);
   if (input.referralCode) form.set('referralCode', input.referralCode);
+  if (input.locale) form.set('locale', input.locale);
   if (input.avatar) {
     const blob = await fetch(input.avatar).then((r) => r.blob());
     form.set('photo', blob, 'avatar.jpg');
@@ -96,11 +98,24 @@ export async function signupBusiness(input: {
   password: string;
   phone?: string;
   turnstileToken?: string;
+  locale?: string;
 }): Promise<User> {
   const res = await api.post<AuthResponse>('/auth/business/signup', input);
   tokens.set(res);
   return res.user;
 }
+
+// ---- Password reset & email verification -----------------------------------
+export const forgotPassword = (email: string, locale?: string) =>
+  api.post<{ success: true }>('/auth/forgot-password', { email, locale });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  api.post<{ success: true }>('/auth/reset-password', { token, newPassword });
+
+export const verifyEmail = (token: string) => api.post<{ success: true }>('/auth/verify-email', { token });
+
+export const resendVerification = () =>
+  api.post<{ success: true; alreadyVerified: boolean }>('/auth/resend-verification');
 
 export function getCurrentUser(): Promise<User> {
   return api.get<User>('/auth/me');

@@ -5,6 +5,8 @@ export interface AuthUser {
   email: string;
   role: 'USER' | 'ADMIN' | 'BUSINESS';
   status: 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+  /** False until the user confirms their email (EmailVerifiedGuard). */
+  emailVerified: boolean;
 }
 
 /** Injects the authenticated user (or undefined on optional-auth routes). */

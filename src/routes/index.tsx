@@ -5,6 +5,9 @@ import { LandingPage } from '@/features/auth/LandingPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { SignupPage } from '@/features/auth/SignupPage';
 import { OnboardingPage } from '@/features/auth/OnboardingPage';
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
+import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage';
 import { DiscoverPage } from '@/features/discover/DiscoverPage';
 import { CreateEventPage } from '@/features/create/CreateEventPage';
 import { ChatListPage } from '@/features/chat/ChatListPage';
@@ -59,6 +62,11 @@ export const router = createBrowserRouter([
   { path: '/login', element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: '/signup', element: <PublicOnly><SignupPage /></PublicOnly> },
   { path: '/onboarding', element: <OnboardingPage /> },
+  // Account recovery / verification — public, reachable signed in or out
+  // (email links can be opened on any device).
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
   // Public, read-only activity preview from a shared link. Logged-out visitors
   // see the safe details + a sign-up CTA; members are redirected to /event/:id.
   { path: '/a/:id', element: <PublicActivityPage /> },

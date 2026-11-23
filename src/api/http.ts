@@ -24,18 +24,37 @@ export const tokens = {
   set(pair: { accessToken?: string; refreshToken?: string }) {
     if (pair.accessToken) localStorage.setItem(ACCESS_KEY, pair.accessToken);
     if (pair.refreshToken) localStorage.setItem(REFRESH_KEY, pair.refreshToken);
+    if (pair.accessToken && typeof window !== 'undefined') window.dispatchEvent(new Event(TOKENS_CHANGED_EVENT));
   },
   clear() {
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(TOKENS_CHANGED_EVENT));
   },
 };
 
-class ApiError extends Error {
-  constructor(public status: number, message: string) {
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    /** Machine-readable code from the backend (e.g. EMAIL_NOT_VERIFIED). */
+    public code?: string,
+  ) {
     super(message);
   }
 }
+
+/** Fired on window when the backend rejects an action because the email isn't verified. */
+export const EMAIL_NOT_VERIFIED_EVENT = 'hudlgo:email-not-verified';
+
+/** Pluggable translator so this module doesn't import i18n (kept framework-free). */
+let translateCode: ((code: string, fallback: string) => string) | null = null;
+export function setErrorCodeTranslator(fn: (code: string, fallback: string) => string): void {
+  translateCode = fn;
+}
+
+/** Fired after the access token changes (login / refresh) so the socket can reconnect. */
+export const TOKENS_CHANGED_EVENT = 'hudlgo:tokens-changed';
 
 let refreshing: Promise<boolean> | null = null;
 
@@ -90,13 +109,21 @@ async function request<T>(path: string, opts: RequestOpts = {}, retry = true): P
   }
   if (!res.ok) {
     let message = res.statusText;
+    let code: string | undefined;
     try {
       const err = await res.json();
       message = Array.isArray(err.message) ? err.message.join(', ') : err.message ?? message;
+      code = typeof err.code === 'string' ? err.code : undefined;
     } catch {
       /* ignore */
     }
-    throw new ApiError(res.status, message);
+    if (code) {
+      if (translateCode) message = translateCode(code, message);
+      if (code === 'EMAIL_NOT_VERIFIED' && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(EMAIL_NOT_VERIFIED_EVENT));
+      }
+    }
+    throw new ApiError(res.status, message, code);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

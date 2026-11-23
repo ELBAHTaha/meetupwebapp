@@ -103,14 +103,55 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f
 > ones are replaced, live ones (and any real joins) are left untouched. The full
 > demo seed (`seed.ts`) is still intentionally **not** used in production.
 
-## 8. Email (recommended before real users)
+## 8. Email with Resend (free tier, required before real users)
 
-Without a real email provider, password-reset and verification emails only print
-to the container log — users can't recover accounts. To enable real email:
+hudlgo sends password-reset links, email-verification links, password-changed
+notices, plan-renewal reminders and notification mirrors. Without a real email
+provider these only print to the api container log (`[mail:dev] … link for …`),
+so **new users can't verify their email and nobody can reset a password**.
 
-1. Create a [Resend](https://resend.com) account and **verify your domain**.
-2. Set `RESEND_API_KEY=re_...` and `MAIL_FROM="Jmaa <noreply@DOMAIN>"` in `.env.prod`.
-3. `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d` (recreates api).
+[Resend](https://resend.com)'s **free tier** (3,000 emails/month, 100/day, one
+domain) is plenty for launch.
+
+1. **Create an account** at <https://resend.com/signup> (no card needed).
+2. **Add the domain**: *Domains → Add domain* → enter `hudlgo.com`. Pick the region
+   closest to your users (EU – Ireland is fine for Morocco).
+3. **Add the DNS records Resend shows you** at your DNS host (Cloudflare for
+   hudlgo.com → *DNS → Records → Add record*). Resend lists the exact values;
+   typically:
+
+   | Type | Name | Value (copy from Resend) | Purpose |
+   |------|------|--------------------------|---------|
+   | TXT  | `resend._domainkey` | `p=MIGfMA0GCSq…` (long DKIM key) | DKIM signature |
+   | MX   | `send` | `feedback-smtp.<region>.amazonses.com` (priority 10) | bounce handling |
+   | TXT  | `send` | `v=spf1 include:amazonses.com ~all` | SPF |
+   | TXT  | `_dmarc` *(optional, recommended)* | `v=DMARC1; p=none; rua=mailto:you@hudlgo.com` | DMARC reporting |
+
+   On Cloudflare set every one of these to **DNS only** (grey cloud), never proxied.
+   They use the `send.` / `resend._domainkey.` sub-names, so they don't clash
+   with any existing MX/SPF records on the apex.
+4. **Wait for verification**: back in Resend click *Verify DNS records*. It usually
+   turns green within minutes (up to a few hours while DNS propagates).
+5. **Create an API key**: *API Keys → Create API key* → permission *Sending access*,
+   domain `hudlgo.com`. Copy the `re_…` value (shown once).
+6. **Set it on the VPS** in `.env.prod`:
+   ```bash
+   RESEND_API_KEY=re_your_key_here
+   MAIL_FROM="hudlgo <noreply@hudlgo.com>"
+   APP_URL=https://hudlgo.com          # base URL used inside email links
+   ```
+7. Recreate the api container so it picks up the env (same two-file command as
+   `deploy.sh`):
+   ```bash
+   docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env.prod up -d api
+   ```
+8. **Test**: open `https://hudlgo.com/forgot-password`, enter your own address, and
+   check the email arrives (and isn't in spam). `docker compose … logs api | grep -i resend`
+   shows any delivery error.
+
+> Existing accounts were marked verified by the migration that introduced email
+> verification, so only accounts created after this release get the
+> verification email and the "verify your email" banner.
 
 ## 9. Day-2 operations
 

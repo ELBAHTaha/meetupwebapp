@@ -4,11 +4,15 @@ import { TopNav } from './TopNav';
 import { Toaster } from './Toaster';
 import { DevelopedBy } from './DevelopedBy';
 import { FeedbackButton } from './FeedbackButton';
+import { VerifyEmailBanner } from './VerifyEmailBanner';
+import { useLocaleSync } from '@/hooks/useLocaleSync';
 
 export function AppLayout() {
+  useLocaleSync();
   return (
     <div className="min-h-screen bg-bg">
       <TopNav />
+      <VerifyEmailBanner />
       {/* Mobile: single column max-w-app. Desktop: centered shell. */}
       <main className="mx-auto w-full max-w-app pb-24 md:max-w-shell md:px-6 md:pb-10 md:pt-2">
         <Outlet />
