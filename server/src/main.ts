@@ -8,6 +8,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { AppIoAdapter } from './realtime/io.adapter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false, rawBody: true });
@@ -25,6 +26,8 @@ async function bootstrap(): Promise<void> {
     origin: allowedOrigins,
     credentials: true,
   });
+  // WebSockets (socket.io at /socket.io) share the same CORS allow-list.
+  app.useWebSocketAdapter(new AppIoAdapter(app, allowedOrigins));
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -348,7 +348,15 @@
     "groupTag": "Group",
     "expired": "This group chat has closed (24h after the meetup).",
     "ended": "Activity ended — chat is now read-only.",
-    "you": "You"
+    "you": "You",
+    "sendFailed": "Could not send your message.",
+    "unread": "Unread messages",
+    "noMessages": "No messages yet",
+    "sayHello": "No messages yet — say hello 👋",
+    "member": "Member",
+    "messageAttendees": "Message attendees…",
+    "deniedTitle": "Only the host and attendees can see this chat.",
+    "deniedHint": "You can chat in activities your venue hosts."
   },
   "profile": {
     "edit": "Edit profile",
@@ -606,5 +614,21 @@
     "EMAIL_NOT_VERIFIED": "Please verify your email first — check your inbox for the confirmation link.",
     "INVALID_TOKEN": "This link is invalid or has expired. Request a new one.",
     "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again."
+  },
+  "businessChat": {
+    "title": "Messages",
+    "subtitle": "Group chats for activities at your venue.",
+    "empty": "No activity chats yet.",
+    "emptyHint": "Host an activity and its group chat will appear here.",
+    "going_one": "{{count}} going",
+    "going_other": "{{count}} going",
+    "back": "Back to chats",
+    "notFound": "This activity could not be found.",
+    "details": "Details →",
+    "status": {
+      "live": "Live",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
   }
 }

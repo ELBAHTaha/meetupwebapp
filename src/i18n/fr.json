@@ -348,7 +348,15 @@
     "groupTag": "Groupe",
     "expired": "Ce groupe est fermé (24h après le meetup).",
     "ended": "Activité terminée — le chat est en lecture seule.",
-    "you": "Toi"
+    "you": "Toi",
+    "sendFailed": "Impossible d’envoyer ton message.",
+    "unread": "Messages non lus",
+    "noMessages": "Pas encore de messages",
+    "sayHello": "Pas encore de messages — dis bonjour 👋",
+    "member": "Membre",
+    "messageAttendees": "Écrire aux participants…",
+    "deniedTitle": "Seuls l’organisateur et les participants peuvent voir ce chat.",
+    "deniedHint": "Tu peux discuter dans les activités organisées par ton établissement."
   },
   "profile": {
     "edit": "Modifier le profil",
@@ -606,5 +614,21 @@
     "EMAIL_NOT_VERIFIED": "Confirme d’abord ton e-mail — regarde dans ta boîte mail pour le lien de confirmation.",
     "INVALID_TOKEN": "Ce lien est invalide ou a expiré. Demandes-en un nouveau.",
     "TOO_MANY_REQUESTS": "Trop de tentatives. Patiente quelques minutes et réessaie."
+  },
+  "businessChat": {
+    "title": "Messages",
+    "subtitle": "Les chats de groupe des activités de ton établissement.",
+    "empty": "Pas encore de chats d’activité.",
+    "emptyHint": "Organise une activité et son chat de groupe apparaîtra ici.",
+    "going_one": "{{count}} participant",
+    "going_other": "{{count}} participants",
+    "back": "Retour aux chats",
+    "notFound": "Cette activité est introuvable.",
+    "details": "Détails →",
+    "status": {
+      "live": "En cours",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    }
   }
 }

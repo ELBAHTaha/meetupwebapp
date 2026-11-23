@@ -81,6 +81,9 @@ async function doRefresh(): Promise<boolean> {
   return refreshing;
 }
 
+/** Refresh the access token with the stored refresh token (single in-flight). */
+export const refreshAccessToken = (): Promise<boolean> => doRefresh();
+
 interface RequestOpts {
   method?: string;
   body?: unknown;

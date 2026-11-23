@@ -246,6 +246,12 @@ dedicated key (not your personal one) so you can revoke it independently.
 
 ### Notes & optional hardening
 
+- **WebSockets** (real-time chat + live notification badges) run on the API at
+  `wss://api.DOMAIN/socket.io/`. Traefik and Caddy both forward WebSocket upgrades
+  out of the box, so nothing needs configuring. Socket CORS uses the same
+  `FRONTEND_URL` allow-list as the REST API. If you put Cloudflare in front, keep
+  *Network → WebSockets* enabled (it's on by default, free plan included).
+
 - **Single-origin CORS**: the API only allows `https://DOMAIN`. `www` redirects to
   the apex before the app loads, so this is fine.
 - **Swagger** (`/docs`) is publicly reachable. Harmless, but you can gate or

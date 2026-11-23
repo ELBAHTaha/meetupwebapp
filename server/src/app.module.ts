@@ -10,6 +10,7 @@ import { StorageModule } from './storage/storage.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MailModule } from './mail/mail.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ActivityTypesModule } from './activity-types/activity-types.module';
@@ -38,6 +39,7 @@ import { HealthController } from './health/health.controller';
     ScheduleModule.forRoot(),
     // Infrastructure
     PrismaModule,
+    RealtimeModule,
     TrustModule,
     StorageModule,
     GeocodingModule,

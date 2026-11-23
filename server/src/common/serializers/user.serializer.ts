@@ -28,7 +28,7 @@ export function cityFromZip(zip?: string | null, fallback?: string | null): stri
   return fallback ?? 'Casablanca';
 }
 
-function avatarFor(u: Pick<User, 'photoUrl' | 'name'>): string {
+export function avatarFor(u: Pick<User, 'photoUrl' | 'name'>): string {
   if (u.photoUrl) return u.photoUrl;
   const seed = encodeURIComponent(u.name || 'jmaa');
   return `https://api.dicebear.com/9.x/avataaars/svg?seed=${seed}&backgroundColor=ffd5b3,c0aede,d1d4f9,b6e3f4,ffdfbf`;

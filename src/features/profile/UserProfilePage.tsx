@@ -12,6 +12,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { getUser } from '@/api';
 import { db } from '@/api/store';
 import { useSession } from '@/store/session';
+import { USE_REMOTE } from '@/api/http';
 
 export function UserProfilePage() {
   const { id = '' } = useParams();
@@ -60,9 +61,12 @@ export function UserProfilePage() {
       ) : user ? (
         <>
           <div className="flex gap-2 px-5 pt-3 md:px-0">
-            <Button fullWidth leftIcon={<MessageCircle className="h-4 w-4" strokeWidth={1.6} />} onClick={messageUser}>
-              {t('profile.message')}
-            </Button>
+            {/* Direct messages only exist in the offline mock — there's no DM backend yet. */}
+            {!USE_REMOTE && (
+              <Button fullWidth leftIcon={<MessageCircle className="h-4 w-4" strokeWidth={1.6} />} onClick={messageUser}>
+                {t('profile.message')}
+              </Button>
+            )}
             <Button variant="danger" leftIcon={<Flag className="h-4 w-4" strokeWidth={1.6} />} onClick={() => setReportOpen(true)}>
               {t('report.title')}
             </Button>

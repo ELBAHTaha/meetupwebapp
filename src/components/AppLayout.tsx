@@ -6,9 +6,11 @@ import { DevelopedBy } from './DevelopedBy';
 import { FeedbackButton } from './FeedbackButton';
 import { VerifyEmailBanner } from './VerifyEmailBanner';
 import { useLocaleSync } from '@/hooks/useLocaleSync';
+import { useRealtimeConnection } from '@/hooks/useRealtime';
 
 export function AppLayout() {
   useLocaleSync();
+  useRealtimeConnection();
   return (
     <div className="min-h-screen bg-bg">
       <TopNav />

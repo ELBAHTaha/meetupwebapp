@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Flag, Lock, SendHorizonal } from 'lucide-react';
@@ -14,6 +14,8 @@ import { toast } from '@/store/toast';
 import { formatChatTime } from '@/lib/format';
 import type { ChatMessage, ChatThread } from '@/types';
 import { cn } from '@/lib/cn';
+import { markThreadSeen, mergeIncoming, settleOptimistic, withPending } from '@/lib/chat';
+import { useResync, useThreadMessages } from '@/hooks/useRealtime';
 
 export function ChatThreadPage() {
   const { threadId = '' } = useParams();
@@ -31,7 +33,7 @@ export function ChatThreadPage() {
   const event = thread?.eventId ? db.events.find((e) => e.id === thread.eventId) : undefined;
   const activity = event ? db.activities.find((a) => a.id === event.activityId) : undefined;
   const other = !thread?.eventId ? db.users.find((u) => thread?.participantIds.includes(u.id) && u.id !== user?.id) : undefined;
-  const title = thread?.title ?? activity?.name ?? other?.name ?? fetched?.title ?? 'Chat';
+  const title = thread?.title ?? activity?.name ?? other?.name ?? fetched?.title ?? t('chat.title');
   const expired = thread ? threadExpired(thread) : false;
   // Once the activity ends the chat is read-only (separate from the 24h expiry).
   const ended = fetched?.ended ?? (fetched?.endsAt ? new Date(fetched.endsAt) < new Date() : false);
@@ -40,15 +42,28 @@ export function ChatThreadPage() {
   const reportTargetType = event ? 'activity' : 'user';
   const reportTargetId = event ? event.id : other?.id ?? '';
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let active = true;
     getThread(threadId).then((th) => {
-      if (active) { setMessages(th?.messages ?? []); setFetched(th); setLoading(false); }
+      if (!active) return;
+      setMessages((cur) => withPending(th?.messages ?? [], cur));
+      setFetched(th);
+      setLoading(false);
     });
     return () => { active = false; };
   }, [threadId]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
+  useEffect(() => load(), [load]);
+  // Missed anything while offline / in a background tab? Refetch.
+  useResync(() => { load(); });
+  // Live messages from the group's socket room (group chats only).
+  useThreadMessages(fetched?.eventId ?? thread?.eventId, (m) => setMessages((cur) => mergeIncoming(cur, m, user?.id)));
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const last = messages[messages.length - 1];
+    if (last && !last.pending) markThreadSeen(threadId, last.sentAt);
+  }, [messages.length, threadId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function send() {
     const value = text.trim();
@@ -58,10 +73,10 @@ export function ChatThreadPage() {
     setMessages((m) => [...m, optimistic]);
     try {
       const saved = await sendMessage(threadId, value);
-      setMessages((m) => m.map((msg) => (msg.id === optimistic.id ? saved : msg)));
+      setMessages((m) => settleOptimistic(m, optimistic.id, saved));
     } catch (err) {
       setMessages((m) => m.filter((msg) => msg.id !== optimistic.id));
-      toast(err instanceof Error ? err.message : 'Could not send', 'error');
+      toast(err instanceof Error ? err.message : t('chat.sendFailed'), 'error');
     }
   }
 
@@ -92,7 +107,7 @@ export function ChatThreadPage() {
         ) : (
           messages.map((m, i) => {
             const mine = m.senderId === user?.id;
-            const sender = db.users.find((u) => u.id === m.senderId);
+            const sender = m.sender ?? db.users.find((u) => u.id === m.senderId);
             const showAvatar = !mine && messages[i - 1]?.senderId !== m.senderId;
             return (
               <div key={m.id} className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>

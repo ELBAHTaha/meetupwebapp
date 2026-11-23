@@ -5,6 +5,7 @@ import { DevelopedBy } from '@/components/DevelopedBy';
 import { FeedbackButton } from '@/components/FeedbackButton';
 import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
 import { useLocaleSync } from '@/hooks/useLocaleSync';
+import { useRealtimeConnection } from '@/hooks/useRealtime';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
@@ -20,6 +21,7 @@ export function BusinessLayout() {
   const navigate = useNavigate();
   const logout = useSession((s) => s.logout);
   useLocaleSync();
+  useRealtimeConnection();
 
   return (
     <div className="min-h-screen bg-bg">

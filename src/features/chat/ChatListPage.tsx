@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, MessageCircle } from 'lucide-react';
@@ -11,13 +12,32 @@ import { listThreads } from '@/api';
 import { db } from '@/api/store';
 import { useSession } from '@/store/session';
 import { formatChatTime, formatEventDate } from '@/lib/format';
-import type { ChatThread } from '@/types';
+import type { ChatMessage, ChatThread } from '@/types';
+import { isThreadUnread } from '@/lib/chat';
+import { useResync, useSocketEvent } from '@/hooks/useRealtime';
+import { cn } from '@/lib/cn';
 
 export function ChatListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, dataVersion } = useSession();
   const threads = useAsync(() => listThreads(user?.id), [user?.id, dataVersion]);
+  // Live overlay: latest message per thread pushed over the socket (`chat:activity`).
+  const [live, setLive] = useState<Record<string, ChatMessage>>({});
+  useEffect(() => setLive({}), [threads.data]);
+  useSocketEvent<{ eventId: string; message: ChatMessage }>('chat:activity', (p) =>
+    setLive((cur) => ({ ...cur, [p.eventId]: p.message })),
+  );
+  useResync(() => threads.reload());
+
+  const rows = useMemo(() => {
+    const list = (threads.data ?? []).map((th) => {
+      const extra = live[th.eventId ?? th.id];
+      return extra && !th.messages.some((m) => m.id === extra.id) ? { ...th, messages: [...th.messages, extra] } : th;
+    });
+    const lastAt = (th: ChatThread) => th.messages[th.messages.length - 1]?.sentAt ?? th.startsAt ?? '';
+    return list.sort((a, b) => lastAt(b).localeCompare(lastAt(a)));
+  }, [threads.data, live]);
 
   return (
     <div>
@@ -32,9 +52,9 @@ export function ChatListPage() {
               </div>
             ))}
           </div>
-        ) : threads.data && threads.data.length > 0 ? (
+        ) : rows.length > 0 ? (
           <div className="space-y-2">
-            {threads.data.map((thread) => (
+            {rows.map((thread) => (
               <ThreadRow key={thread.id} thread={thread} currentUserId={user!.id} onClick={() => navigate(`/chat/${thread.id}`)} />
             ))}
           </div>
@@ -53,8 +73,9 @@ function ThreadRow({ thread, currentUserId, onClick }: { thread: ChatThread; cur
   const activity = event ? db.activities.find((a) => a.id === event.activityId) : undefined;
   const other = !thread.eventId ? db.users.find((u) => thread.participantIds.includes(u.id) && u.id !== currentUserId) : undefined;
   const title = thread.title ?? activity?.name ?? other?.name ?? 'Chat';
-  const sender = last ? db.users.find((u) => u.id === last.senderId) : undefined;
-  const prefix = last ? (last.senderId === currentUserId ? `${t('chat.you')}: ` : `${sender?.name.split(' ')[0]}: `) : '';
+  const sender = last ? last.sender ?? db.users.find((u) => u.id === last.senderId) : undefined;
+  const prefix = last ? (last.senderId === currentUserId ? `${t('chat.you')}: ` : sender ? `${sender.name.split(' ')[0]}: ` : '') : '';
+  const unread = isThreadUnread(thread.id, last, currentUserId);
   // Activity date for group chats (from the thread payload, else the local store).
   const startsAt = thread.startsAt ?? event?.startsAt;
   const ended = thread.ended ?? (thread.endsAt ? new Date(thread.endsAt) < new Date() : false);
@@ -71,7 +92,12 @@ function ThreadRow({ thread, currentUserId, onClick }: { thread: ChatThread; cur
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <h3 className="truncate font-display text-h3 font-medium text-ink">{title}</h3>
-          {last && <span className="shrink-0 text-[12px] text-ink-faint">{formatChatTime(last.sentAt)}</span>}
+          {last && (
+            <span className={cn('flex shrink-0 items-center gap-1.5 text-[12px]', unread ? 'font-semibold text-clay' : 'text-ink-faint')}>
+              {unread && <span className="h-2 w-2 rounded-full bg-clay" aria-label={t('chat.unread')} />}
+              {formatChatTime(last.sentAt)}
+            </span>
+          )}
         </div>
         {thread.eventId && startsAt && (
           <p className="flex items-center gap-1 text-[11px] font-medium text-ink-faint">
@@ -80,7 +106,7 @@ function ThreadRow({ thread, currentUserId, onClick }: { thread: ChatThread; cur
             {ended && <span className="text-clay"> · {t('chat.ended')}</span>}
           </p>
         )}
-        <p className="truncate text-meta text-ink-soft">{prefix}{last?.text ?? 'No messages yet'}</p>
+        <p className={cn('truncate text-meta', unread ? 'font-medium text-ink' : 'text-ink-soft')}>{prefix}{last?.text ?? t('chat.noMessages')}</p>
       </div>
       {thread.eventId && <span className="shrink-0 rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-medium text-ink-soft">{t('chat.groupTag')}</span>}
     </button>

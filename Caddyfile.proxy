@@ -21,6 +21,8 @@ http://{$DOMAIN}, http://www.{$DOMAIN} {
 }
 
 # --- API → NestJS container on the compose network ---
+# Includes the socket.io endpoint (/socket.io/): Traefik forwards the WebSocket
+# upgrade to this container and reverse_proxy passes it on to the api.
 http://api.{$DOMAIN} {
 	reverse_proxy api:4000
 }

@@ -366,6 +366,8 @@ export interface ChatMessage {
   text: string;
   sentAt: string;
   pending?: boolean;
+  /** Sender display info (sent by the backend; the mock resolves it locally). */
+  sender?: { id: string; name: string; avatar: string };
 }
 
 export interface ChatThread {

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { publicUser, userPublicInclude } from '../common/serializers/user.serializer';
 import { eventInclude, serializeEvent } from '../common/serializers/event.serializer';
@@ -18,6 +19,7 @@ export class AdminService {
     private readonly notifications: NotificationsService,
     private readonly businesses: BusinessService,
     private readonly expressPayments: ExpressPaymentService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async overview(): Promise<{ openReports: number; flaggedUsers: number; liveToday: number }> {
@@ -558,6 +560,7 @@ export class AdminService {
     await this.ensureUser(userId);
     const suspendedUntil = new Date(Date.now() + days * 86_400_000);
     await this.prisma.user.update({ where: { id: userId }, data: { status: 'SUSPENDED', suspendedUntil } });
+    this.realtime.disconnectUser(userId);
     await this.prisma.moderationAction.create({
       data: { adminId, targetUserId: userId, action: 'SUSPEND', suspendDays: days, note },
     });
@@ -573,6 +576,7 @@ export class AdminService {
   async ban(adminId: string, userId: string, note?: string): Promise<unknown> {
     const u = await this.ensureUser(userId);
     await this.prisma.user.update({ where: { id: userId }, data: { status: 'BANNED', suspendedUntil: null } });
+    this.realtime.disconnectUser(userId);
     await this.prisma.refreshToken.updateMany({ where: { userId }, data: { revoked: true } });
     await this.prisma.moderationAction.create({ data: { adminId, targetUserId: userId, action: 'BAN', note } });
     // Record hashed contacts so this person can't simply re-register.

@@ -24,3 +24,6 @@ services:
       - "traefik.http.routers.hudlgo.entrypoints=websecure"
       - "traefik.http.routers.hudlgo.tls.certresolver=letsencrypt"
       - "traefik.http.services.hudlgo.loadbalancer.server.port=80"
+    # WebSockets (real-time chat at wss://api.${DOMAIN}/socket.io/) need no extra
+    # labels: Traefik forwards Upgrade/Connection headers by default, and Caddy's
+    # reverse_proxy passes them through to the api container.

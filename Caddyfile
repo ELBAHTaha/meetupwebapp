@@ -23,6 +23,8 @@ www.{$DOMAIN} {
 }
 
 # --- API (api subdomain) → NestJS container on the compose network ---
+# reverse_proxy passes WebSocket upgrades through transparently, so the real-time
+# chat socket (wss://api.DOMAIN/socket.io/) needs no extra config.
 api.{$DOMAIN} {
 	reverse_proxy api:4000
 }
