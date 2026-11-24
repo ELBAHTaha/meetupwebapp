@@ -1,11 +1,9 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SponsorshipTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaymentsService } from '../payments/payments.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterBusinessDto } from './dto/business.dto';
-import { BillingInterval, BizTier, CheckoutSession } from '../payments/payment-gateway.interface';
 
 const MAX_VENUE_PHOTOS = 6;
 
@@ -25,7 +23,6 @@ export class BusinessService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly notifications: NotificationsService,
-    private readonly payments: PaymentsService,
   ) {}
 
   async register(dto: RegisterBusinessDto, ownerId?: string) {
@@ -160,22 +157,6 @@ export class BusinessService {
     const current = (business.photos as string[] | null) ?? [];
     await this.prisma.business.update({ where: { id: business.id }, data: { photos: current.filter((p) => p !== url) } });
     return this.myBusiness(userId);
-  }
-
-  /**
-   * Start a sponsorship checkout: opens a Paddle transaction and returns the
-   * checkout session. The frontend completes it in the Paddle.js overlay; the
-   * order is fulfilled (business verified + sponsorship created) on Paddle's
-   * `transaction.completed` webhook.
-   */
-  async createSponsorshipCheckout(
-    businessId: string,
-    tierInput: BizTier,
-    interval: BillingInterval = 'monthly',
-  ): Promise<CheckoutSession> {
-    const business = await this.prisma.business.findUnique({ where: { id: businessId } });
-    if (!business) throw new NotFoundException('Business not found.');
-    return this.payments.createSponsorshipCheckout(businessId, tierInput, interval);
   }
 
   async sponsoredVenues(): Promise<unknown[]> {

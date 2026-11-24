@@ -1,8 +1,8 @@
 # Deploying Jmaâ to production
 
-A single-VPS, Docker-based deployment for a **soft launch** (payments run in
-dev-simulation — no real charges). Three containers behind one Caddy edge with
-automatic HTTPS:
+A single-VPS, Docker-based deployment. Paid plans are paid **offline** and
+activated by an admin (no payment gateway — see §10). Three containers behind one
+Caddy edge with automatic HTTPS:
 
 ```
                          ┌──────────────────────────────────────┐
@@ -185,25 +185,35 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod down   # stop (ke
 Persistent data lives in named volumes: `mysql_data` (DB), `uploads` (user photos),
 `caddy_data` (TLS certs). `down` keeps them; `down -v` **deletes** them — don't.
 
-## 10. Going live with payments later
+## 10. Paid plans: offline payment + manual activation
 
-This deployment runs Paddle in **dev-simulation** (orders are marked paid
-without charging). When you're ready to charge real money:
+hudlgo has **no payment gateway**. Customers pay by bank transfer, CashPlus or
+cash, and an admin switches the plan on.
 
-1. In the **Paddle dashboard**, create the products + prices and copy each price id:
-   Pro Host (recurring), the business sponsorships (one recurring price per
-   tier × billing term), and the one-off pinned-extra price.
-2. Get a **production** Paddle API key and a webhook **signing secret**, and a
-   client-side **token** for Paddle.js.
-3. Add to `.env.prod` and to the `api` service env in `docker-compose.prod.yml`:
-   `PADDLE_API_KEY`, `PADDLE_ENVIRONMENT=production`, `PADDLE_WEBHOOK_SECRET`, and
-   the `PADDLE_*_PRICE_ID` vars. Bake `VITE_PADDLE_CLIENT_TOKEN` (+ `VITE_PADDLE_ENV`)
-   into the web build.
-4. Add a Paddle **notification destination** (webhook) pointed at
-   `https://api.DOMAIN/payments/paddle/webhook`, subscribed to
-   `transaction.completed`, `subscription.canceled`, and `transaction.payment_failed`.
-5. Paddle is the **merchant of record** — no card data touches your servers (no
-   PCI-DSS SAQ-D scope); Paddle also handles VAT/tax.
+**Set the payment instructions** (shown to the customer with every request) in
+`.env.prod`, one per language. `{amount}` (MAD) and `{reference}` (e.g. `HG-4F7K2`)
+are filled in automatically; write `\n` for a line break:
+```bash
+PAYMENT_INSTRUCTIONS_EN="Send {amount} MAD by bank transfer to RIB 000 000 0000000000000000 00 (hudlgo) or by CashPlus, and write {reference} in the description. Then message us on WhatsApp +212 6XX XX XX XX."
+PAYMENT_INSTRUCTIONS_FR="Envoie {amount} MAD par virement au RIB … avec la référence {reference}. Puis écris-nous sur WhatsApp au +212 6XX XX XX XX."
+PAYMENT_INSTRUCTIONS_AR="صيفط {amount} درهم … وكتب {reference} ف الوصف."
+```
+Then recreate the api container (`… up -d api`).
+
+**Day to day:**
+1. A customer taps *Request upgrade* (Pricing / business *Plan* page / *Pinned* in
+   the create flow) and gets the amount + reference. Admins get an in-app
+   notification.
+2. When the money arrives, open **/admin → Upgrade requests**, find the reference,
+   pick the length (defaults to the requested 1 / 3 / 12 months) and **Approve**.
+   The plan, sponsorship or pin is applied immediately and the customer is notified.
+   **Reject** (with a note) if no payment came. A rejected or cancelled extra
+   activity is cancelled with it.
+3. **/admin → Plans** lets you grant, extend or revoke a person's Pro Host or a
+   business's sponsorship directly, e.g. for a cash payment or a goodwill extension.
+4. Every change is audit-logged (`SubscriptionEvent`, with the admin's id).
+   Plans **don't auto-renew**: they drop back to Free at their end date, and
+   customers get an email + in-app reminder about 5 days before.
 
 ## 11. One-command & automatic deploys
 

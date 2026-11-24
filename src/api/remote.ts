@@ -21,7 +21,9 @@ import type {
   BusinessOrg,
   ChatMessage,
   BillingInterval,
-  CheckoutSession,
+  AdminUserPlan,
+  CreateUpgradeInput,
+  UpgradeRequest,
   ChatThread,
   CreateActivityInput,
   CreateEventInput,
@@ -259,7 +261,6 @@ export function createEvent(input: CreateEventInput & { lat?: number; lng?: numb
     genderPreference: input.genderPreference,
     visibility: input.visibility,
     priorityLevel: input.priorityLevel,
-    expressPaymentIntentId: input.expressPaymentIntentId,
     businessId: input.businessId,
   });
 }
@@ -273,13 +274,8 @@ export const getSubscriptionSummary = () =>
     resetsAt?: string;
     pinsRemaining: number | 'unlimited';
     pinQuota: number | 'unlimited';
+    endsAt?: string;
   }>('/subscriptions/me');
-
-export const createSubscriptionCheckout = (planType: 'pro') =>
-  api.post<CheckoutSession>('/subscriptions/checkout', { planType });
-
-export const createExpressPaymentIntent = (priorityLevel: 'express' | 'priority') =>
-  api.post<CheckoutSession>('/payments/express-intent', { priorityLevel });
 
 export const listSponsoredVenues = () => api.get<SponsoredVenue[]>('/businesses/sponsored-venues');
 
@@ -293,11 +289,24 @@ export const registerBusiness = (input: {
   phone?: string;
 }) => api.post('/businesses/register', input);
 
-export const createSponsorshipCheckout = (
+// ---- Manual upgrades (paid offline, activated by an admin) ------------------
+export const createUpgradeRequest = (input: CreateUpgradeInput) => api.post<UpgradeRequest>('/upgrades', input);
+export const listMyUpgradeRequests = () => api.get<UpgradeRequest[]>('/upgrades/mine');
+export const cancelUpgradeRequest = (id: string) => api.post<{ success: true }>(`/upgrades/${id}/cancel`);
+export const listUpgradeRequestsAdmin = () => api.get<UpgradeRequest[]>('/admin/upgrade-requests');
+export const approveUpgradeRequest = (id: string, opts: { until?: string; months?: number; adminNote?: string } = {}) =>
+  api.post<UpgradeRequest>(`/admin/upgrade-requests/${id}/approve`, opts);
+export const rejectUpgradeRequest = (id: string, adminNote?: string) =>
+  api.post<UpgradeRequest>(`/admin/upgrade-requests/${id}/reject`, { adminNote });
+export const adminSearchUsers = (q: string) => api.get<AdminUserPlan[]>(`/admin/users/search?q=${encodeURIComponent(q)}`);
+export const adminSetUserPlan = (
+  userId: string,
+  input: { action: 'grant' | 'extend' | 'revoke'; until?: string; months?: number; note?: string },
+) => api.post<AdminUserPlan>(`/admin/users/${userId}/plan`, input);
+export const adminSetBusinessSponsorship = (
   businessId: string,
-  tier: SponsorshipTier,
-  interval: BillingInterval = 'monthly',
-) => api.post<CheckoutSession>(`/businesses/${businessId}/sponsorship-checkout`, { tier, interval });
+  input: { action: 'grant' | 'extend' | 'revoke'; tier?: 'starter' | 'bronze' | 'silver'; interval?: BillingInterval; until?: string; months?: number; note?: string },
+) => api.post<{ success: true; until?: string }>(`/admin/businesses/${businessId}/sponsorship`, input);
 
 export const getMyBusiness = () => api.get<MyBusiness>('/businesses/mine');
 

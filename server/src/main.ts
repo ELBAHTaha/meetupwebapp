@@ -11,7 +11,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AppIoAdapter } from './realtime/io.adapter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false, rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false });
   const config = app.get(ConfigService);
 
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));

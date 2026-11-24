@@ -36,6 +36,11 @@ const en: Dict = {
   changedBody: 'The password for your hudlgo account was just changed, and you were signed out on all your devices.',
   changedWarn: "If this wasn't you, reset your password right away and contact us by replying to this email.",
   changedCta: 'Log in',
+
+  planEndingSubject: 'Your {{plan}} ends on {{date}}',
+  planEndingHeading: 'Your {{plan}} ends soon',
+  planEndingBody: 'Your {{plan}} is active until {{date}}. Plans don’t renew automatically: to keep it, send a new payment with a new upgrade request (you’ll get a fresh payment reference).',
+  planEndingCta: 'Renew my plan',
 };
 
 const fr: Dict = {
@@ -64,6 +69,11 @@ const fr: Dict = {
   changedBody: 'Le mot de passe de ton compte hudlgo vient d’être modifié et tu as été déconnecté de tous tes appareils.',
   changedWarn: "Si ce n'était pas toi, réinitialise ton mot de passe immédiatement et contacte-nous en répondant à cet e-mail.",
   changedCta: 'Se connecter',
+
+  planEndingSubject: 'Ton offre {{plan}} se termine le {{date}}',
+  planEndingHeading: 'Ton offre {{plan}} se termine bientôt',
+  planEndingBody: 'Ton offre {{plan}} est active jusqu’au {{date}}. Les offres ne se renouvellent pas automatiquement : pour la garder, envoie un nouveau paiement avec une nouvelle demande (tu recevras une nouvelle référence de paiement).',
+  planEndingCta: 'Renouveler mon offre',
 };
 
 const ar: Dict = {
@@ -92,6 +102,11 @@ const ar: Dict = {
   changedBody: 'كلمة السر ديال الحساب ديالك فـ hudlgo يالاه تبدلات، وتخرجتي من جميع الأجهزة.',
   changedWarn: 'إلا ماشي نتا، عاود عيّن كلمة السر دغيا وتواصل معانا بالرد على هاد الرسالة.',
   changedCta: 'تسجيل الدخول',
+
+  planEndingSubject: 'العرض {{plan}} ديالك كيسالي نهار {{date}}',
+  planEndingHeading: 'العرض {{plan}} ديالك قرب يسالي',
+  planEndingBody: 'العرض {{plan}} ديالك خدام حتى {{date}}. العروض ما كيتجددوش بوحدهم: باش تخليه، صيفط خلاص جديد مع طلب جديد (غادي يتعطاك مرجع جديد).',
+  planEndingCta: 'جدد العرض ديالي',
 };
 
 const DICTS: Record<MailLocale, Dict> = { en, fr, ar };

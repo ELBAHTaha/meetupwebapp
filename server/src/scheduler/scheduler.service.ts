@@ -3,7 +3,13 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BusinessService } from '../monetization/business.service';
+import { PlanGrantsService } from '../monetization/plan-grants.service';
 import { TrustService } from '../trust/trust.service';
+import { MailService } from '../mail/mail.service';
+
+const DAY_MS = 86_400_000;
+/** Renewal reminders go out about this long before a manual plan ends. */
+const REMINDER_LEAD_MS = 5 * DAY_MS;
 
 @Injectable()
 export class SchedulerService {
@@ -14,6 +20,8 @@ export class SchedulerService {
     private readonly notifications: NotificationsService,
     private readonly businesses: BusinessService,
     private readonly trust: TrustService,
+    private readonly grants: PlanGrantsService,
+    private readonly mail: MailService,
   ) {}
 
   /** Mark ended events COMPLETED and prompt participants to rate (once). */
@@ -112,21 +120,112 @@ export class SchedulerService {
     await this.businesses.resetMonthlyCounts();
   }
 
+  /**
+   * Manual plans end on their date (no auto-renewal): fall back to Free and
+   * expire sponsorships whose end date has passed. Logged in the audit trail.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async expireLapsedPlans(): Promise<void> {
+    const now = new Date();
+    const lapsedUsers = await this.prisma.user.findMany({
+      where: { subscriptionPlan: { not: 'FREE' }, subscriptionEndsAt: { lt: now } },
+      select: { id: true },
+    });
+    for (const u of lapsedUsers) await this.grants.revokePro(u.id, null, 'expire_pro');
+
+    const lapsedSponsorships = await this.prisma.sponsorship.findMany({
+      where: { status: 'ACTIVE', endDate: { lt: now } },
+      select: { businessId: true },
+    });
+    for (const businessId of new Set(lapsedSponsorships.map((s) => s.businessId))) {
+      await this.grants.revokeSponsorship(businessId, null, 'expire_sponsorship');
+    }
+    if (lapsedUsers.length || lapsedSponsorships.length) {
+      this.logger.log(`Expired ${lapsedUsers.length} Pro plan(s) and ${lapsedSponsorships.length} sponsorship(s).`);
+    }
+  }
+
+  /**
+   * ~5 days before a plan ends, remind the customer (email + in-app) to send a
+   * new payment with a new request. Sent once per granted period.
+   */
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async renewalReminders(): Promise<void> {
-    const soon = new Date(Date.now() + 3 * 86_400_000);
+    const now = new Date();
+    const soon = new Date(now.getTime() + REMINDER_LEAD_MS);
+
     const users = await this.prisma.user.findMany({
-      where: { subscriptionStatus: 'ACTIVE', subscriptionEndsAt: { lte: soon, gte: new Date() } },
-      select: { id: true, subscriptionPlan: true, subscriptionEndsAt: true },
+      where: {
+        subscriptionPlan: 'PRO',
+        subscriptionStatus: 'ACTIVE', // paid plans (referral trials are CANCELED + end date)
+        subscriptionEndsAt: { gt: now, lte: soon },
+        planReminderSentAt: null,
+      },
+      select: { id: true, email: true, name: true, locale: true, subscriptionEndsAt: true, status: true },
     });
-    await this.notifications.pushMany(
-      users.map((user) => ({
-        userId: user.id,
-        type: 'admin',
-        title: 'Subscription renewal soon',
-        body: `Your ${user.subscriptionPlan.toLowerCase()} plan renews soon.`,
-      })),
-    );
+    for (const u of users) {
+      if (u.status === 'BANNED') continue;
+      const endsAt = u.subscriptionEndsAt!;
+      await this.notifications.push(
+        {
+          userId: u.id,
+          type: 'upgrade',
+          title: 'Your Pro Host plan ends soon',
+          body: `It’s active until ${endsAt.toISOString().slice(0, 10)} and won’t renew automatically. Send a new payment with a new request to keep it.`,
+        },
+        { email: false },
+      );
+      void this.mail.sendPlanEndingSoon(u, 'Pro Host', endsAt, '/pricing').catch(() => undefined);
+      await this.prisma.user.update({ where: { id: u.id }, data: { planReminderSentAt: now } });
+    }
+
+    const sponsorships = await this.prisma.sponsorship.findMany({
+      where: { status: 'ACTIVE', endDate: { gt: now, lte: soon }, reminderSentAt: null },
+      include: { business: { select: { name: true, owner: { select: { id: true, email: true, name: true, locale: true } } } } },
+    });
+    for (const s of sponsorships) {
+      const owner = s.business.owner;
+      if (owner) {
+        const plan = `${s.tier.charAt(0)}${s.tier.slice(1).toLowerCase()} sponsorship`;
+        await this.notifications.push(
+          {
+            userId: owner.id,
+            type: 'upgrade',
+            title: `Your ${plan} ends soon`,
+            body: `“${s.business.name}” is sponsored until ${s.endDate!.toISOString().slice(0, 10)}. Send a new payment with a new request to keep it.`,
+          },
+          { email: false },
+        );
+        void this.mail.sendPlanEndingSoon(owner, plan, s.endDate!, '/business/upgrades').catch(() => undefined);
+      }
+      await this.prisma.sponsorship.update({ where: { id: s.id }, data: { reminderSentAt: now } });
+    }
+    if (users.length || sponsorships.length) {
+      this.logger.log(`Sent ${users.length + sponsorships.length} renewal reminder(s).`);
+    }
+  }
+
+  /**
+   * Pin requests are pointless once the activity has started: cancel them, and
+   * drop the hidden extra activity they were holding.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async closeStalePinRequests(): Promise<void> {
+    const now = new Date();
+    const stale = await this.prisma.upgradeRequest.findMany({
+      where: { status: 'PENDING', product: 'PINNED_ACTIVITY', event: { startsAt: { lte: now } } },
+      select: { id: true, eventId: true },
+    });
+    if (!stale.length) return;
+    await this.prisma.upgradeRequest.updateMany({
+      where: { id: { in: stale.map((r) => r.id) } },
+      data: { status: 'CANCELLED', decidedAt: now, adminNote: 'Activity started before payment was confirmed.' },
+    });
+    await this.prisma.event.updateMany({
+      where: { id: { in: stale.map((r) => r.eventId!).filter(Boolean) }, awaitingPayment: true, status: 'LIVE' },
+      data: { status: 'CANCELLED' },
+    });
+    this.logger.log(`Closed ${stale.length} stale pin request(s).`);
   }
 
   /** Prune chat messages from threads long past expiry. */

@@ -48,11 +48,15 @@ import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/format';
+import { UpgradeRequestsTab } from './UpgradeRequestsTab';
+import { PlansTab } from './PlansTab';
 
-type Tab = 'analytics' | 'pending' | 'verify' | 'bizverify' | 'claims' | 'reports' | 'flagged' | 'review' | 'feedback';
+type Tab = 'analytics' | 'upgrades' | 'plans' | 'pending' | 'verify' | 'bizverify' | 'claims' | 'reports' | 'flagged' | 'review' | 'feedback';
 
 const TAB_LABEL: Record<Tab, string> = {
   analytics: 'admin.tabAnalytics',
+  upgrades: 'admin.tabUpgrades',
+  plans: 'admin.tabPlans',
   pending: 'admin.tabPending',
   verify: 'admin.tabVerify',
   bizverify: 'admin.tabBizVerify',
@@ -105,7 +109,7 @@ export function AdminPage() {
 
         {/* Tabs */}
         <div className="mt-5 flex gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1">
-          {(['analytics', 'pending', 'verify', 'bizverify', 'claims', 'reports', 'flagged', 'review', 'feedback'] as Tab[]).map((tb) => (
+          {(['analytics', 'upgrades', 'plans', 'pending', 'verify', 'bizverify', 'claims', 'reports', 'flagged', 'review', 'feedback'] as Tab[]).map((tb) => (
             <button key={tb} onClick={() => setTab(tb)} className={cn('flex-1 whitespace-nowrap rounded-full px-2 py-2 text-[13px] font-medium transition-colors cursor-pointer', tab === tb ? 'bg-ink text-bg' : 'text-ink-soft')}>
               {t(TAB_LABEL[tb])}
             </button>
@@ -122,6 +126,8 @@ export function AdminPage() {
               <EmptyState icon={BarChart3} title="No analytics yet" />
             ))}
 
+          {tab === 'upgrades' && <UpgradeRequestsTab onChanged={bumpData} />}
+          {tab === 'plans' && <PlansTab onChanged={bumpData} />}
           {tab === 'pending' &&
             (pending.loading ? (
               <Skeleton className="h-28 w-full" />

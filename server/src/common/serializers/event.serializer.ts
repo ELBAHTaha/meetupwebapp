@@ -126,6 +126,8 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     hostSpotNote: joined ? e.hostSpotNote ?? undefined : undefined,
     priorityLevel: e.priorityLevel.toLowerCase(),
     expressFeePaid: e.expressFeePaid,
+    // Extra activity hidden until its offline payment is confirmed (host-only info).
+    awaitingPayment: e.awaitingPayment,
     approvedAt: e.approvedAt ? e.approvedAt.toISOString() : undefined,
     pinnedUntil: e.pinnedUntil ? e.pinnedUntil.toISOString() : undefined,
     // Currently featured (pin still active) — drives the "Featured" badge + feed order.

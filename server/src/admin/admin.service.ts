@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { publicUser, userPublicInclude } from '../common/serializers/user.serializer';
 import { eventInclude, serializeEvent } from '../common/serializers/event.serializer';
 import { BusinessService } from '../monetization/business.service';
-import { ExpressPaymentService } from '../monetization/express-payment.service';
 import { hashContact } from '../auth/auth.service';
 import { nearestCityName } from '../common/utils/area';
 
@@ -18,7 +17,6 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly businesses: BusinessService,
-    private readonly expressPayments: ExpressPaymentService,
     private readonly realtime: RealtimeService,
   ) {}
 
@@ -84,7 +82,7 @@ export class AdminService {
       this.prisma.event.count({ where: { status: 'LIVE' } }),
       this.prisma.event.count({ where: { status: 'COMPLETED' } }),
       this.prisma.event.count({ where: { status: 'CANCELLED' } }),
-      this.prisma.event.count({ where: { status: 'LIVE', approvedAt: null } }),
+      this.prisma.event.count({ where: { status: 'LIVE', approvedAt: null, awaitingPayment: false } }),
       this.prisma.event.count({ where: { underReview: true } }),
       this.prisma.business.count(),
       this.prisma.business.count({ where: { status: 'VERIFIED' } }),
@@ -285,7 +283,9 @@ export class AdminService {
   /** Activities awaiting first approval (created by normal users). */
   async pendingActivities(): Promise<unknown[]> {
     const events = await this.prisma.event.findMany({
-      where: { approvedAt: null, status: 'LIVE' },
+      // Paid extras waiting for their offline payment are approved through the
+      // Upgrade requests tab, not here.
+      where: { approvedAt: null, status: 'LIVE', awaitingPayment: false },
       include: eventInclude,
       orderBy: { createdAt: 'asc' },
     });
@@ -293,6 +293,10 @@ export class AdminService {
   }
 
   async approveActivity(id: string): Promise<{ success: true }> {
+    const pending = await this.prisma.event.findUnique({ where: { id }, select: { awaitingPayment: true } });
+    if (pending?.awaitingPayment) {
+      throw new BadRequestException('This extra activity is waiting for payment — approve its upgrade request instead.');
+    }
     const e = await this.prisma.event.update({ where: { id }, data: { approvedAt: new Date() } });
     await this.notifications.push({
       userId: e.hostId,
@@ -528,8 +532,22 @@ export class AdminService {
     });
   }
 
-  expressPaymentsList(): Promise<unknown[]> {
-    return this.expressPayments.pendingPaidActivities();
+  /** Activities with a paid pin / extra (granted by approving a PINNED_ACTIVITY request). */
+  async expressPaymentsList(): Promise<unknown[]> {
+    const events = await this.prisma.event.findMany({
+      where: { priorityLevel: { in: ['EXPRESS', 'PRIORITY'] }, expressFeePaid: true },
+      include: { host: true },
+      orderBy: [{ priorityLevel: 'desc' }, { createdAt: 'asc' }],
+      take: 200,
+    });
+    return events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      hostName: event.host.name,
+      priorityLevel: event.priorityLevel.toLowerCase(),
+      paymentIntentId: event.expressPaymentIntentId,
+      createdAt: event.createdAt.toISOString(),
+    }));
   }
 
   async resolveReport(id: string, adminId: string): Promise<{ success: true }> {

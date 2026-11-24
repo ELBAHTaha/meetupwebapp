@@ -25,6 +25,7 @@ import { MyEventsPage } from '@/features/myevents/MyEventsPage';
 import { NotFoundPage } from '@/features/misc/NotFoundPage';
 import { PricingPage } from '@/features/monetization/PricingPage';
 import { BusinessPage } from '@/features/monetization/BusinessPage';
+import { UpgradesPage } from '@/features/monetization/UpgradesPage';
 import { BusinessLayout } from '@/features/business/BusinessLayout';
 import { BusinessDashboardPage } from '@/features/business/BusinessDashboardPage';
 import { BusinessVenuePage } from '@/features/business/BusinessVenuePage';
@@ -73,7 +74,7 @@ export const router = createBrowserRouter([
   // Public: businesses can register/sponsor without a user account (the signup
   // page links here). Renders standalone — no app nav chrome required.
   { path: '/business', element: <BusinessPage /> },
-  // Public legal pages — viewable signed-in or out (Paddle requires public URLs).
+  // Public legal pages — viewable signed-in or out.
   { path: '/terms', element: <TermsPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
   { path: '/refunds', element: <RefundPolicyPage /> },
@@ -98,6 +99,7 @@ export const router = createBrowserRouter([
       { path: '/notifications', element: <NotificationsPage /> },
       { path: '/admin', element: <AdminPage /> },
       { path: '/pricing', element: <PricingPage /> },
+      { path: '/upgrades', element: <UpgradesPage /> },
       { path: '/venues', element: <VenuesPage /> },
       { path: '/venues/:id', element: <VenueDetailPage /> },
       { path: '/business/onboard', element: <BusinessOnboardPage /> },
@@ -116,6 +118,7 @@ export const router = createBrowserRouter([
       { path: '/business/activity/:id', element: <BusinessActivityDetailPage /> },
       { path: '/business/chat', element: <BusinessChatListPage /> },
       { path: '/business/chat/:eventId', element: <BusinessChatThreadPage /> },
+      { path: '/business/upgrades', element: <UpgradesPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

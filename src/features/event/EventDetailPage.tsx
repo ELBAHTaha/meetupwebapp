@@ -18,6 +18,7 @@ import {
   Users,
   UserCheck,
   Video,
+  Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Avatar } from '@/components/Avatar';
@@ -236,6 +237,20 @@ export function EventDetailPage() {
           <MetaRow icon={Ticket} label={formatPrice(event.price)} sub={event.price === 0 ? t('event.free') : 'per person'} />
           <MetaRow icon={Users} label={`${event.capacity} ${t('event.capacityWord')}`} sub={event.minPlayers > 1 ? t('event.minPlayers', { count: event.minPlayers }) : ''} />
         </div>
+
+        {/* Extra activity waiting for its offline payment (host only) */}
+        {status === 'host' && event.awaitingPayment && (
+          <button
+            onClick={() => navigate('/upgrades')}
+            className="flex w-full items-start gap-3 rounded-card border border-saffron/40 bg-saffron-soft p-4 text-start cursor-pointer"
+          >
+            <Receipt className="mt-0.5 h-5 w-5 shrink-0 text-ink-soft" strokeWidth={1.7} />
+            <span>
+              <span className="block text-meta font-semibold text-ink">{t('pin.awaitingTitle')}</span>
+              <span className="block text-[12px] text-ink-soft">{t('pin.awaitingBody')}</span>
+            </span>
+          </button>
+        )}
 
         {/* Conditions (outdoor only) */}
         {showConditions && (

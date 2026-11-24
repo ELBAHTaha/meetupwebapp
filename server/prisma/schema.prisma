@@ -173,7 +173,7 @@ enum SponsorshipTier {
 }
 
 // How a paid plan is billed. Monthly is the default; QUARTERLY and ANNUAL are
-// longer Paddle billing cycles (a discounted total billed each period).
+// longer prepaid terms (a discounted total, paid offline up front).
 enum BillingInterval {
   MONTHLY
   QUARTERLY
@@ -234,6 +234,8 @@ model User {
   emailVerifiedAt DateTime?
   // Preferred UI language ("en" | "fr" | "ar") — used to localize emails.
   locale       String?    @db.VarChar(5)
+  // Last "your plan ends soon" reminder (reset whenever the plan is granted/extended).
+  planReminderSentAt DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -258,6 +260,8 @@ model User {
   businessMemberships BusinessMember[]
   venueReviews     VenueReview[]
   feedback         Feedback[]         @relation("UserFeedback")
+  upgradeRequests  UpgradeRequest[]   @relation("UpgradeRequester")
+  upgradeDecisions UpgradeRequest[]   @relation("UpgradeDecider")
   referredBy       User?              @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
   referrals        User[]             @relation("UserReferrals")
 
@@ -337,10 +341,14 @@ model Event {
   hostSpotNote     String?
   reminderSentAt   DateTime?
   ratePromptSentAt DateTime?
+  // Extra activity created beyond the free quota: hidden until an admin approves
+  // its PINNED_ACTIVITY upgrade request (i.e. the offline payment arrived).
+  awaitingPayment  Boolean          @default(false)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   attendances Attendance[]
+  upgradeRequests UpgradeRequest[]
   chatThread  ChatThread?
   ratings     Rating[]
   flags       Flag[]
@@ -577,6 +585,7 @@ model Business {
   venues        Venue[]
   verifications BusinessVerification[]
   claims        VenueClaim[]
+  upgradeRequests UpgradeRequest[]
 
   @@index([status])
   @@index([ownerId])
@@ -698,6 +707,8 @@ model Sponsorship {
   status                  SponsorshipStatus @default(ACTIVE)
   activitiesUsedThisMonth Int               @default(0)
   lastResetDate           DateTime          @default(now())
+  // Last "sponsorship ends soon" reminder.
+  reminderSentAt          DateTime?
   createdAt               DateTime          @default(now())
 
   activityUsages ActivityVenue[]
@@ -723,15 +734,66 @@ model ActivityVenue {
   @@index([sponsorshipId])
 }
 
+// Audit log of plan changes. Historically the Paddle order/webhook log
+// (eventType paddle_*); now records manual grants/extensions/revocations and
+// automatic expiries. `paddleEventId` is kept (unique) and holds a generated
+// audit id for new rows; `adminId` is the admin who made a manual change.
 model SubscriptionEvent {
   id            String   @id @default(cuid())
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   eventType     String
   paddleEventId String   @unique
+  adminId       String?
   data          Json
   createdAt     DateTime @default(now())
 
   @@index([userId])
   @@index([eventType])
+}
+
+enum UpgradeProduct {
+  PRO_HOST
+  SPONSORSHIP_STARTER
+  SPONSORSHIP_BRONZE
+  SPONSORSHIP_SILVER
+  PINNED_ACTIVITY
+}
+
+enum UpgradeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// A request to activate a paid plan. The customer pays offline (bank transfer /
+// CashPlus / cash) quoting `reference`; an admin then approves it, which grants
+// the plan through the normal plan/sponsorship/pin code paths.
+model UpgradeRequest {
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation("UpgradeRequester", fields: [userId], references: [id], onDelete: Cascade)
+  businessId      String?
+  business        Business?            @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  product         UpgradeProduct
+  venueId         String?
+  eventId         String?
+  event           Event?               @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  billingInterval BillingInterval?
+  amountCents     Int
+  status          UpgradeRequestStatus @default(PENDING)
+  reference       String               @unique @db.VarChar(16)
+  note            String?              @db.Text
+  adminNote       String?              @db.Text
+  grantedUntil    DateTime?
+  createdAt       DateTime             @default(now())
+  decidedAt       DateTime?
+  decidedById     String?
+  decidedBy       User?                @relation("UpgradeDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([businessId])
+  @@index([eventId])
 }

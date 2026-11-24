@@ -302,9 +302,9 @@
     "pinsNone": "Not included on Free",
     "pinsLeft": "{{n}} of {{q}} left this week",
     "upgradeMore": "Upgrade to host more often & pin activities →",
-    "unlimitedFeatured": "Your Gold plan: unlimited hosting — every activity is featured. No extra fee.",
-    "nextFreeNotice": "Next free activity in {{time}}. Choose a paid option below to host now.",
-    "usedNotice": "You’ve used your hosting allowance for now. Choose a paid option below to host another.",
+    "unlimitedFeatured": "Your Pro Host plan covers this — unlimited hosting, no extra request needed.",
+    "nextFreeNotice": "Next free activity in {{time}}. To host now, request an extra pinned activity below (paid offline).",
+    "usedNotice": "You’ve used today’s free activity. Request an extra pinned activity below (paid offline), or upgrade to Pro Host.",
     "planCovers": "Your {{plan}} plan covers this activity.",
     "planCoversPinned": "Your {{plan}} plan covers this — it’ll be pinned to the top.",
     "capacityHint": "Activities need between 4 and 12 people.",
@@ -533,7 +533,9 @@
     "noFlagged": "No flagged users right now.",
     "statusSuspended": "Suspended",
     "statusBanned": "Banned",
-    "actionDone": "Done"
+    "actionDone": "Done",
+    "tabUpgrades": "Upgrade requests",
+    "tabPlans": "Plans"
   },
   "dev": {
     "title": "Dev controls",
@@ -569,7 +571,8 @@
     "notFoundHint": "We couldn't find what you're looking for.",
     "goHome": "Back to Discover",
     "comingSoon": "Coming soon",
-    "somethingWrong": "Something went wrong. Please try again."
+    "somethingWrong": "Something went wrong. Please try again.",
+    "back": "Back"
   },
   "authFlow": {
     "forgotLink": "Forgot password?",
@@ -648,5 +651,198 @@
       "storm": "Thunderstorms",
       "windy": "Windy"
     }
+  },
+  "pricing": {
+    "title": "Pricing",
+    "currentPlan": "Current plan",
+    "freeName": "Free",
+    "proName": "Pro Host",
+    "freeSub": "1 activity every day",
+    "freeP1": "1 free activity every day",
+    "freeP2": "{{price}} per extra activity (pinned to the top)",
+    "freeP3": "Join unlimited activities",
+    "proSub": "Unlimited hosting",
+    "proP1": "Host unlimited activities",
+    "proP2": "7 pinned activities per week",
+    "proP3": "Priority visibility & top placement",
+    "unlimited": "Unlimited hosting",
+    "remainingFree_one": "{{count}} free activity left today",
+    "remainingFree_other": "{{count}} free activities left today",
+    "activeUntil": "Active until {{date}} · doesn’t renew automatically",
+    "tiersTitle": "Membership tiers",
+    "tiersSubtitle": "Host more often and pin your activities to the top.",
+    "manualNote": "Pay by bank transfer, CashPlus or cash — no card needed. Request an upgrade to get the amount and a payment reference; we activate your plan by hand once the payment arrives. Plans don’t renew automatically.",
+    "popular": "Most popular",
+    "perMonth": "/mo",
+    "current": "Current plan",
+    "included": "Included",
+    "requestUpgrade": "Request upgrade",
+    "viewPending": "View pending request",
+    "renew": "Renew",
+    "sponsorTitle": "Sponsor venues",
+    "sponsorBody": "Starter, Bronze and Silver venue sponsorships for local businesses.",
+    "businessSignup": "Business signup"
+  },
+  "upgrades": {
+    "title": "Upgrade requests",
+    "subtitle": "Pay offline with the reference shown, and we’ll activate your plan by hand.",
+    "myRequests": "My upgrade requests",
+    "instructionsTitle": "How to pay",
+    "instructionsIntro": "Your request is in. Send the payment below — we activate your plan as soon as it arrives.",
+    "reference": "Reference",
+    "amount": "Amount",
+    "copyReference": "Copy reference",
+    "copied": "Copied",
+    "pendingHint": "Put the reference on your transfer so we can match your payment.",
+    "activeUntil": "Active until {{date}}",
+    "pinnedUntil": "Pinned until {{date}}",
+    "adminNote": "Note from the team: {{note}}",
+    "cancel": "Cancel request",
+    "cancelled": "Request cancelled",
+    "requestSent": "Request sent — follow the payment instructions below.",
+    "requestSponsorship": "Request a sponsorship",
+    "notePlaceholder": "Optional note for our team (e.g. how you’ll pay)",
+    "getPro": "Want unlimited hosting? Request Pro Host from the pricing page.",
+    "empty": "No requests yet",
+    "emptyHint": "Requests you make for Pro Host, sponsorships or pinned activities show up here.",
+    "product": {
+      "pro_host": "Pro Host",
+      "sponsorship_starter": "Starter sponsorship",
+      "sponsorship_bronze": "Bronze sponsorship",
+      "sponsorship_silver": "Silver sponsorship",
+      "pinned_activity": "Pinned activity"
+    },
+    "status": {
+      "pending": "Waiting for payment",
+      "approved": "Active",
+      "rejected": "Declined",
+      "cancelled": "Cancelled"
+    },
+    "interval": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "annual": "Annual"
+    }
+  },
+  "pin": {
+    "visibilityTitle": "Activity visibility",
+    "extraHeading": "Extra activity",
+    "choose": "Choose an option to continue",
+    "free": "Free",
+    "freeTitle": "Free",
+    "freeCopy": "Your free activity (1 every day)",
+    "pinnedTitle": "Pinned",
+    "pinnedCopy": "Pin it to the top of the feed until it starts",
+    "extraTitle": "Create + pinned",
+    "extraCopy": "Host an extra activity today, pinned to the top",
+    "offlineNote": "You’ll get payment instructions and a reference after publishing. We pin the activity (and publish an extra one) once the payment arrives.",
+    "createdAwaiting": "Saved! Pay with reference {{ref}} — it goes live once we receive the payment.",
+    "createdRequested": "Published — pay with reference {{ref}} to get it pinned.",
+    "awaitingTitle": "Waiting for your payment",
+    "awaitingBody": "This extra activity goes live (pinned) as soon as we receive your payment. Tap to see the reference and instructions."
+  },
+  "sponsor": {
+    "tier": {
+      "starter": "Starter",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold"
+    },
+    "tagline": {
+      "starter": "Test the waters",
+      "bronze": "Get discovered by locals",
+      "silver": "Grow steady foot traffic"
+    },
+    "limit": {
+      "starter": "2 sponsored activities / month",
+      "bronze": "5 sponsored activities / month",
+      "silver": "15 sponsored activities / month"
+    },
+    "save": {
+      "quarterly": "−10%",
+      "annual": "−15%"
+    },
+    "points": {
+      "starter": {
+        "0": "Sponsored label on your venue in the map & venue picker",
+        "1": "Listed when hosts search for a place",
+        "2": "Great for small or new venues"
+      },
+      "bronze": {
+        "0": "Sponsored label on your venue in the map & venue picker",
+        "1": "Listed when hosts search for a place",
+        "2": "Basic business profile"
+      },
+      "silver": {
+        "0": "Everything in Bronze",
+        "1": "Full business profile page",
+        "2": "Unique coupon codes for attendees",
+        "3": "Top placement in the venue picker"
+      }
+    },
+    "totalDue": "Total due: {{amount}} ({{term}}, paid up front)",
+    "activeTitle": "{{tier}} sponsorship",
+    "usage": "{{used}} / {{limit}} activities this month",
+    "until": "until {{date}}",
+    "noneTitle": "No active sponsorship",
+    "noneBody": "Sponsor your venue to host more activities and show up first."
+  },
+  "business": {
+    "badge": "For businesses",
+    "heroTitle": "Put your venue where the plans happen",
+    "heroBody": "Every hudlgo meetup needs a place. Sponsored venues show up first when hosts pick where to gather — sending a steady stream of new faces through your door.",
+    "benefitReach": "Reach active locals",
+    "benefitMap": "Featured on the map",
+    "benefitUsage": "Monthly usage tracking",
+    "chooseTitle": "Choose your sponsorship",
+    "chooseSubtitle": "One month, or prepay a quarter/year for a discount · limits reset on the 1st.",
+    "venueTitle": "Tell us about your venue",
+    "venueSubtitle": "We review new venues before they go live.",
+    "name": "Business name",
+    "description": "Description",
+    "descriptionPlaceholder": "What makes your venue great for meetups?",
+    "address": "Address",
+    "addressPlaceholder": "Rue Example, Casablanca",
+    "phone": "Phone",
+    "loginTitle": "Your login",
+    "loginHint": "Use this email and password to sign in to your account later.",
+    "selectedPlan": "Selected plan",
+    "manualPayNote": "No card needed: after signing up you get the payment instructions and a reference. We activate your sponsorship once the payment arrives.",
+    "submit": "Create account & continue",
+    "submitHint": "Creates your login, registers your venue and requests the {{plan}} sponsorship.",
+    "registerFailed": "Could not register your business.",
+    "doneTitle": "You’re registered 🎉",
+    "doneBody": "Your venue is awaiting review. To activate your sponsorship, send the payment below with the reference."
+  },
+  "adminUpgrades": {
+    "intro": "Pending requests first. Check the payment arrived (matching the reference), then approve to activate the plan.",
+    "none": "No pending upgrade requests",
+    "showHistory": "Show decided requests ({{count}})",
+    "hideHistory": "Hide decided requests",
+    "months": "Grant for",
+    "monthsCount_one": "{{count}} month",
+    "monthsCount_other": "{{count}} months",
+    "orUntil": "…or until date",
+    "note": "Note (optional)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved": "{{ref}} approved — plan activated",
+    "rejected": "{{ref}} rejected",
+    "confirmReject": "Reject request {{ref}}?",
+    "pinNote": "Approving pins the activity until it starts (and publishes it if it’s an extra activity)."
+  },
+  "adminPlans": {
+    "proTitle": "Pro Host (people)",
+    "searchPlaceholder": "Search by name or email",
+    "search": "Search",
+    "noResults": "No one found.",
+    "sponsorTitle": "Venue sponsorships (businesses)",
+    "noSponsorship": "No sponsorship",
+    "tier": "Tier",
+    "grant": "Grant",
+    "extend": "Extend",
+    "revoke": "Revoke",
+    "confirmRevoke": "Revoke the plan for {{name}}?",
+    "saved": "Plan updated"
   }
 }

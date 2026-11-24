@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { CalendarRange, ChevronRight, Clock, MapPin, Plus, Ticket, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { CalendarRange, ChevronRight, Clock, Crown, MapPin, Plus, Ticket, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAsync } from '@/hooks/useAsync';
 import { getMyBusiness } from '@/api';
@@ -8,7 +9,7 @@ import { Button } from '@/components/Button';
 import { Skeleton } from '@/components/Skeleton';
 import { Tag } from '@/components/Chip';
 import { cn } from '@/lib/cn';
-import type { MyBusinessActivity } from '@/types';
+import type { MyBusiness, MyBusinessActivity } from '@/types';
 
 const STATUS_TONE: Record<string, string> = {
   live: 'bg-olive-soft text-olive',
@@ -44,6 +45,8 @@ export function BusinessDashboardPage() {
         <h1 className="font-display text-h1 font-medium text-ink">{business.name}</h1>
       </div>
 
+      <SponsorshipCard sponsorship={data.data.sponsorship} onManage={() => navigate('/business/upgrades')} />
+
       {/* Activities at venue */}
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -68,6 +71,41 @@ export function BusinessDashboardPage() {
         )}
       </section>
     </div>
+  );
+}
+
+/** Current venue sponsorship (activated manually by an admin) + request/renew. */
+function SponsorshipCard({ sponsorship, onManage }: { sponsorship: MyBusiness['sponsorship']; onManage: () => void }) {
+  const { t } = useTranslation();
+  const active = sponsorship && sponsorship.status === 'active';
+  const endsSoon = !!sponsorship?.endDate && new Date(sponsorship.endDate).getTime() - Date.now() < 7 * 86_400_000;
+  return (
+    <section className="flex flex-wrap items-center gap-3 rounded-card border border-border bg-surface p-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-saffron-soft text-ink">
+        <Crown className="h-5 w-5" strokeWidth={1.7} />
+      </span>
+      <div className="min-w-0 flex-1">
+        {active ? (
+          <>
+            <p className="font-display text-h3 font-medium text-ink">
+              {t('sponsor.activeTitle', { tier: t(`sponsor.tier.${sponsorship.tier}`, sponsorship.tier) })}
+            </p>
+            <p className="text-[12px] text-ink-soft">
+              {t('sponsor.usage', { used: sponsorship.used, limit: sponsorship.limit === 'unlimited' ? '∞' : sponsorship.limit })}
+              {sponsorship.endDate && ` · ${t('sponsor.until', { date: new Date(sponsorship.endDate).toLocaleDateString() })}`}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-display text-h3 font-medium text-ink">{t('sponsor.noneTitle')}</p>
+            <p className="text-[12px] text-ink-soft">{t('sponsor.noneBody')}</p>
+          </>
+        )}
+      </div>
+      <Button size="sm" variant={active && !endsSoon ? 'outline' : 'primary'} onClick={onManage}>
+        {active ? t('pricing.renew') : t('pricing.requestUpgrade')}
+      </Button>
+    </section>
   );
 }
 

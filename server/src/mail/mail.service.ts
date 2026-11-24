@@ -46,8 +46,8 @@ function stripHtml(html: string): string {
 /**
  * Transactional email. Mirrors the in-app notifications to email (Resend), with a
  * dev-simulation fallback: when no real API key is set (placeholder contains "xxx"),
- * emails are logged to the server console instead of sent — same pattern as Paddle
- * and Turnstile, so local dev never needs real credentials.
+ * emails are logged to the server console instead of sent — same pattern as
+ * Turnstile, so local dev never needs real credentials.
  */
 @Injectable()
 export class MailService {
@@ -177,6 +177,29 @@ export class MailService {
         bodyHtml: this.authBody(l, user.name, [mt(l, 'changedBody'), mt(l, 'changedWarn')]),
         cta: { text: mt(l, 'changedCta'), url },
         preheader: mt(l, 'changedBody'),
+      }),
+    });
+  }
+
+  /** Manual plans don't auto-renew — remind ~5 days before the end date. */
+  async sendPlanEndingSoon(
+    user: MailRecipient & { locale?: string | null },
+    plan: string,
+    endsAt: Date,
+    renewPath: string,
+  ): Promise<void> {
+    const l = mailLocale(user.locale);
+    const date = endsAt.toISOString().slice(0, 10);
+    const url = `${this.appUrl}${renewPath}`;
+    await this.send({
+      to: user.email,
+      subject: mt(l, 'planEndingSubject', { plan, date }),
+      html: this.layout({
+        locale: l,
+        heading: mt(l, 'planEndingHeading', { plan }),
+        bodyHtml: this.authBody(l, user.name, [mt(l, 'planEndingBody', { plan, date })]),
+        cta: { text: mt(l, 'planEndingCta'), url },
+        preheader: mt(l, 'planEndingBody', { plan, date }),
       }),
     });
   }

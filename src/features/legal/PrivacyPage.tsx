@@ -19,7 +19,7 @@ export function PrivacyPage() {
             'Identity verification — if you opt into verification, the selfie and pose images you submit so our team can confirm you are a real person.',
             'Activity and usage data — the activities you create, join or message about, and how you interact with the Service.',
             'Location information — the general area and, once you join an activity, the precise location needed to attend.',
-            'Payment information — purchases are handled by Paddle (see section 6). We receive confirmation and limited billing details, but not your full card number.',
+            'Payment information — for paid plans, the upgrade requests you make (plan, amount, payment reference) and the payment confirmation details you or your bank share with us. We never collect card numbers (see section 6).',
             'Device and log data — IP address, browser/device type and basic diagnostics used to keep the Service secure and working.',
             'Communications — messages you send to other users through the Service and any support requests you send to us.',
           ]}
@@ -32,7 +32,7 @@ export function PrivacyPage() {
             'To provide, maintain and improve the Service and its features;',
             'To create and manage your account and authenticate you;',
             'To enable activities, group chats, notifications and verification;',
-            'To process purchases and manage subscriptions (via Paddle);',
+            'To match offline payments to your upgrade requests and manage your plan;',
             'To keep the Service safe — preventing fraud, abuse and harmful behaviour, and enforcing our Terms;',
             'To communicate with you about your account, updates and support; and',
             'To comply with our legal obligations.',
@@ -53,28 +53,19 @@ export function PrivacyPage() {
         <List
           items={[
             'With other users — your public profile and activity details are visible to other members as part of how the Service works.',
-            'With service providers — including Paddle (payments), our hosting provider, and our email provider, who process data on our behalf.',
+            'With service providers — including our hosting provider and our email provider, who process data on our behalf.',
             'For legal reasons — where required by law, regulation, or to protect the rights, safety and property of our users or others.',
             'In a business transfer — if we are involved in a merger, acquisition or sale of assets, subject to this Policy.',
           ]}
         />
       </Section>
 
-      <Section title="6. Payments and Paddle">
+      <Section title="6. Payments">
         <p>
-          Our order process is conducted by our online reseller{' '}
-          <strong className="font-semibold text-ink">Paddle.com</strong>, the merchant of record for our products.
-          Paddle handles customer service enquiries related to payments and processes your payment data in accordance
-          with its own{' '}
-          <a
-            href="https://www.paddle.com/legal/privacy"
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-clay hover:text-clay-press underline underline-offset-2"
-          >
-            privacy policy
-          </a>
-          . We do not receive or store your full payment-card details.
+          Paid plans are paid offline (bank transfer, CashPlus or cash) with a payment reference, and our team activates
+          them by hand. We keep a record of your upgrade requests and of plan changes so we can match payments, answer
+          billing questions and meet our accounting obligations. We never collect or store payment-card details. Your
+          bank or payment service processes your payment under its own privacy terms.
         </p>
       </Section>
 

@@ -49,15 +49,54 @@ export type PriorityLevel = 'standard' | 'express' | 'priority';
 export type SponsorshipTier = 'starter' | 'bronze' | 'silver' | 'gold';
 export type BillingInterval = 'monthly' | 'quarterly' | 'annual';
 
-// --- Paddle checkout ---
-/** Returned by the *-checkout endpoints. Either a Paddle transaction to open in
- * the overlay (`transactionId`), or a dev-simulated session already applied
- * server-side (`simulated`). `ref` is the order id used to verify one-off buys. */
-export interface CheckoutSession {
-  ref: string;
+// --- Manual upgrades (paid offline, activated by an admin) ---
+export type UpgradeProduct = 'pro_host' | 'sponsorship_starter' | 'sponsorship_bronze' | 'sponsorship_silver' | 'pinned_activity';
+export type UpgradeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface UpgradeRequest {
+  id: string;
+  product: UpgradeProduct;
+  status: UpgradeStatus;
+  /** Short code the customer writes on their transfer (e.g. HG-4F7K2). */
+  reference: string;
   amountCents: number;
-  transactionId?: string;
-  simulated?: boolean;
+  billingInterval?: BillingInterval;
+  businessId?: string;
+  businessName?: string;
+  venueId?: string;
+  eventId?: string;
+  eventTitle?: string;
+  eventStartsAt?: string;
+  note?: string;
+  adminNote?: string;
+  grantedUntil?: string;
+  createdAt: string;
+  decidedAt?: string;
+  /** Localized payment instructions (pending requests only). */
+  instructions?: string;
+  /** Admin listing only. */
+  user?: { id: string; name: string; email: string };
+}
+
+export interface CreateUpgradeInput {
+  product: UpgradeProduct;
+  interval?: BillingInterval;
+  businessId?: string;
+  venueId?: string;
+  eventId?: string;
+  note?: string;
+  locale?: string;
+}
+
+/** Admin plans screen: a person's host plan. */
+export interface AdminUserPlan {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  plan: string;
+  status: string;
+  endsAt?: string;
 }
 
 /** Per-user relationship to an event, derived for the current viewer. */
@@ -336,6 +375,8 @@ export interface JmaaEvent {
   priorityLevel?: PriorityLevel;
   expressPaymentIntentId?: string;
   expressFeePaid?: boolean;
+  /** Extra activity hidden until its offline payment is confirmed by an admin. */
+  awaitingPayment?: boolean;
   approvedAt?: string;
   pinnedUntil?: string;
   businessId?: string;
@@ -590,6 +631,8 @@ export interface LoginInput {
 
 /** Event enriched with resolved relations for convenient rendering. */
 export interface EnrichedEvent extends JmaaEvent {
+  /** Returned by createEvent when a pin / extra-activity request was filed. */
+  upgradeRequest?: UpgradeRequest;
   activity: Activity;
   host: User;
   spot?: Spot;

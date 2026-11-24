@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEmail, IsEnum, IsLatitude, IsLongitude, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsLatitude, IsLongitude, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class RegisterBusinessDto {
   @IsString()
@@ -32,15 +32,6 @@ export class RegisterBusinessDto {
   @IsString()
   @MaxLength(40)
   phone?: string;
-}
-
-export class SponsorshipCheckoutDto {
-  @IsEnum(['starter', 'bronze', 'silver'])
-  tier!: 'starter' | 'bronze' | 'silver';
-
-  @IsOptional()
-  @IsEnum(['monthly', 'quarterly', 'annual'])
-  interval?: 'monthly' | 'quarterly' | 'annual';
 }
 
 export class RemovePhotoDto {

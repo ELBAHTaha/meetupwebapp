@@ -22,22 +22,6 @@ export interface AppConfig {
     ttl: number;
     limit: number;
   };
-  // Paddle (Billing) — merchant-of-record checkout. The server creates a
-  // transaction with a catalog price id; the frontend opens Paddle.js overlay;
-  // Paddle posts signed webhooks back to fulfil the order.
-  paddle: {
-    apiKey?: string; // server-side API key (pdl_…) — never exposed to the browser
-    environment: 'sandbox' | 'production';
-    webhookSecret?: string; // signing secret used to verify webhook payloads
-    // Catalog price ids (created in the Paddle dashboard).
-    prices: {
-      hostPro?: string; // recurring Pro Host (49 MAD/mo)
-      extraPriority?: string; // one-time pinned extra activity (19.90 MAD)
-      // Recurring business sponsorships, one price id per (tier × billing term).
-      biz: Record<'starter' | 'bronze' | 'silver', Record<'monthly' | 'quarterly' | 'annual', string | undefined>>;
-    };
-    enabled: boolean; // true only when a real (non-placeholder) API key is set
-  };
   turnstile: {
     secretKey?: string;
   };
@@ -45,12 +29,10 @@ export interface AppConfig {
     apiKey?: string;
     from: string;
   };
-  // Global payments kill switch. While false, all checkout creation (host
-  // subscriptions, business sponsorships, one-off extra activities) is refused —
-  // including the dev-simulation auto-grant. Flip on (PAYMENTS_ENABLED=true) once
-  // the Paddle account is approved and live price ids are configured.
+  // Manual (offline) payments: the instructions shown with every upgrade
+  // request. Supports {amount} and {reference} placeholders and literal "\n".
   payments: {
-    enabled: boolean;
+    instructions: { en?: string; fr?: string; ar?: string };
   };
 }
 
@@ -82,35 +64,6 @@ export default (): AppConfig => ({
     ttl: parseInt(process.env.THROTTLE_TTL ?? '60000', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),
   },
-  paddle: {
-    apiKey: process.env.PADDLE_API_KEY || undefined,
-    environment: process.env.PADDLE_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
-    webhookSecret: process.env.PADDLE_WEBHOOK_SECRET || undefined,
-    prices: {
-      hostPro: process.env.PADDLE_HOST_PRO_PRICE_ID || undefined,
-      extraPriority: process.env.PADDLE_EXTRA_PRIORITY_PRICE_ID || undefined,
-      biz: {
-        starter: {
-          monthly: process.env.PADDLE_BIZ_STARTER_MONTHLY_PRICE_ID || undefined,
-          quarterly: process.env.PADDLE_BIZ_STARTER_QUARTERLY_PRICE_ID || undefined,
-          annual: process.env.PADDLE_BIZ_STARTER_ANNUAL_PRICE_ID || undefined,
-        },
-        bronze: {
-          monthly: process.env.PADDLE_BIZ_BRONZE_MONTHLY_PRICE_ID || undefined,
-          quarterly: process.env.PADDLE_BIZ_BRONZE_QUARTERLY_PRICE_ID || undefined,
-          annual: process.env.PADDLE_BIZ_BRONZE_ANNUAL_PRICE_ID || undefined,
-        },
-        silver: {
-          monthly: process.env.PADDLE_BIZ_SILVER_MONTHLY_PRICE_ID || undefined,
-          quarterly: process.env.PADDLE_BIZ_SILVER_QUARTERLY_PRICE_ID || undefined,
-          annual: process.env.PADDLE_BIZ_SILVER_ANNUAL_PRICE_ID || undefined,
-        },
-      },
-    },
-    // A real key is required for live checkout; placeholders ("xxx") fall back to
-    // dev simulation so the flow stays testable without Paddle credentials.
-    enabled: Boolean(process.env.PADDLE_API_KEY && !process.env.PADDLE_API_KEY.includes('xxx')),
-  },
   turnstile: {
     secretKey: process.env.TURNSTILE_SECRET_KEY || undefined,
   },
@@ -118,8 +71,11 @@ export default (): AppConfig => ({
     apiKey: process.env.RESEND_API_KEY || undefined,
     from: process.env.MAIL_FROM ?? 'hudlgo <onboarding@resend.dev>',
   },
-  // Off unless explicitly enabled, so payments stay blocked until Paddle is live.
   payments: {
-    enabled: process.env.PAYMENTS_ENABLED === 'true',
+    instructions: {
+      en: process.env.PAYMENT_INSTRUCTIONS_EN || undefined,
+      fr: process.env.PAYMENT_INSTRUCTIONS_FR || undefined,
+      ar: process.env.PAYMENT_INSTRUCTIONS_AR || undefined,
+    },
   },
 });

@@ -12,7 +12,6 @@ import type {
   CreateEventInput,
   EnrichedEvent,
   EventFilters,
-  CheckoutSession,
   JmaaEvent,
   LoginInput,
   MyBusiness,
@@ -22,6 +21,10 @@ import type {
   Report,
   ReportInput,
   Review,
+  AdminUserPlan,
+  BillingInterval,
+  CreateUpgradeInput,
+  UpgradeRequest,
   SignupInput,
   Spot,
   SponsoredVenue,
@@ -57,7 +60,6 @@ import {
 } from './store';
 import { distanceKm } from '@/lib/format';
 import { CITIES } from './catalog';
-import { paymentsEnabled } from '@/lib/paddle';
 
 // Artificial latency so loading states are exercised.
 const delay = <T>(value: T, ms = 320): Promise<T> =>
@@ -399,15 +401,15 @@ export async function createEvent(input: CreateEventInput & { lat?: number; lng?
   const usedThisWindow = activitiesHostedThisWindow(db.currentUserId);
   // Gold (window null) is unlimited; everyone else gets 1 per their window.
   const mustPay = HOSTING_WINDOW_MS[plan] !== null && usedThisWindow >= 1;
-  if (mustPay && !paidExtra) {
-    throw new Error('You’ve used your free activity for now. Pay the one-time fee to host another, or upgrade your plan for more.');
+  // Over the free quota → the extra activity must come with a pin request (paid
+  // offline); it stays hidden until an admin approves that request.
+  const wantsPin = paidExtra && !input.businessId;
+  if (mustPay && !wantsPin) {
+    throw new Error('You’ve used your free activity for today. Request an extra pinned activity (19.90 MAD), or upgrade to Pro Host for unlimited hosting.');
   }
-  // Pinned: the host's tier auto-pin allowance (Bronze 1/wk, Silver 3/wk, Gold ∞),
-  // $2.99 priority extras, and the $0.99 express option on a free activity.
-  const pinned =
-    hasPinAllowance(db.currentUserId) ||
-    input.priorityLevel === 'priority' ||
-    (!mustPay && input.priorityLevel === 'express');
+  const awaitingPayment = mustPay && wantsPin;
+  // Pro's weekly auto-pin allowance; paid pins are applied when the request is approved.
+  const pinned = hasPinAllowance(db.currentUserId);
   // Launch-safety rules (also enforced in the UI).
   if (!input.publicPlaceConfirmed) throw new Error('Please confirm this is a public place.');
   if (new Date(input.startsAt).getTime() - Date.now() < FOUR_HOURS)
@@ -424,9 +426,9 @@ export async function createEvent(input: CreateEventInput & { lat?: number; lng?
     status: 'PENDING',
     lifecycle: 'live',
     endsAt: endsAtOf({ startsAt: input.startsAt, durationMins: input.durationMins }),
-    priorityLevel: input.priorityLevel ?? 'standard',
-    expressPaymentIntentId: input.expressPaymentIntentId,
-    expressFeePaid: paidExtra,
+    priorityLevel: 'standard',
+    expressFeePaid: false,
+    awaitingPayment,
     // Business-venue activities auto-approve; normal users' wait for admin review.
     approvedAt: input.businessId ? new Date().toISOString() : undefined,
     pinnedUntil: pinned ? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() : undefined,
@@ -451,7 +453,8 @@ export async function createEvent(input: CreateEventInput & { lat?: number; lng?
   // survives a page reload — otherwise the limit resets and a free host could
   // create another "free" activity before the 7-day window elapses.
   saveDb();
-  return delay(enrich(event), 450);
+  const upgradeRequest = wantsPin ? await createUpgradeRequest({ product: 'pinned_activity', eventId: event.id }) : undefined;
+  return delay({ ...enrich(event), ...(upgradeRequest ? { upgradeRequest } : {}) }, 450);
 }
 
 // ---- Monetization ----------------------------------------------------------
@@ -480,11 +483,12 @@ export async function getSubscriptionSummary(): Promise<{
   resetsAt?: string;
   pinsRemaining: number | 'unlimited';
   pinQuota: number | 'unlimited';
+  endsAt?: string;
 }> {
   const me = findUser(db.currentUserId)!;
   const plan = me.subscriptionPlan ?? 'free';
   const status = me.subscriptionStatus ?? (plan === 'free' ? 'inactive' : 'active');
-  const pins = pinInfoOf(db.currentUserId);
+  const pins = { ...pinInfoOf(db.currentUserId), endsAt: plan !== 'free' ? me.subscriptionEndsAt : undefined };
   if (HOSTING_WINDOW_MS[plan] === null) return delay({ remaining: 'unlimited', plan, status, ...pins }, 120);
   const used = activitiesHostedThisWindow(db.currentUserId);
   const remaining = Math.max(0, 1 - used);
@@ -492,34 +496,6 @@ export async function getSubscriptionSummary(): Promise<{
     { remaining, plan, status, resetsAt: remaining === 0 ? freeActivityResetsAt(db.currentUserId) : undefined, ...pins },
     120,
   );
-}
-
-// The mock has no Paddle, so every checkout is a simulation: the effect is
-// applied at checkout-create time and the returned session is marked `simulated`
-// (settleCheckout then resolves without opening an overlay). `ref` is the order
-// id an extra-activity purchase carries back to createEvent.
-function simulatedSession(amountCents: number): CheckoutSession {
-  return { ref: nextId('ord-'), amountCents, simulated: true };
-}
-
-// Global kill switch — refuse every checkout while payments are disabled, so the
-// mock can't auto-grant Pro/sponsorships/extra activities either.
-function assertPaymentsEnabled(): void {
-  if (!paymentsEnabled) throw new Error('Payments are temporarily unavailable.');
-}
-
-export async function createSubscriptionCheckout(planType: 'pro'): Promise<CheckoutSession> {
-  assertPaymentsEnabled();
-  const me = findUser(db.currentUserId)!;
-  me.subscriptionPlan = planType;
-  me.subscriptionStatus = 'active';
-  saveDb();
-  return delay(simulatedSession(4900), 200);
-}
-
-export async function createExpressPaymentIntent(priorityLevel: 'express' | 'priority'): Promise<CheckoutSession> {
-  assertPaymentsEnabled();
-  return delay(simulatedSession(priorityLevel === 'express' ? 990 : 1990), 180);
 }
 
 export async function listSponsoredVenues(): Promise<SponsoredVenue[]> {
@@ -543,14 +519,186 @@ const SPONSOR_MONTHLY_MAD: Record<SponsorshipTier, number> = { starter: 199, bro
 const INTERVAL_MONTHS: Record<'monthly' | 'quarterly' | 'annual', number> = { monthly: 1, quarterly: 3, annual: 12 };
 const INTERVAL_DISCOUNT: Record<'monthly' | 'quarterly' | 'annual', number> = { monthly: 0, quarterly: 0.1, annual: 0.15 };
 
-export async function createSponsorshipCheckout(
+// ---- Manual upgrades (mock) --------------------------------------------------
+// Offline payment + admin approval, simulated in memory. Approving from the
+// mock admin panel applies the plan to the demo user.
+
+const upgradeStore: UpgradeRequest[] = [];
+const MOCK_INSTRUCTIONS =
+  'Send {amount} MAD by bank transfer or CashPlus and write the reference {reference} in the description. Your plan is activated by hand as soon as we receive the payment.';
+const productTier: Partial<Record<UpgradeRequest['product'], SponsorshipTier>> = {
+  sponsorship_starter: 'starter',
+  sponsorship_bronze: 'bronze',
+  sponsorship_silver: 'silver',
+};
+
+function upgradeAmountCents(product: UpgradeRequest['product'], interval: BillingInterval): number {
+  const total = (monthlyMad: number) => Math.round(monthlyMad * INTERVAL_MONTHS[interval] * (1 - INTERVAL_DISCOUNT[interval]) * 100);
+  if (product === 'pro_host') return total(49);
+  if (product === 'pinned_activity') return 1990;
+  return total(SPONSOR_MONTHLY_MAD[productTier[product] ?? 'starter']);
+}
+
+function withInstructions(r: UpgradeRequest): UpgradeRequest {
+  if (r.status !== 'pending') return { ...r, instructions: undefined };
+  const amount = (r.amountCents / 100).toFixed(2).replace(/\.00$/, '');
+  return { ...r, instructions: MOCK_INSTRUCTIONS.replace('{amount}', amount).replace('{reference}', r.reference) };
+}
+
+export async function createUpgradeRequest(input: CreateUpgradeInput): Promise<UpgradeRequest> {
+  const interval = input.product === 'pinned_activity' ? undefined : input.interval ?? 'monthly';
+  const existing = upgradeStore.find(
+    (r) => r.status === 'pending' && r.product === input.product && (r.eventId ?? '') === (input.eventId ?? '') && r.billingInterval === interval,
+  );
+  if (existing) return delay(withInstructions(existing), 200);
+  const ev = input.eventId ? findEvent(input.eventId) : undefined;
+  const req: UpgradeRequest = {
+    id: nextId('up-'),
+    product: input.product,
+    status: 'pending',
+    reference: `HG-${Math.random().toString(36).slice(2, 7).toUpperCase().replace(/[01ILO]/g, '7')}`,
+    amountCents: upgradeAmountCents(input.product, interval ?? 'monthly'),
+    billingInterval: interval,
+    businessId: input.businessId,
+    eventId: input.eventId,
+    eventTitle: ev?.title,
+    eventStartsAt: ev?.startsAt,
+    note: input.note,
+    createdAt: new Date().toISOString(),
+    user: { id: db.currentUserId, name: findUser(db.currentUserId)?.name ?? 'You', email: 'you@hudlgo.app' },
+  };
+  upgradeStore.unshift(req);
+  pushNotification({ type: 'admin', title: 'New upgrade request', body: `${req.product} · ref ${req.reference}` });
+  return delay(withInstructions(req), 250);
+}
+
+export async function listMyUpgradeRequests(): Promise<UpgradeRequest[]> {
+  return delay(upgradeStore.map(withInstructions), 150);
+}
+
+export async function cancelUpgradeRequest(id: string): Promise<{ success: true }> {
+  const r = upgradeStore.find((x) => x.id === id);
+  if (!r || r.status !== 'pending') throw new Error('Only pending requests can be cancelled.');
+  r.status = 'cancelled';
+  r.decidedAt = new Date().toISOString();
+  const e = r.eventId ? findEvent(r.eventId) : undefined;
+  if (e?.awaitingPayment) e.lifecycle = 'cancelled';
+  return delay({ success: true }, 150);
+}
+
+export async function listUpgradeRequestsAdmin(): Promise<UpgradeRequest[]> {
+  assertAdmin();
+  const pending = upgradeStore.filter((r) => r.status === 'pending').reverse();
+  return delay([...pending, ...upgradeStore.filter((r) => r.status !== 'pending')].map(withInstructions), 150);
+}
+
+export async function approveUpgradeRequest(id: string, opts: { until?: string; months?: number; adminNote?: string } = {}): Promise<UpgradeRequest> {
+  assertAdmin();
+  const r = upgradeStore.find((x) => x.id === id);
+  if (!r || r.status !== 'pending') throw new Error('This request is no longer pending.');
+  const until = opts.until
+    ? new Date(opts.until)
+    : addDays(new Date(), 30 * (opts.months ?? INTERVAL_MONTHS[r.billingInterval ?? 'monthly']));
+  if (r.product === 'pro_host') {
+    const me = findUser(r.user?.id ?? db.currentUserId);
+    if (me) {
+      me.subscriptionPlan = 'pro';
+      me.subscriptionStatus = 'active';
+      me.subscriptionEndsAt = until.toISOString();
+    }
+  } else if (r.product === 'pinned_activity' && r.eventId) {
+    const e = findEvent(r.eventId);
+    if (e) {
+      e.pinnedUntil = e.startsAt;
+      e.priorityLevel = 'priority';
+      e.expressFeePaid = true;
+      if (e.awaitingPayment) {
+        e.awaitingPayment = false;
+        e.approvedAt = e.approvedAt ?? new Date().toISOString();
+      }
+    }
+  }
+  Object.assign(r, { status: 'approved', decidedAt: new Date().toISOString(), grantedUntil: until.toISOString(), adminNote: opts.adminNote });
+  saveDb();
+  return delay(withInstructions(r), 150);
+}
+
+export async function rejectUpgradeRequest(id: string, adminNote?: string): Promise<UpgradeRequest> {
+  assertAdmin();
+  const r = upgradeStore.find((x) => x.id === id);
+  if (!r || r.status !== 'pending') throw new Error('This request is no longer pending.');
+  Object.assign(r, { status: 'rejected', decidedAt: new Date().toISOString(), adminNote });
+  const e = r.eventId ? findEvent(r.eventId) : undefined;
+  if (e?.awaitingPayment) e.lifecycle = 'cancelled';
+  return delay(withInstructions(r), 150);
+}
+
+function planOfUser(u: User): AdminUserPlan {
+  return {
+    id: u.id,
+    name: u.name,
+    email: `${u.id}@hudlgo.app`,
+    role: u.role,
+    plan: u.subscriptionPlan ?? 'free',
+    status: u.subscriptionStatus ?? 'inactive',
+    endsAt: u.subscriptionEndsAt,
+  };
+}
+
+export async function adminSearchUsers(q: string): Promise<AdminUserPlan[]> {
+  assertAdmin();
+  const term = q.trim().toLowerCase();
+  if (term.length < 2) return delay([], 100);
+  return delay(db.users.filter((u) => u.name.toLowerCase().includes(term)).slice(0, 20).map(planOfUser), 150);
+}
+
+export async function adminSetUserPlan(
+  userId: string,
+  input: { action: 'grant' | 'extend' | 'revoke'; until?: string; months?: number; note?: string },
+): Promise<AdminUserPlan> {
+  assertAdmin();
+  const u = findUser(userId);
+  if (!u) throw new Error('User not found.');
+  if (input.action === 'revoke') {
+    u.subscriptionPlan = 'free';
+    u.subscriptionStatus = 'inactive';
+    u.subscriptionEndsAt = undefined;
+  } else {
+    const base = u.subscriptionEndsAt && new Date(u.subscriptionEndsAt) > new Date() ? new Date(u.subscriptionEndsAt) : new Date();
+    u.subscriptionPlan = 'pro';
+    u.subscriptionStatus = 'active';
+    u.subscriptionEndsAt = (input.until ? new Date(input.until) : addDays(base, 30 * (input.months ?? 1))).toISOString();
+  }
+  saveDb();
+  return delay(planOfUser(u), 150);
+}
+
+export async function adminSetBusinessSponsorship(
   _businessId: string,
-  tier: SponsorshipTier,
-  interval: 'monthly' | 'quarterly' | 'annual' = 'monthly',
-): Promise<CheckoutSession> {
-  assertPaymentsEnabled();
-  const amountMad = Math.round(SPONSOR_MONTHLY_MAD[tier] * INTERVAL_MONTHS[interval] * (1 - INTERVAL_DISCOUNT[interval]));
-  return delay(simulatedSession(amountMad * 100), 220);
+  input: { action: 'grant' | 'extend' | 'revoke'; tier?: 'starter' | 'bronze' | 'silver'; interval?: BillingInterval; until?: string; months?: number; note?: string },
+): Promise<{ success: true; until?: string }> {
+  assertAdmin();
+  if (input.action === 'revoke') {
+    MOCK_BUSINESS = { ...MOCK_BUSINESS, sponsorship: null };
+    return delay({ success: true }, 150);
+  }
+  const until = input.until ?? addDays(new Date(), 30 * (input.months ?? 1)).toISOString();
+  const tier = input.tier ?? (MOCK_BUSINESS.sponsorship?.tier as 'starter' | 'bronze' | 'silver' | undefined) ?? 'starter';
+  const limit = { starter: 2, bronze: 5, silver: 15 }[tier];
+  MOCK_BUSINESS = {
+    ...MOCK_BUSINESS,
+    sponsorship: {
+      tier,
+      status: 'active',
+      used: MOCK_BUSINESS.sponsorship?.used ?? 0,
+      limit,
+      remaining: Math.max(0, limit - (MOCK_BUSINESS.sponsorship?.used ?? 0)),
+      startDate: new Date().toISOString(),
+      endDate: until,
+      monthlyPriceCents: SPONSOR_MONTHLY_MAD[tier] * 100,
+    },
+  };
+  return delay({ success: true, until }, 150);
 }
 
 let MOCK_BUSINESS: MyBusiness = {

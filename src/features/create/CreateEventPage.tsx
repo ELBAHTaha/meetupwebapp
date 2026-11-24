@@ -12,7 +12,7 @@ import { MapView } from '@/components/MapView';
 import { Sheet } from '@/components/Sheet';
 import { useAsync } from '@/hooks/useAsync';
 import { createCustomActivity, createEvent, getSubscriptionSummary, listActivities, listSponsoredVenues, listSpots } from '@/api';
-import { ExpressPaymentBox } from '@/features/monetization/ExpressPaymentBox';
+import { PinRequestBox } from '@/features/monetization/PinRequestBox';
 import { CITIES, GROUP_LABELS } from '@/api/catalog';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
@@ -69,7 +69,6 @@ export function CreateEventPage() {
   const [meetingUrl, setMeetingUrl] = useState('');
   const [areaLabel, setAreaLabel] = useState('');
   const [priorityLevel, setPriorityLevel] = useState<PriorityLevel>('standard');
-  const [expressPaymentIntentId, setExpressPaymentIntentId] = useState<string | undefined>();
   const [businessId, setBusinessId] = useState<string | undefined>();
 
   const startsAtMs = new Date(`${date}T${time}`).getTime();
@@ -131,11 +130,17 @@ export function CreateEventPage() {
         isOnline,
         meetingUrl: isOnline ? meetingUrl.trim() || undefined : undefined,
         priorityLevel,
-        expressPaymentIntentId,
         businessId,
       });
       bumpData();
-      toast(created.approvedAt ? t('create.published') : t('create.submitted'), 'success');
+      toast(
+        created.upgradeRequest
+          ? t(created.awaitingPayment ? 'pin.createdAwaiting' : 'pin.createdRequested', { ref: created.upgradeRequest.reference })
+          : created.approvedAt
+            ? t('create.published')
+            : t('create.submitted'),
+        'success',
+      );
       navigate(`/event/${created.id}`);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not publish', 'error');
@@ -155,7 +160,7 @@ export function CreateEventPage() {
     : step === 1 ? (isOnline ? true : !!resolvedLocation && publicConfirmed && areaLabel.trim().length > 0)
     : step === 2 ? timeValid
     : step === 3 ? title.trim().length > 0
-    : step === 4 ? (freeAvailable ? priorityLevel === 'standard' || !!expressPaymentIntentId : !!expressPaymentIntentId)
+    : step === 4 ? (freeAvailable || priorityLevel === 'priority')
     : true;
   const isLast = step === STEP_COUNT - 1;
 
@@ -393,10 +398,7 @@ export function CreateEventPage() {
                 const plan = subscription.data?.plan ?? 'free';
                 const remaining = subscription.data?.remaining;
                 const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
-                const onExpressChange = (level: PriorityLevel, intentId?: string) => {
-                  setPriorityLevel(level);
-                  setExpressPaymentIntentId(intentId);
-                };
+                const onPinChange = (level: PriorityLevel) => setPriorityLevel(level);
                 // Gold (unlimited): always covered + featured.
                 if (remaining === 'unlimited') {
                   return (
@@ -405,7 +407,7 @@ export function CreateEventPage() {
                     </p>
                   );
                 }
-                // Allowance used up (any plan): must pay the one-off fee to host now.
+                // Allowance used up: an extra activity goes live (pinned) once its offline payment is confirmed.
                 if (remaining === 0) {
                   return (
                     <>
@@ -414,7 +416,7 @@ export function CreateEventPage() {
                           ? t('create.nextFreeNotice', { time: formatDistanceToNowStrict(new Date(subscription.data.resetsAt)) })
                           : t('create.usedNotice')}
                       </p>
-                      <ExpressPaymentBox value={priorityLevel} paymentIntentId={expressPaymentIntentId} freeAvailable={false} onChange={onExpressChange} />
+                      <PinRequestBox value={priorityLevel} freeAvailable={false} onChange={onPinChange} />
                     </>
                   );
                 }
@@ -428,9 +430,9 @@ export function CreateEventPage() {
                     </p>
                   );
                 }
-                // Free plan within allowance: free, with the optional 9.90 MAD pin.
+                // Free plan within allowance: free, with an optional paid pin (requested, paid offline).
                 return (
-                  <ExpressPaymentBox value={priorityLevel} paymentIntentId={expressPaymentIntentId} freeAvailable onChange={onExpressChange} />
+                  <PinRequestBox value={priorityLevel} freeAvailable onChange={onPinChange} />
                 );
               })()}
             </div>

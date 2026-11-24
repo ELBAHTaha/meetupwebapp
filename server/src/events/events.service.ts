@@ -18,7 +18,7 @@ import { TrustService } from '../trust/trust.service';
 import { haversineKm } from '../common/utils/haversine';
 import { ActivityCategory, GenderPreference, Prisma, Visibility } from '@prisma/client';
 import { SubscriptionService } from '../monetization/subscription.service';
-import { ExpressPaymentService } from '../monetization/express-payment.service';
+import { UpgradesService } from '../monetization/upgrades.service';
 import { BusinessService } from '../monetization/business.service';
 
 const FOUR_HOURS = 4 * 60 * 60 * 1000;
@@ -33,7 +33,7 @@ export class EventsService {
     private readonly geocoding: GeocodingService,
     private readonly notifications: NotificationsService,
     private readonly subscriptions: SubscriptionService,
-    private readonly expressPayments: ExpressPaymentService,
+    private readonly upgrades: UpgradesService,
     private readonly businesses: BusinessService,
     private readonly trust: TrustService,
   ) {}
@@ -112,33 +112,19 @@ export class EventsService {
     if (!activityTypeId) throw new BadRequestException('Unknown activity type.');
 
     const plan = await this.subscriptions.hostPlanForCreate(userId);
-    let priorityLevel: 'STANDARD' | 'EXPRESS' | 'PRIORITY' = 'STANDARD';
-    let expressFeePaid = false;
-    if (dto.priorityLevel && dto.priorityLevel !== 'standard') {
-      if (!dto.expressPaymentIntentId) throw new BadRequestException('Hosting an extra activity requires a successful payment.');
-      priorityLevel = await this.expressPayments.verifyPaymentIntent(dto.expressPaymentIntentId, userId, dto.priorityLevel);
-      expressFeePaid = true;
-    }
-
-    // Each plan hosts 1 activity per its window (Free 3d / Bronze 2d / Silver 1d
-    // / Gold unlimited). Beyond that, hosting requires the one-time extra fee
-    // ($0.99, or $2.99 for featured placement).
-    if (mustPayForExtra && !expressFeePaid && !ownsVenue) {
+    // A paid pin (19.90 MAD) is requested at creation and paid offline: the
+    // activity is created now and an admin pins it once the payment arrives.
+    const wantsPin = !ownsVenue && (dto.priorityLevel === 'priority' || dto.priorityLevel === 'express');
+    // Free plan hosts 1 activity/day. Beyond that, hosting needs the paid extra
+    // (pinned) activity: it's saved hidden until that request is approved.
+    const extraActivity = mustPayForExtra && !ownsVenue;
+    if (extraActivity && !wantsPin) {
       throw new BadRequestException(
-        'You’ve used your free activity for now. Pay the one-time fee to host another, or upgrade your plan for more.',
+        'You’ve used your free activity for today. Request an extra pinned activity (19.90 MAD), or upgrade to Pro Host for unlimited hosting.',
       );
     }
-
-    // Featured/pinned placement:
-    //  • the host's tier auto-pin allowance (Bronze 1/wk, Silver 3/wk, Gold ∞)
-    //  • $2.99 "priority" extra always pins
-    //  • $0.99 "express" pins only on the host's free activity of the window —
-    //    there the fee buys the pin, not the activity slot itself.
-    const pinFromExpress = !mustPayForExtra && priorityLevel === 'EXPRESS';
-    const pinnedUntil =
-      plan.autoPin || priorityLevel === 'PRIORITY' || pinFromExpress
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
-        : undefined;
+    // Pro Host's weekly auto-pin allowance (24h at the top).
+    const pinnedUntil = plan.autoPin ? new Date(Date.now() + 24 * 60 * 60 * 1000) : undefined;
 
     // Optional venue link (from the "saved places" picker). Unknown ids are ignored.
     const venueId = dto.venueId
@@ -170,9 +156,8 @@ export class EventsService {
         genderPreference: (dto.genderPreference?.toUpperCase() as GenderPreference) ?? 'ANY',
         visibility: (dto.visibility?.toUpperCase() as Visibility) ?? 'PUBLIC',
         status: 'LIVE',
-        priorityLevel,
-        expressPaymentIntentId: dto.expressPaymentIntentId,
-        expressFeePaid,
+        priorityLevel: 'STANDARD',
+        awaitingPayment: extraActivity,
         // Business activities (own sponsored venue) go live instantly; everything
         // a normal user creates waits for admin approval (approvedAt stays null).
         approvedAt: ownsVenue ? new Date() : null,
@@ -184,18 +169,29 @@ export class EventsService {
 
     await this.businesses.trackVenueUsage(dto.businessId, event.id);
 
+    // Pin / extra-activity request (paid offline). Returned with the event so the
+    // UI can show the payment instructions and reference right away.
+    const upgradeRequest = wantsPin ? await this.upgrades.createForExtraActivity(userId, event.id) : undefined;
+
     await this.notifications.push({
       userId,
       type: 'confirmed',
-      title: event.approvedAt ? 'Your activity is live 🎉' : 'Activity submitted for review',
-      body: event.approvedAt
-        ? `“${event.title}” is now visible in the feed.`
-        : `“${event.title}” will appear once an admin approves it.`,
+      title: extraActivity
+        ? 'Activity saved — waiting for payment'
+        : event.approvedAt
+          ? 'Your activity is live 🎉'
+          : 'Activity submitted for review',
+      body: extraActivity
+        ? `“${event.title}” goes live once we receive your payment (ref ${upgradeRequest?.reference}).`
+        : event.approvedAt
+          ? `“${event.title}” is now visible in the feed.`
+          : `“${event.title}” will appear once an admin approves it.`,
       eventId: event.id,
     });
 
-    // Ping admins when an activity needs approval.
-    if (!event.approvedAt) {
+    // Ping admins when an activity needs approval (paid extras are announced
+    // through their upgrade request instead).
+    if (!event.approvedAt && !extraActivity) {
       await this.notifications.notifyAdmins(
         {
           type: 'admin',
@@ -207,7 +203,7 @@ export class EventsService {
       );
     }
 
-    return serializeEvent(event, userId);
+    return { ...serializeEvent(event, userId), ...(upgradeRequest ? { upgradeRequest } : {}) };
   }
 
   // --- list (public) ------------------------------------------------------

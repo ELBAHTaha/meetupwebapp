@@ -7,7 +7,8 @@
 
 It started as a frontend-only mock prototype (which the original [README.md](README.md) still
 describes) and has since grown a full **NestJS + Prisma + MySQL** backend, a **two-sided
-business side**, and a **Paddle (Billing) payment integration**.
+business side**, and **manually activated paid plans** (customers pay offline, an admin
+grants the plan; there is no payment gateway).
 
 ---
 
@@ -17,7 +18,7 @@ business side**, and a **Paddle (Billing) payment integration**.
 |---|---|
 | **Frontend** | Vite + React 18 + TypeScript, Tailwind CSS, React Router, Zustand (state), react-i18next (en/fr/ar), react-leaflet + OpenStreetMap, lucide-react icons, date-fns |
 | **Backend** | NestJS 10, Prisma 5 ORM, MySQL 8, Passport (JWT + Google OAuth), class-validator, @nestjs/throttler, @nestjs/schedule, Swagger, helmet |
-| **Payments** | Paddle Billing (merchant-of-record: server-created transactions + Paddle.js overlay + signed webhooks), with a dev-simulation fallback when keys are unset |
+| **Payments** | None online: offline payment (bank transfer / CashPlus / cash) + admin-approved upgrade requests |
 | **Infra** | Docker Compose (MySQL on :3307, optional api container), local-disk file storage, Resend (email) |
 
 Two apps in one repo: the **frontend** at the repo root ([package.json](package.json), name
@@ -73,8 +74,12 @@ The schema is the backbone. Key entities:
   creates a Flag.
 - **`Report` / `BannedContact` / `ModerationAction`** — abuse reporting + admin actions;
   banned email/phone hashes block re-signup.
-- **`Notification`**, **`Feedback`**, **`RefreshToken`**, **`SubscriptionEvent`** (webhook /
-  payment idempotency log).
+- **`Notification`**, **`Feedback`**, **`RefreshToken`**, **`AuthToken`** (hashed one-time
+  password-reset / email-verification tokens), **`SubscriptionEvent`** (audit log of plan
+  grants / extensions / revocations / expiries; historically the Paddle order log).
+- **`UpgradeRequest`**: a customer's request for a paid plan (`PRO_HOST`, `SPONSORSHIP_*`,
+  `PINNED_ACTIVITY`) with its amount, a short payment `reference` (`HG-XXXXX`) and its status
+  (`PENDING → APPROVED | REJECTED | CANCELLED`).
 
 **Business side (two-sided marketplace)**
 - **`Business`** — org with legal info (`rcNumber`/`iceNumber` — Moroccan RC/ICE), category,
@@ -119,14 +124,13 @@ transform), a global `JwtAuthGuard` (routes opt out with `@Public`/`@OptionalAut
   member invite/accept/role/remove.
 - **Venues** ([venue.controller.ts](server/src/business/venue.controller.ts)) — browse/search,
   profile, create/update, `POST /venues/:id/claim`, `POST /venues/:id/reviews`.
-- **Monetization** ([monetization.module.ts](server/src/monetization/monetization.module.ts)) —
-  subscriptions/checkout, express (extra-activity) payments, and the business/sponsorship
-  surface (`/businesses/sponsored-venues`, `/mine`, `/register`, `/:id/sponsorship-checkout`).
-  All three open a Paddle transaction; the frontend completes it in the overlay.
-- **Payments** ([payments.module.ts](server/src/payments/payments.module.ts)) — the **Paddle
-  gateway**: provider-agnostic `PaymentsService` over `PaddleService` (server-created transaction
-  against a catalog price id → Paddle.js overlay → signed `transaction.completed`/`subscription.*`
-  webhooks at `POST /payments/paddle/webhook`), with a dev-simulation fallback when keys aren't set.
+- **Monetization** ([monetization.module.ts](server/src/monetization/monetization.module.ts)):
+  plan allowances (`GET /subscriptions/me`), the business/sponsorship surface
+  (`/businesses/sponsored-venues`, `/mine`, `/register`), and the **manual upgrade flow**:
+  `POST /upgrades`, `GET /upgrades/mine`, `POST /upgrades/:id/cancel`, plus admin
+  `GET /admin/upgrade-requests`, `POST /admin/upgrade-requests/:id/approve|reject`,
+  `POST /admin/users/:id/plan`, `POST /admin/businesses/:id/sponsorship`. Every plan change
+  goes through `PlanGrantsService`, which writes the audit log.
 - **Admin** ([admin.controller.ts](server/src/admin/admin.controller.ts)) — overview/analytics,
   reports, flagged users, subscribers, business verifications, venue claims, venue-review
   moderation, activity approval queue, identity-verification queue, and moderation actions
@@ -180,26 +184,41 @@ boost for verified hosts.
 
 ---
 
-## 6. Monetization & payments
+## 6. Monetization & payments (manual, no gateway)
 
-- **Host plan** (consumer, overhauled 2026-06-19): **Free** (1 activity/day, 0 pins) + a single
-  **Pro Host** plan (49 MAD/mo, unlimited hosting + 7 pins/week). `PlanType` = FREE/PRO
-  (BRONZE/SILVER/GOLD kept only as legacy values). Plus a single one-off **19.90 MAD pinned**
-  extra activity (`priority`) — used both to pin a free activity and to host an extra one.
-- **Business venue sponsorships**: 3 sellable packs **Starter/Bronze/Silver (199/490/990 MAD)** —
-  monthly activity quota (2/5/15), feed priority, badges, and (Silver) per-activity **coupon codes**
-  (`HUDLGO-XXXXXX`, currently cosmetic — no redemption logic yet). Each pack bills **monthly, or a
-  prepaid quarter (−10%) / year (−15%)**. GOLD (1990 MAD, unlimited + 50 MAD host credit) is a
-  dormant legacy tier — still in the enum/feed-rank/credit logic but no longer sold.
-- Prices are in **MAD**.
-- **Gateway**: **Paddle Billing** (merchant of record). All checkouts open a Paddle transaction
-  against a catalog price id; the frontend completes it in the **Paddle.js overlay**
-  ([src/lib/paddle.ts](src/lib/paddle.ts)) — no card data touches our servers. Orders are fulfilled
-  on Paddle's signed `transaction.completed` webhook; `subscription.canceled` /
-  `transaction.payment_failed` keep plan status in sync. A dev-simulation fallback marks orders
-  paid without real keys ([configuration.ts](server/src/config/configuration.ts) → `paddle.*`).
-  Pro Host and sponsorships are **recurring subscriptions** (auto-renew); the one-off pinned extra
-  is a one-time charge. Cancelling schedules Paddle to stop at period end and keeps access until then.
+**What's sold** (prices in **MAD**):
+- **Host plans** (consumer): **Free** (1 activity/day, 0 pins) and **Pro Host** (49 MAD/mo,
+  unlimited hosting + 7 auto-pins/week). `PlanType` = FREE/PRO (BRONZE/SILVER/GOLD are legacy values).
+- **Pinned / extra activity**: 19.90 MAD. It pins an activity **until it starts**. When a Free host
+  has used today's activity, it also lets them host one more.
+- **Business venue sponsorships**: **Starter / Bronze / Silver (199 / 490 / 990 MAD per month)**, with
+  monthly activity quotas (2 / 5 / 15), feed priority, badges and (Silver) per-activity coupon codes.
+  Terms: one month, or a prepaid quarter (−10%) / year (−15%). GOLD is a dormant legacy tier.
+
+**How customers pay**: offline (bank transfer, CashPlus or cash). There is no payment gateway,
+no card data and no auto-renewal.
+1. The customer files an **`UpgradeRequest`**: *Request upgrade* on Pricing (Pro Host), on the
+   business signup / *Plan* page (sponsorships), or by choosing *Pinned* in the create flow.
+   The response includes the amount, a short **reference** (`HG-XXXXX`) and the **payment
+   instructions**. Those come from `PAYMENT_INSTRUCTIONS_EN|FR|AR` with `{amount}` / `{reference}`
+   placeholders.
+2. Over-quota "extra" activities are created right away with `Event.awaitingPayment = true`. They
+   stay hidden and out of the normal approval queue until their request is approved.
+3. An admin checks that the payment arrived and approves the request in **/admin → Upgrade
+   requests**. They choose the length (default 1 / 3 / 12 months from the requested term) or an
+   exact end date. Approval goes through `PlanGrantsService`:
+   - Pro Host → `subscriptionPlan=PRO, ACTIVE, subscriptionEndsAt`, stacked on any remaining Pro time.
+   - Sponsorship → extends a same-tier sponsorship, or replaces it with the new tier, and marks
+     the business VERIFIED.
+   - Pin → `pinnedUntil = startsAt`, and publishes the activity if it was awaiting payment.
+4. Admins can also **grant / extend / revoke** plans directly in **/admin → Plans**. Every change
+   is written to `SubscriptionEvent` with the admin's id.
+5. **Scheduler**: hourly expiry (Pro → Free, sponsorship → EXPIRED), a renewal reminder (email +
+   in-app) about 5 days before the end date, and cancellation of pin requests whose activity has
+   already started.
+
+The old Paddle columns (`paddleCustomerId`, `paddleSubscriptionId`, `paddleEventId`) remain in the
+schema unused, because there are no destructive migrations.
 
 ---
 

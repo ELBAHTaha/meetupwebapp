@@ -21,11 +21,14 @@ export class NotificationsService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  async push(input: NotifyInput): Promise<void> {
+  /** `opts.email=false` skips the email mirror (when a dedicated email is sent instead). */
+  async push(input: NotifyInput, opts: { email?: boolean } = {}): Promise<void> {
     await this.prisma.notification.create({ data: input });
     void this.emitLive([input]).catch((e) => this.logger.error(`live push failed: ${e?.message}`));
     // Mirror to email (fire-and-forget — email must never block or break the flow).
-    void this.emailMany([input]).catch((e) => this.logger.error(`email mirror failed: ${e?.message}`));
+    if (opts.email !== false) {
+      void this.emailMany([input]).catch((e) => this.logger.error(`email mirror failed: ${e?.message}`));
+    }
   }
 
   async pushMany(inputs: NotifyInput[]): Promise<void> {

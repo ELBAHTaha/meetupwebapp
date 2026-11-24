@@ -1,8 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PlanType, SubStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaymentsService } from '../payments/payments.service';
-import { CheckoutSession, HostTier } from '../payments/payment-gateway.interface';
 
 // How often each plan may host 1 activity (null = unlimited). Free = 1/day,
 // Pro = unlimited. Legacy tiers retained so historical subscriptions still work.
@@ -20,29 +18,18 @@ const PIN_WINDOW_MS = 7 * 86_400_000;
 
 @Injectable()
 export class SubscriptionService {
-  private readonly logger = new Logger(SubscriptionService.name);
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly payments: PaymentsService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Start a Pro Host checkout: opens a Paddle transaction and returns the
-   * checkout session. The frontend completes it in the Paddle.js overlay; the
-   * subscription is activated when Paddle's `transaction.completed` webhook lands.
+   * The plan that governs the user's allowance right now. Plans are granted by
+   * an admin until `subscriptionEndsAt` (no auto-renewal); referral trials are
+   * stored as CANCELED + a future end date. Past the end date → FREE, even
+   * before the hourly expiry job has run.
    */
-  async createCheckoutSession(userId: string, planType: HostTier): Promise<CheckoutSession> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('Account not found.');
-    return this.payments.createHostSubscriptionCheckout(userId, planType);
-  }
-
-  /** The plan that governs the user's allowance right now. A canceled plan keeps
-   * its tier until the end of the paid term; otherwise FREE. */
   private effectivePlan(user: { subscriptionPlan: PlanType; subscriptionStatus: SubStatus; subscriptionEndsAt?: Date | null }): PlanType {
     if (user.subscriptionPlan === 'FREE') return 'FREE';
-    const active = user.subscriptionStatus === 'ACTIVE';
+    const notLapsed = !user.subscriptionEndsAt || user.subscriptionEndsAt > new Date();
+    const active = user.subscriptionStatus === 'ACTIVE' && notLapsed;
     const inPaidTerm = user.subscriptionStatus === 'CANCELED' && !!user.subscriptionEndsAt && user.subscriptionEndsAt > new Date();
     return active || inPaidTerm ? user.subscriptionPlan : 'FREE';
   }
@@ -66,11 +53,12 @@ export class SubscriptionService {
     resetsAt?: string;
     pinsRemaining: number | 'unlimited';
     pinQuota: number | 'unlimited';
+    endsAt?: string;
   }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Account not found.');
     const plan = this.effectivePlan(user);
-    const pins = await this.pinInfo(userId, plan);
+    const pins = { ...(await this.pinInfo(userId, plan)), endsAt: plan !== 'FREE' ? user.subscriptionEndsAt?.toISOString() : undefined };
     const windowMs = HOSTING_WINDOW_MS[plan];
     if (windowMs === null) {
       return { remaining: 'unlimited', plan: plan.toLowerCase(), status: user.subscriptionStatus.toLowerCase(), ...pins };
@@ -118,20 +106,5 @@ export class SubscriptionService {
     const plan = this.effectivePlan(user);
     const autoPin = await this.hasPinAllowance(userId, plan);
     return { plan: user.subscriptionPlan, status: user.subscriptionStatus, autoPin };
-  }
-
-  /**
-   * Cancel the Pro Host plan. The Paddle subscription is scheduled to stop at the
-   * end of the current billing period; we mark the plan CANCELED locally so the
-   * user keeps Pro access until `subscriptionEndsAt`, then falls back to Free.
-   * (`subscription.canceled` webhook later confirms the downgrade.)
-   */
-  async cancel(userId: string): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.subscriptionPlan === 'FREE') throw new NotFoundException('No active subscription found.');
-    await this.payments.cancelHostSubscription(userId);
-    await this.prisma.user.update({ where: { id: userId }, data: { subscriptionStatus: 'CANCELED' } });
-    this.logger.log(`User ${userId} canceled their ${user.subscriptionPlan} plan.`);
-    return { message: 'Subscription will cancel at the end of the billing period. You keep Pro access until then.' };
   }
 }

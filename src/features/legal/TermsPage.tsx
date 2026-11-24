@@ -72,26 +72,16 @@ export function TermsPage() {
           sponsorship plans, and occasional one-off purchases. Prices and inclusions are shown at the point of purchase.
         </p>
         <p>
-          Our payments and subscriptions are sold and processed by{' '}
-          <strong className="font-semibold text-ink">Paddle.com</strong>, which acts as the merchant of record and
-          authorised reseller for these transactions. When you make a purchase, your contract for the sale is with
-          Paddle, and Paddle&rsquo;s{' '}
-          <a
-            href="https://www.paddle.com/legal/checkout-buyer-terms"
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-clay hover:text-clay-press underline underline-offset-2"
-          >
-            Checkout Buyer Terms
-          </a>{' '}
-          also apply. Paddle handles billing, payment-method processing and applicable taxes (such as VAT). We do not
-          receive or store your full card details.
+          We don&rsquo;t take card payments. To upgrade, you file an upgrade request in the app and receive the amount due
+          and a short payment reference. You then pay offline (bank transfer, CashPlus or cash) quoting that reference,
+          and our team activates the plan by hand once the payment arrives.
         </p>
         <List
           items={[
-            'Subscriptions renew automatically at the end of each billing term (monthly, quarterly or annual, as selected) until cancelled.',
-            'You can cancel a subscription at any time; cancellation takes effect at the end of the current paid period and you keep access until then.',
-            'We may change prices or plan features with reasonable advance notice; changes apply to your next billing term.',
+            'Plans are prepaid for a fixed period (one, three or twelve months, as requested) and end on their end date. They do not renew automatically.',
+            'We remind you about five days before a plan ends. To keep it, send a new payment with a new upgrade request.',
+            'You can cancel a pending request at any time before we activate it.',
+            'We may change prices or plan features with reasonable notice; changes apply to requests made after the change.',
             'Refunds are governed by our Refund Policy.',
           ]}
         />
@@ -99,7 +89,7 @@ export function TermsPage() {
 
       <Section title="8. Cancellations and refunds">
         <p>
-          You may cancel paid plans as described above. Refund eligibility and how to request one are set out in our{' '}
+          Paid plans end automatically at the end of their prepaid period. Refund eligibility and how to request one are set out in our{' '}
           <a href="/refunds" className="font-medium text-clay hover:text-clay-press underline underline-offset-2">
             Refund Policy
           </a>
@@ -117,8 +107,8 @@ export function TermsPage() {
 
       <Section title="10. Third-party services">
         <p>
-          The Service relies on third parties such as Paddle (payments), our hosting and email providers, and mapping
-          services. Your use of those features may be subject to the third party&rsquo;s own terms and privacy
+          The Service relies on third parties such as our hosting and email providers, weather data (Open-Meteo) and
+          mapping services. Your use of those features may be subject to the third party&rsquo;s own terms and privacy
           practices. We are not responsible for third-party services we do not control.
         </p>
       </Section>
@@ -146,7 +136,7 @@ export function TermsPage() {
           To the fullest extent permitted by law, {LEGAL.entity} will not be liable for any indirect, incidental,
           special or consequential damages, or for any loss arising from your participation in activities or your
           interactions with other users. Our total liability for any claim relating to the Service will not exceed the
-          amount you paid to us (or via Paddle for our products) in the twelve months before the event giving rise to
+          amount you paid to us in the twelve months before the event giving rise to
           the claim. Nothing in these Terms limits liability that cannot be limited under applicable law.
         </p>
       </Section>

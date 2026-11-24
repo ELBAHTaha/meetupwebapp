@@ -5,8 +5,7 @@ import { cn } from '@/lib/cn';
 /**
  * Single source of truth for the facts that appear across the legal pages.
  *
- * ⚠️ Review every value below before submitting these URLs to Paddle — Paddle's
- * compliance team reads these pages and rejects placeholder text. Replace the
+ * ⚠️ Review every value below before relying on these pages — replace the
  * domain, contact email and legal entity with your real details.
  */
 export const LEGAL = {
@@ -14,14 +13,14 @@ export const LEGAL = {
   /** The legal entity that operates hudlgo — your registered company name, or
    *  your full legal name if you trade as a sole proprietor. */
   entity: 'hudlgo',
-  /** Public contact inbox. Paddle's reviewers (and customers) will email this. */
+  /** Public contact inbox for customers (support, billing, refunds). */
   email: 'support@hudlgo.com',
   /** Your production domain, without the protocol. */
   domain: 'hudlgo.com',
   /** Country whose law governs these terms / where you are established. */
   jurisdiction: 'Morocco',
   /** Shown as the "last updated" line on every page. */
-  effectiveDate: '29 June 2026',
+  effectiveDate: '24 November 2026',
 } as const;
 
 const LINKS = [

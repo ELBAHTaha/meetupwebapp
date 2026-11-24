@@ -302,9 +302,9 @@
     "pinsNone": "Non inclus en Gratuit",
     "pinsLeft": "{{n}} sur {{q}} cette semaine",
     "upgradeMore": "Passe à un forfait pour organiser plus & épingler →",
-    "unlimitedFeatured": "Ton forfait Gold : hébergement illimité — chaque activité en vedette. Sans frais.",
-    "nextFreeNotice": "Prochaine activité gratuite dans {{time}}. Choisis une option payante ci-dessous pour publier maintenant.",
-    "usedNotice": "Tu as utilisé ton quota pour le moment. Choisis une option payante ci-dessous pour en publier une autre.",
+    "unlimitedFeatured": "Ton offre Pro Host couvre cette activité — organisation illimitée, aucune demande en plus.",
+    "nextFreeNotice": "Prochaine activité gratuite dans {{time}}. Pour publier maintenant, demande une activité supplémentaire épinglée ci-dessous (paiement hors ligne).",
+    "usedNotice": "Tu as utilisé ton activité gratuite du jour. Demande une activité supplémentaire épinglée ci-dessous (paiement hors ligne), ou passe à Pro Host.",
     "planCovers": "Ton forfait {{plan}} couvre cette activité.",
     "planCoversPinned": "Ton forfait {{plan}} couvre cette activité — elle sera épinglée en haut.",
     "capacityHint": "Une activité doit compter entre 4 et 12 personnes.",
@@ -533,7 +533,9 @@
     "noFlagged": "Aucun utilisateur signalé pour l'instant.",
     "statusSuspended": "Suspendu",
     "statusBanned": "Banni",
-    "actionDone": "Fait"
+    "actionDone": "Fait",
+    "tabUpgrades": "Demandes d’offre",
+    "tabPlans": "Offres"
   },
   "dev": {
     "title": "Contrôles dev",
@@ -569,7 +571,8 @@
     "notFoundHint": "Nous n'avons pas trouvé cette page.",
     "goHome": "Retour à Découvrir",
     "comingSoon": "Bientôt disponible",
-    "somethingWrong": "Une erreur s'est produite. Réessaie."
+    "somethingWrong": "Une erreur s'est produite. Réessaie.",
+    "back": "Retour"
   },
   "authFlow": {
     "forgotLink": "Mot de passe oublié ?",
@@ -648,5 +651,198 @@
       "storm": "Orages",
       "windy": "Venteux"
     }
+  },
+  "pricing": {
+    "title": "Tarifs",
+    "currentPlan": "Offre actuelle",
+    "freeName": "Gratuit",
+    "proName": "Pro Host",
+    "freeSub": "1 activité par jour",
+    "freeP1": "1 activité gratuite par jour",
+    "freeP2": "{{price}} par activité supplémentaire (épinglée en haut)",
+    "freeP3": "Rejoins des activités sans limite",
+    "proSub": "Organisation illimitée",
+    "proP1": "Organise des activités sans limite",
+    "proP2": "7 activités épinglées par semaine",
+    "proP3": "Visibilité prioritaire et meilleure place",
+    "unlimited": "Organisation illimitée",
+    "remainingFree_one": "{{count}} activité gratuite restante aujourd’hui",
+    "remainingFree_other": "{{count}} activités gratuites restantes aujourd’hui",
+    "activeUntil": "Active jusqu’au {{date}} · pas de renouvellement automatique",
+    "tiersTitle": "Formules",
+    "tiersSubtitle": "Organise plus souvent et épingle tes activités en haut.",
+    "manualNote": "Paiement par virement, CashPlus ou espèces — pas besoin de carte. Fais une demande pour obtenir le montant et une référence de paiement ; on active ton offre manuellement dès réception. Les offres ne se renouvellent pas automatiquement.",
+    "popular": "Le plus populaire",
+    "perMonth": "/mois",
+    "current": "Offre actuelle",
+    "included": "Inclus",
+    "requestUpgrade": "Demander l’offre",
+    "viewPending": "Voir la demande en cours",
+    "renew": "Renouveler",
+    "sponsorTitle": "Sponsoriser des lieux",
+    "sponsorBody": "Sponsorings Starter, Bronze et Silver pour les commerces locaux.",
+    "businessSignup": "Inscription entreprise"
+  },
+  "upgrades": {
+    "title": "Demandes d’offre",
+    "subtitle": "Paie hors ligne avec la référence indiquée, et on active ton offre manuellement.",
+    "myRequests": "Mes demandes d’offre",
+    "instructionsTitle": "Comment payer",
+    "instructionsIntro": "Ta demande est enregistrée. Envoie le paiement ci-dessous — on active ton offre dès réception.",
+    "reference": "Référence",
+    "amount": "Montant",
+    "copyReference": "Copier la référence",
+    "copied": "Copié",
+    "pendingHint": "Indique la référence dans ton virement pour qu’on retrouve ton paiement.",
+    "activeUntil": "Active jusqu’au {{date}}",
+    "pinnedUntil": "Épinglée jusqu’au {{date}}",
+    "adminNote": "Note de l’équipe : {{note}}",
+    "cancel": "Annuler la demande",
+    "cancelled": "Demande annulée",
+    "requestSent": "Demande envoyée — suis les instructions de paiement ci-dessous.",
+    "requestSponsorship": "Demander un sponsoring",
+    "notePlaceholder": "Note facultative pour l’équipe (ex. comment tu vas payer)",
+    "getPro": "Tu veux organiser sans limite ? Demande Pro Host depuis la page Tarifs.",
+    "empty": "Aucune demande",
+    "emptyHint": "Tes demandes de Pro Host, de sponsoring ou d’activité épinglée apparaissent ici.",
+    "product": {
+      "pro_host": "Pro Host",
+      "sponsorship_starter": "Sponsoring Starter",
+      "sponsorship_bronze": "Sponsoring Bronze",
+      "sponsorship_silver": "Sponsoring Silver",
+      "pinned_activity": "Activité épinglée"
+    },
+    "status": {
+      "pending": "En attente de paiement",
+      "approved": "Active",
+      "rejected": "Refusée",
+      "cancelled": "Annulée"
+    },
+    "interval": {
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "annual": "Annuel"
+    }
+  },
+  "pin": {
+    "visibilityTitle": "Visibilité de l’activité",
+    "extraHeading": "Activité supplémentaire",
+    "choose": "Choisis une option pour continuer",
+    "free": "Gratuit",
+    "freeTitle": "Gratuit",
+    "freeCopy": "Ton activité gratuite (1 par jour)",
+    "pinnedTitle": "Épinglée",
+    "pinnedCopy": "Épingle-la en haut du fil jusqu’à son début",
+    "extraTitle": "Créer + épinglée",
+    "extraCopy": "Organise une activité de plus aujourd’hui, épinglée en haut",
+    "offlineNote": "Tu recevras les instructions de paiement et une référence après la publication. On épingle l’activité (et on publie l’activité supplémentaire) dès réception du paiement.",
+    "createdAwaiting": "Enregistrée ! Paie avec la référence {{ref}} — elle sera publiée dès réception du paiement.",
+    "createdRequested": "Publiée — paie avec la référence {{ref}} pour l’épingler.",
+    "awaitingTitle": "En attente de ton paiement",
+    "awaitingBody": "Cette activité supplémentaire sera publiée (épinglée) dès réception de ton paiement. Appuie pour voir la référence et les instructions."
+  },
+  "sponsor": {
+    "tier": {
+      "starter": "Starter",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold"
+    },
+    "tagline": {
+      "starter": "Pour essayer",
+      "bronze": "Fais-toi connaître des locaux",
+      "silver": "Une affluence régulière"
+    },
+    "limit": {
+      "starter": "2 activités sponsorisées / mois",
+      "bronze": "5 activités sponsorisées / mois",
+      "silver": "15 activités sponsorisées / mois"
+    },
+    "save": {
+      "quarterly": "−10 %",
+      "annual": "−15 %"
+    },
+    "points": {
+      "starter": {
+        "0": "Label sponsorisé sur ton lieu (carte et choix du lieu)",
+        "1": "Visible quand les organisateurs cherchent un lieu",
+        "2": "Idéal pour les petits ou nouveaux lieux"
+      },
+      "bronze": {
+        "0": "Label sponsorisé sur ton lieu (carte et choix du lieu)",
+        "1": "Visible quand les organisateurs cherchent un lieu",
+        "2": "Profil d’entreprise de base"
+      },
+      "silver": {
+        "0": "Tout ce qu’il y a dans Bronze",
+        "1": "Page de profil complète",
+        "2": "Codes promo uniques pour les participants",
+        "3": "Première place dans le choix du lieu"
+      }
+    },
+    "totalDue": "Total à payer : {{amount}} ({{term}}, payé d’avance)",
+    "activeTitle": "Sponsoring {{tier}}",
+    "usage": "{{used}} / {{limit}} activités ce mois-ci",
+    "until": "jusqu’au {{date}}",
+    "noneTitle": "Aucun sponsoring actif",
+    "noneBody": "Sponsorise ton lieu pour organiser plus d’activités et apparaître en premier."
+  },
+  "business": {
+    "badge": "Pour les entreprises",
+    "heroTitle": "Mets ton lieu là où les plans se font",
+    "heroBody": "Chaque rencontre hudlgo a besoin d’un lieu. Les lieux sponsorisés apparaissent en premier quand les organisateurs choisissent où se retrouver — et t’amènent de nouvelles têtes régulièrement.",
+    "benefitReach": "Touche des locaux actifs",
+    "benefitMap": "Mis en avant sur la carte",
+    "benefitUsage": "Suivi mensuel de l’utilisation",
+    "chooseTitle": "Choisis ton sponsoring",
+    "chooseSubtitle": "Un mois, ou paie un trimestre/une année d’avance avec remise · les limites repartent le 1er.",
+    "venueTitle": "Parle-nous de ton lieu",
+    "venueSubtitle": "On vérifie les nouveaux lieux avant leur mise en ligne.",
+    "name": "Nom de l’entreprise",
+    "description": "Description",
+    "descriptionPlaceholder": "Qu’est-ce qui rend ton lieu idéal pour des rencontres ?",
+    "address": "Adresse",
+    "addressPlaceholder": "Rue Exemple, Casablanca",
+    "phone": "Téléphone",
+    "loginTitle": "Tes identifiants",
+    "loginHint": "Utilise cet e-mail et ce mot de passe pour te connecter plus tard.",
+    "selectedPlan": "Formule choisie",
+    "manualPayNote": "Pas besoin de carte : après l’inscription tu reçois les instructions de paiement et une référence. On active ton sponsoring dès réception du paiement.",
+    "submit": "Créer le compte et continuer",
+    "submitHint": "Crée tes identifiants, enregistre ton lieu et demande le sponsoring {{plan}}.",
+    "registerFailed": "Impossible d’enregistrer ton entreprise.",
+    "doneTitle": "Tu es inscrit 🎉",
+    "doneBody": "Ton lieu est en cours de vérification. Pour activer ton sponsoring, envoie le paiement ci-dessous avec la référence."
+  },
+  "adminUpgrades": {
+    "intro": "Les demandes en attente d’abord. Vérifie que le paiement est arrivé (avec la référence), puis approuve pour activer l’offre.",
+    "none": "Aucune demande en attente",
+    "showHistory": "Voir les demandes traitées ({{count}})",
+    "hideHistory": "Masquer les demandes traitées",
+    "months": "Accorder pour",
+    "monthsCount_one": "{{count}} mois",
+    "monthsCount_other": "{{count}} mois",
+    "orUntil": "…ou jusqu’au",
+    "note": "Note (facultative)",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "approved": "{{ref}} approuvée — offre activée",
+    "rejected": "{{ref}} refusée",
+    "confirmReject": "Refuser la demande {{ref}} ?",
+    "pinNote": "Approuver épingle l’activité jusqu’à son début (et la publie si c’est une activité supplémentaire)."
+  },
+  "adminPlans": {
+    "proTitle": "Pro Host (personnes)",
+    "searchPlaceholder": "Rechercher par nom ou e-mail",
+    "search": "Rechercher",
+    "noResults": "Personne trouvé.",
+    "sponsorTitle": "Sponsorings de lieux (entreprises)",
+    "noSponsorship": "Aucun sponsoring",
+    "tier": "Formule",
+    "grant": "Accorder",
+    "extend": "Prolonger",
+    "revoke": "Retirer",
+    "confirmRevoke": "Retirer l’offre de {{name}} ?",
+    "saved": "Offre mise à jour"
   }
 }

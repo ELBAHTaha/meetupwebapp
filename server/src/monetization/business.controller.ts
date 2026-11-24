@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Patch, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { OptionalAuth } from '../common/decorators/optional-auth.decorator';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
 import { BusinessService } from './business.service';
-import { RegisterBusinessDto, RemovePhotoDto, SponsorshipCheckoutDto, UpdateBusinessDto } from './dto/business.dto';
+import { RegisterBusinessDto, RemovePhotoDto, UpdateBusinessDto } from './dto/business.dto';
 
 @ApiTags('businesses')
 @Controller('businesses')
@@ -55,11 +55,5 @@ export class BusinessController {
     }
     return this.businesses.register(dto, user?.id);
   }
-
-  // Public: a business registers (above) and pays without a user account.
-  @Public()
-  @Post(':id/sponsorship-checkout')
-  sponsorshipCheckout(@Param('id') id: string, @Body() dto: SponsorshipCheckoutDto) {
-    return this.businesses.createSponsorshipCheckout(id, dto.tier, dto.interval ?? 'monthly');
-  }
+  // Sponsorships are requested through POST /upgrades (paid offline, activated by an admin).
 }
