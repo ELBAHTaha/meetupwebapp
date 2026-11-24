@@ -38,7 +38,7 @@ export function TopNav() {
           <span className="font-display text-h1 font-medium tracking-tight">hudlgo</span>
         </button>
 
-        <nav className="ml-4 flex items-center gap-1">
+        <nav className="ms-4 flex items-center gap-1">
           {links.map(({ to, icon: Icon, key }) => (
             <NavLink
               key={key}
@@ -67,7 +67,7 @@ export function TopNav() {
           <LanguageToggle />
           <button
             onClick={toggleTheme}
-            aria-label="Toggle dark mode"
+            aria-label={t('a11y.toggleTheme')}
             className="grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-surface-sunk cursor-pointer"
           >
             {theme === 'dark' ? <Sun className="h-5 w-5" strokeWidth={1.6} /> : <Moon className="h-5 w-5" strokeWidth={1.6} />}
@@ -79,7 +79,7 @@ export function TopNav() {
           >
             <Bell className="h-5 w-5" strokeWidth={1.6} />
             {unread > 0 && (
-              <span className="absolute right-1 top-1 grid min-h-[16px] min-w-[16px] place-items-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white">
+              <span className="absolute end-1 top-1 grid min-h-[16px] min-w-[16px] place-items-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white">
                 {unread > 9 ? '9+' : unread}
               </span>
             )}

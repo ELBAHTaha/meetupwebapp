@@ -11,11 +11,11 @@ import { useSession } from '@/store/session';
 import { AuthBackdrop } from '@/components/AuthBackdrop';
 
 const ACTIVITY_CHIPS: { icon: LucideIcon; label: string }[] = [
-  { icon: Coffee, label: 'Coffee' },
-  { icon: Waves, label: 'Surf' },
-  { icon: Mountain, label: 'Hiking' },
-  { icon: Dices, label: 'Board games' },
-  { icon: Bike, label: 'Cycling' },
+  { icon: Coffee, label: 'chips.coffee' },
+  { icon: Waves, label: 'chips.surf' },
+  { icon: Mountain, label: 'chips.hiking' },
+  { icon: Dices, label: 'chips.boardgames' },
+  { icon: Bike, label: 'chips.cycling' },
 ];
 
 export function LoginPage() {
@@ -63,10 +63,10 @@ export function LoginPage() {
               {t('auth.badge')}
             </span>
             <h1 className="mt-3 font-display text-display font-medium leading-[1.05] text-white">
-              Welcome back
+              {t('authPage.welcomeBack')}
             </h1>
             <p className="mt-2 text-[15px] leading-relaxed text-white/75">
-              People are gathering near you right now.
+              {t('authPage.gathering')}
             </p>
           </div>
 
@@ -78,7 +78,7 @@ export function LoginPage() {
                 className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[12px] font-medium text-white/85 backdrop-blur-sm"
               >
                 <Icon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                {label}
+                {t(label)}
               </span>
             ))}
           </div>
@@ -128,7 +128,7 @@ export function LoginPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-input border border-dashed border-border bg-surface-sunk py-2.5 text-meta font-medium text-ink-soft cursor-pointer hover:border-clay hover:text-clay transition-colors"
               >
                 <Wand2 className="h-4 w-4" strokeWidth={1.6} />
-                Use demo account
+                {t('authPage.demo')}
               </button>
 
               {error && (

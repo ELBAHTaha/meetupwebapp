@@ -12,7 +12,7 @@ import type {
   CreateEventInput,
   EnrichedEvent,
   EventFilters,
-  JmaaEvent,
+  HudlgoEvent,
   LoginInput,
   MyBusiness,
   Rating,
@@ -220,7 +220,7 @@ export async function getConditions(q: ConditionsQuery): Promise<Conditions | nu
 
 // ---- Events ----------------------------------------------------------------
 
-function matches(e: JmaaEvent, f: EventFilters): boolean {
+function matches(e: HudlgoEvent, f: EventFilters): boolean {
   const enriched = enrich(e);
   // Online activities have no physical city — show them under any city filter.
   if (!e.isOnline) {
@@ -427,7 +427,7 @@ export async function createEvent(input: CreateEventInput & { lat?: number; lng?
     throw new Error('Activities must start more than 4 hours from now.');
 
   const { publicPlaceConfirmed: _c, ...rest } = input;
-  const event: JmaaEvent = {
+  const event: HudlgoEvent = {
     id: nextId('e-'),
     ...rest,
     genderPreference: input.genderPreference ?? 'any',
@@ -1104,7 +1104,7 @@ export async function cancelActivity(id: string): Promise<EnrichedEvent> {
 }
 
 /** Whether a "start activity" action is currently allowed for the host. */
-export function canStart(e: Pick<JmaaEvent, 'startsAt' | 'startedAt'>): boolean {
+export function canStart(e: Pick<HudlgoEvent, 'startsAt' | 'startedAt'>): boolean {
   return !e.startedAt && new Date(e.startsAt).getTime() - Date.now() <= THIRTY_MIN;
 }
 

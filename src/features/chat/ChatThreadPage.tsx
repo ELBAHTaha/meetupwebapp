@@ -102,7 +102,7 @@ export function ChatThreadPage() {
         }
       />
       {event && (
-        <button onClick={() => navigate(`/event/${event.id}`)} className="mx-auto w-full max-w-app border-b border-border bg-surface/60 px-5 py-2 text-left text-[12px] font-medium text-clay cursor-pointer md:max-w-shell">
+        <button onClick={() => navigate(`/event/${event.id}`)} className="mx-auto w-full max-w-app border-b border-border bg-surface/60 px-5 py-2 text-start text-[12px] font-medium text-clay cursor-pointer md:max-w-shell">
           {t('event.about')} →
         </button>
       )}
@@ -131,10 +131,10 @@ export function ChatThreadPage() {
                       {sender.name.split(' ')[0]}
                     </button>
                   )}
-                  <div className={cn('rounded-[14px] px-3.5 py-2.5 text-[15px] leading-snug', mine ? 'rounded-br-[4px] bg-clay-soft text-ink' : 'rounded-bl-[4px] bg-surface-sunk text-ink', m.pending && 'opacity-60')}>
+                  <div className={cn('rounded-[14px] px-3.5 py-2.5 text-[15px] leading-snug', mine ? 'rounded-ee-[4px] bg-clay-soft text-ink' : 'rounded-es-[4px] bg-surface-sunk text-ink', m.pending && 'opacity-60')}>
                     {m.text}
                   </div>
-                  <p className={cn('mt-0.5 text-[10px] text-ink-faint', mine ? 'text-right' : 'ml-1')}>{formatChatTime(m.sentAt)}</p>
+                  <p className={cn('mt-0.5 text-[10px] text-ink-faint', mine ? 'text-end' : 'ms-1')}>{formatChatTime(m.sentAt)}</p>
                 </div>
               </div>
             );
@@ -152,7 +152,7 @@ export function ChatThreadPage() {
           <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-center gap-2">
             <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('chat.messagePlaceholder')} className="flex-1 rounded-full border border-border bg-surface px-4 py-3 text-[15px] focus:border-clay" />
             <button type="submit" disabled={!text.trim()} aria-label={t('chat.send')} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-clay text-white transition-transform active:scale-90 disabled:opacity-40 cursor-pointer">
-              <SendHorizonal className="h-5 w-5" strokeWidth={1.6} />
+              <SendHorizonal className="h-5 w-5 rtl:-scale-x-100" strokeWidth={1.6} />
             </button>
           </form>
         )}

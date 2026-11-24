@@ -57,7 +57,7 @@ export function OnboardingPage() {
       <p className="mt-1 text-meta text-ink-soft">{t('onboarding.citySubtitle')}</p>
       <div className="mt-6 grid grid-cols-2 gap-2.5">
         {CITIES.map((c) => (
-          <button key={c.id} onClick={() => setCityLocal(c.name)} className={cn('flex items-center gap-2 rounded-input border p-3.5 text-left font-medium transition-colors cursor-pointer', city === c.name ? 'border-clay bg-clay-soft text-clay' : 'border-border bg-surface text-ink-soft hover:border-ink/25')}>
+          <button key={c.id} onClick={() => setCityLocal(c.name)} className={cn('flex items-center gap-2 rounded-input border p-3.5 text-start font-medium transition-colors cursor-pointer', city === c.name ? 'border-clay bg-clay-soft text-clay' : 'border-border bg-surface text-ink-soft hover:border-ink/25')}>
             <MapPin className="h-4 w-4 shrink-0" strokeWidth={1.6} />
             <span className="truncate">{c.name}</span>
           </button>
@@ -73,7 +73,7 @@ export function OnboardingPage() {
         {lfOptions.map((o) => {
           const on = lookingFor === o.key;
           return (
-            <button key={o.key} onClick={() => setLookingFor(o.key)} className={cn('flex w-full items-center gap-3 rounded-card border p-4 text-left transition-colors cursor-pointer', on ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/25')}>
+            <button key={o.key} onClick={() => setLookingFor(o.key)} className={cn('flex w-full items-center gap-3 rounded-card border p-4 text-start transition-colors cursor-pointer', on ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/25')}>
               <span className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-[10px]', on ? 'bg-clay text-white' : 'bg-surface-sunk text-ink-soft')}>
                 <o.icon className="h-5 w-5" strokeWidth={1.6} />
               </span>
@@ -96,7 +96,7 @@ export function OnboardingPage() {
           const on = picked.includes(a.id);
           return (
             <button key={a.id} onClick={() => toggleActivity(a.id)} className={cn('relative flex flex-col items-center gap-2 rounded-card border p-3 transition-colors cursor-pointer', on ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/20')}>
-              {on && <span className="absolute right-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full bg-clay text-white"><Check className="h-3 w-3" strokeWidth={2.4} /></span>}
+              {on && <span className="absolute end-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full bg-clay text-white"><Check className="h-3 w-3" strokeWidth={2.4} /></span>}
               <ActivityIcon activity={a} size="md" tile />
               <span className="text-center text-[12px] font-medium leading-tight text-ink-soft">{a.name}</span>
             </button>
@@ -109,11 +109,11 @@ export function OnboardingPage() {
     <div key="traveler">
       <h1 className="font-display text-h1 font-medium">{t('onboarding.travelerQuestion')}</h1>
       <div className="mt-6 space-y-3">
-        <button onClick={() => setTraveler(true)} className={cn('flex w-full items-center gap-3 rounded-card border p-4 text-left transition-colors cursor-pointer', traveler === true ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/25')}>
+        <button onClick={() => setTraveler(true)} className={cn('flex w-full items-center gap-3 rounded-card border p-4 text-start transition-colors cursor-pointer', traveler === true ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/25')}>
           <span className="grid h-11 w-11 place-items-center rounded-[10px] bg-majorelle-soft text-majorelle"><Plane className="h-5 w-5" strokeWidth={1.6} /></span>
           <span className="font-display text-h3 font-medium">{t('onboarding.travelerYes')}</span>
         </button>
-        <button onClick={() => setTraveler(false)} className={cn('flex w-full items-center gap-3 rounded-card border p-4 text-left transition-colors cursor-pointer', traveler === false ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/25')}>
+        <button onClick={() => setTraveler(false)} className={cn('flex w-full items-center gap-3 rounded-card border p-4 text-start transition-colors cursor-pointer', traveler === false ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/25')}>
           <span className="grid h-11 w-11 place-items-center rounded-[10px] bg-clay-soft text-clay"><MapPin className="h-5 w-5" strokeWidth={1.6} /></span>
           <span className="font-display text-h3 font-medium">{t('onboarding.travelerNo')}</span>
         </button>

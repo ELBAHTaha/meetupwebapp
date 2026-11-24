@@ -67,7 +67,7 @@ export function ProfileView({ user, self }: { user: User; self: boolean }) {
             const a = db.activities.find((x) => x.id === ua.activityId);
             if (!a) return null;
             return (
-              <div key={ua.activityId} className="flex items-center gap-2 rounded-input border border-border bg-surface py-1.5 pl-2.5 pr-3">
+              <div key={ua.activityId} className="flex items-center gap-2 rounded-input border border-border bg-surface py-1.5 ps-2.5 pe-3">
                 <ActivityIcon activity={a} size="sm" className="!h-[18px] !w-[18px]" />
                 <p className="text-meta font-medium text-ink">{a.name}</p>
               </div>
@@ -117,7 +117,7 @@ export function ProfileView({ user, self }: { user: User; self: boolean }) {
           <div className="space-y-3">
             {reviews.data.map((r) => {
               const from = db.users.find((u) => u.id === r.fromUserId);
-              const fromName = r.fromName ?? from?.name ?? 'Member';
+              const fromName = r.fromName ?? from?.name ?? t('chat.member');
               const fromAvatar =
                 r.fromAvatar ?? from?.avatar ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(fromName)}`;
               return (

@@ -93,7 +93,7 @@ function Toggle({ label, on, onToggle }: { label: string; on: boolean; onToggle:
   return (
     <button onClick={onToggle} className="flex w-full items-center justify-between rounded-input border border-border bg-surface px-4 py-3.5 cursor-pointer">
       <span className="text-[15px] font-medium text-ink">{label}</span>
-      <span className={cn('relative h-6 w-11 rounded-full transition-colors duration-200', on ? 'bg-clay' : 'bg-border')}>
+      <span dir="ltr" className={cn('relative h-6 w-11 rounded-full transition-colors duration-200', on ? 'bg-clay' : 'bg-border')}>
         <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform duration-200', on ? 'translate-x-[22px]' : 'translate-x-0.5')} />
       </span>
     </button>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Building2, FileCheck2, Globe, Mail, MapPin, Phone, Plus, Store, Upload } from 'lucide-react';
 import {
@@ -19,6 +20,7 @@ import type { BusinessOrg } from '@/types';
 const CATEGORIES = ['sports_venue', 'cafe', 'restaurant', 'outdoor', 'coworking', 'wellness', 'other'];
 
 export function BusinessOnboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [version, setVersion] = useState(0);
   const mine = useAsync(() => getMyBusinesses(), [version]);
@@ -27,16 +29,16 @@ export function BusinessOnboardPage() {
   const [tos, setTos] = useState(false);
 
   async function create() {
-    if (!tos) return toast('Please accept the business terms first.', 'info');
+    if (!tos) return toast(t('bizOnboard.acceptTos'), 'info');
     setCreating(true);
     try {
       await createBusinessOrg({ ...form, acceptBusinessTos: true });
-      toast('Business created — submit your documents to get verified.', 'success');
+      toast(t('bizOnboard.created'), 'success');
       setForm({ name: '', category: 'sports_venue', address: '', contactEmail: '', phone: '', website: '', legalName: '', description: '' });
       setTos(false);
       setVersion((v) => v + 1);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not create business', 'error');
+      toast(err instanceof Error ? err.message : t('bizOnboard.createFailed'), 'error');
     } finally {
       setCreating(false);
     }
@@ -44,7 +46,7 @@ export function BusinessOnboardPage() {
 
   return (
     <div>
-      <PageHeader back title="Your businesses" onBack={() => navigate('/profile')} />
+      <PageHeader back title={t('bizOnboard.title')} onBack={() => navigate('/profile')} />
       <div className="space-y-5 px-5 pt-3 pb-8 md:px-0">
         {/* Existing businesses */}
         {mine.data && mine.data.length > 0 ? (
@@ -54,39 +56,39 @@ export function BusinessOnboardPage() {
             ))}
           </div>
         ) : (
-          !mine.loading && <EmptyState icon={Store} title="You don’t manage any business yet" />
+          !mine.loading && <EmptyState icon={Store} title={t('bizOnboard.none')} />
         )}
 
         {/* Create a new business */}
         <div className="rounded-card border border-border bg-surface p-5">
           <div className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-clay" strokeWidth={1.8} />
-            <p className="font-display text-h2 font-medium text-ink">Register a business</p>
+            <p className="font-display text-h2 font-medium text-ink">{t('bizOnboard.register')}</p>
           </div>
-          <p className="mt-1 text-meta text-ink-soft">List your venue on Jmaâ. We’ll verify your RC/ICE before it goes live.</p>
+          <p className="mt-1 text-meta text-ink-soft">{t('bizOnboard.registerHint')}</p>
 
           <div className="mt-4 space-y-4">
-            <Input label="Business name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} leftIcon={<Building2 className="h-5 w-5" strokeWidth={1.6} />} />
-            <Input label="Legal name (optional)" value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value })} />
+            <Input label={t('business.name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} leftIcon={<Building2 className="h-5 w-5" strokeWidth={1.6} />} />
+            <Input label={t('bizOnboard.legalName')} value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value })} />
             <label className="block">
-              <span className="mb-1 block text-meta font-medium text-ink-soft">Category</span>
+              <span className="mb-1 block text-meta font-medium text-ink-soft">{t('bizOnboard.categoryLabel')}</span>
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full rounded-input border border-border bg-bg px-3 py-2.5 text-meta text-ink capitalize">
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+                {CATEGORIES.map((c) => <option key={c} value={c}>{t(`bizOnboard.category.${c}`)}</option>)}
               </select>
             </label>
-            <Textarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <Input label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
-            <Input label="Contact email" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} leftIcon={<Mail className="h-5 w-5" strokeWidth={1.6} />} />
-            <Input label="Phone (optional)" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} leftIcon={<Phone className="h-5 w-5" strokeWidth={1.6} />} />
-            <Input label="Website (optional)" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} leftIcon={<Globe className="h-5 w-5" strokeWidth={1.6} />} />
+            <Textarea label={t('business.description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <Input label={t('business.address')} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
+            <Input label={t('bizOnboard.contactEmail')} type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} leftIcon={<Mail className="h-5 w-5" strokeWidth={1.6} />} />
+            <Input label={t('auth.phone')} type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} leftIcon={<Phone className="h-5 w-5" strokeWidth={1.6} />} />
+            <Input label={t('bizOnboard.website')} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} leftIcon={<Globe className="h-5 w-5" strokeWidth={1.6} />} />
 
             <label className="flex cursor-pointer items-start gap-2 text-meta text-ink-soft">
               <input type="checkbox" checked={tos} onChange={(e) => setTos(e.target.checked)} className="mt-0.5 h-4 w-4 accent-clay" />
-              <span>I accept the business terms of service and advertising policy.</span>
+              <span>{t('bizOnboard.tos')}</span>
             </label>
 
             <Button size="lg" fullWidth loading={creating} disabled={!form.name || !form.address || !form.contactEmail || !tos} onClick={create}>
-              Create business
+              {t('bizOnboard.create')}
             </Button>
           </div>
         </div>
@@ -96,6 +98,7 @@ export function BusinessOnboardPage() {
 }
 
 function BusinessCard({ biz, onChanged }: { biz: BusinessOrg; onChanged: () => void }) {
+  const { t } = useTranslation();
   const [showVerify, setShowVerify] = useState(false);
   const [showVenue, setShowVenue] = useState(false);
   const statusTone =
@@ -112,22 +115,22 @@ function BusinessCard({ biz, onChanged }: { biz: BusinessOrg; onChanged: () => v
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-display text-h2 font-medium text-ink">{biz.name}</p>
-            <Tag className={statusTone}>{biz.status.replace(/_/g, ' ')}</Tag>
-            <Tag className="bg-surface-sunk text-ink-soft capitalize">{biz.role}</Tag>
+            <Tag className={statusTone}>{t(`bizOnboard.status.${biz.status}`, biz.status.replace(/_/g, ' '))}</Tag>
+            <Tag className="bg-surface-sunk text-ink-soft">{t(`bizOnboard.role.${biz.role}`, biz.role)}</Tag>
           </div>
-          <p className="mt-0.5 text-[12px] text-ink-soft capitalize">{biz.category.replace(/_/g, ' ')} · {biz.address}</p>
+          <p className="mt-0.5 text-[12px] text-ink-soft">{t(`bizOnboard.category.${biz.category}`, biz.category.replace(/_/g, ' '))} · {biz.address}</p>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {biz.status !== 'verified' && (biz.role === 'owner') && (
           <Button size="sm" variant="outline" leftIcon={<FileCheck2 className="h-4 w-4" strokeWidth={1.7} />} onClick={() => setShowVerify((s) => !s)}>
-            Submit verification
+            {t('bizOnboard.submitVerification')}
           </Button>
         )}
         {(biz.role === 'owner' || biz.role === 'manager') && (
           <Button size="sm" variant="outline" leftIcon={<Plus className="h-4 w-4" strokeWidth={1.7} />} onClick={() => setShowVenue((s) => !s)}>
-            Add venue
+            {t('bizOnboard.addVenue')}
           </Button>
         )}
       </div>
@@ -139,6 +142,7 @@ function BusinessCard({ biz, onChanged }: { biz: BusinessOrg; onChanged: () => v
 }
 
 function VerifyForm({ businessId, onDone }: { businessId: string; onDone: () => void }) {
+  const { t } = useTranslation();
   const [rc, setRc] = useState('');
   const [ice, setIce] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -149,10 +153,10 @@ function VerifyForm({ businessId, onDone }: { businessId: string; onDone: () => 
     setBusy(true);
     try {
       await submitBusinessVerification(businessId, { rcNumber: rc || undefined, iceNumber: ice || undefined, documents: files });
-      toast('Verification submitted — we’ll review it shortly.', 'success');
+      toast(t('bizOnboard.verificationSent'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not submit verification', 'error');
+      toast(err instanceof Error ? err.message : t('bizOnboard.verificationFailed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -160,18 +164,19 @@ function VerifyForm({ businessId, onDone }: { businessId: string; onDone: () => 
 
   return (
     <div className="mt-3 space-y-3 rounded-card border border-border bg-bg p-4">
-      <Input label="RC number (Registre de Commerce)" value={rc} onChange={(e) => setRc(e.target.value)} />
-      <Input label="ICE number" value={ice} onChange={(e) => setIce(e.target.value)} />
+      <Input label={t('bizOnboard.rc')} value={rc} onChange={(e) => setRc(e.target.value)} />
+      <Input label={t('bizOnboard.ice')} value={ice} onChange={(e) => setIce(e.target.value)} />
       <button onClick={() => fileRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-card border border-dashed border-clay/50 bg-clay-soft/30 px-3 py-3 text-meta font-medium text-clay cursor-pointer">
-        <Upload className="h-4 w-4" strokeWidth={1.7} /> {files.length ? `${files.length} file(s) selected` : 'Upload documents'}
+        <Upload className="h-4 w-4" strokeWidth={1.7} /> {files.length ? t('bizOnboard.filesSelected', { count: files.length }) : t('bizOnboard.uploadDocs')}
       </button>
       <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-      <Button size="sm" fullWidth loading={busy} onClick={submit}>Submit for review</Button>
+      <Button size="sm" fullWidth loading={busy} onClick={submit}>{t('bizOnboard.submitReview')}</Button>
     </div>
   );
 }
 
 function VenueForm({ businessId, onDone }: { businessId: string; onDone: () => void }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({ name: '', category: 'sports_venue', address: '', lat: '', lng: '' });
   const [busy, setBusy] = useState(false);
 
@@ -186,10 +191,10 @@ function VenueForm({ businessId, onDone }: { businessId: string; onDone: () => v
         lat: Number(form.lat) || 0,
         lng: Number(form.lng) || 0,
       });
-      toast('Venue added.', 'success');
+      toast(t('bizOnboard.venueAdded'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not add venue', 'error');
+      toast(err instanceof Error ? err.message : t('bizOnboard.venueFailed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -197,19 +202,19 @@ function VenueForm({ businessId, onDone }: { businessId: string; onDone: () => v
 
   return (
     <div className="mt-3 space-y-3 rounded-card border border-border bg-bg p-4">
-      <Input label="Venue name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <Input label={t('bizOnboard.venueName')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <label className="block">
-        <span className="mb-1 block text-meta font-medium text-ink-soft">Category</span>
+        <span className="mb-1 block text-meta font-medium text-ink-soft">{t('bizOnboard.categoryLabel')}</span>
         <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full rounded-input border border-border bg-bg px-3 py-2.5 text-meta text-ink capitalize">
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+          {CATEGORIES.map((c) => <option key={c} value={c}>{t(`bizOnboard.category.${c}`)}</option>)}
         </select>
       </label>
-      <Input label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
+      <Input label={t('business.address')} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
       <div className="flex gap-3">
-        <Input label="Latitude" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
-        <Input label="Longitude" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
+        <Input label={t('bizOnboard.lat')} value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
+        <Input label={t('bizOnboard.lng')} value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
       </div>
-      <Button size="sm" fullWidth loading={busy} disabled={!form.name || !form.address} onClick={submit}>Add venue</Button>
+      <Button size="sm" fullWidth loading={busy} disabled={!form.name || !form.address} onClick={submit}>{t('bizOnboard.addVenue')}</Button>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, LogOut, MessageCircle, Plus, Receipt, Store, Ticket } from 'lucide-react';
 import { Toaster } from '@/components/Toaster';
 import { DevelopedBy } from '@/components/DevelopedBy';
@@ -11,15 +12,16 @@ import { toast } from '@/store/toast';
 import { cn } from '@/lib/cn';
 
 const links = [
-  { to: '/business/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/business/chat', icon: MessageCircle, label: 'Chat' },
-  { to: '/business/create', icon: Plus, label: 'Host activity' },
-  { to: '/business/venue', icon: Store, label: 'Venue' },
-  { to: '/business/redeem', icon: Ticket, label: 'Redeem' },
-  { to: '/business/upgrades', icon: Receipt, label: 'Plan' },
+  { to: '/business/dashboard', icon: LayoutDashboard, label: 'bizNav.dashboard' },
+  { to: '/business/chat', icon: MessageCircle, label: 'bizNav.chat' },
+  { to: '/business/create', icon: Plus, label: 'bizNav.host' },
+  { to: '/business/venue', icon: Store, label: 'bizNav.venue' },
+  { to: '/business/redeem', icon: Ticket, label: 'bizNav.redeem' },
+  { to: '/business/upgrades', icon: Receipt, label: 'bizNav.plan' },
 ];
 
 export function BusinessLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const logout = useSession((s) => s.logout);
   useLocaleSync();
@@ -32,11 +34,11 @@ export function BusinessLayout() {
           <button onClick={() => navigate('/business/dashboard')} className="flex items-center gap-2 cursor-pointer">
             <img src="/jmaa.svg" alt="hudlgo" className="h-8 w-8" />
             <span className="font-display text-h2 font-medium tracking-tight">
-              hudlgo <span className="text-clay">Business</span>
+              hudlgo <span className="text-clay">{t('bizNav.business')}</span>
             </span>
           </button>
 
-          <nav className="ml-2 flex items-center gap-1">
+          <nav className="ms-2 flex items-center gap-1">
             {links.map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
@@ -49,7 +51,7 @@ export function BusinessLayout() {
                 }
               >
                 <Icon className="h-4 w-4" strokeWidth={1.6} />
-                <span className="hidden sm:inline">{label}</span>
+                <span className="hidden sm:inline">{t(label)}</span>
               </NavLink>
             ))}
           </nav>
@@ -57,11 +59,11 @@ export function BusinessLayout() {
           <button
             onClick={() => {
               logout();
-              toast('Logged out', 'info');
+              toast(t('a11y.loggedOut'), 'info');
               navigate('/login');
             }}
-            aria-label="Log out"
-            title="Log out"
+            aria-label={t('a11y.logout')}
+            title={t('a11y.logout')}
             className="ml-auto grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-surface-sunk hover:text-clay cursor-pointer transition-colors"
           >
             <LogOut className="h-5 w-5" strokeWidth={1.6} />

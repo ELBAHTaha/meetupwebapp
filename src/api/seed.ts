@@ -3,7 +3,7 @@ import type {
   AppNotification,
   ChatThread,
   Conditions,
-  JmaaEvent,
+  HudlgoEvent,
   LookingFor,
   Rating,
   Report,
@@ -290,7 +290,7 @@ const hostOf = (userId: string) => ({
   joinedAt: addHours(now, -120).toISOString(),
 });
 
-const BASE_EVENTS: JmaaEvent[] = [
+const BASE_EVENTS: HudlgoEvent[] = [
   {
     id: 'e1',
     activityId: 'padel',
@@ -987,7 +987,7 @@ const CITY_FILL: Record<string, CityFill[]> = {
 const FILL_HOSTS = ['u1', 'u2', 'u5', 'u6', 'u8', 'u10', 'u7', 'u3', 'u4'];
 
 const CITY_FILL_SPOTS: Spot[] = [];
-const CITY_FILL_EVENTS: JmaaEvent[] = [];
+const CITY_FILL_EVENTS: HudlgoEvent[] = [];
 let fillSeq = 0;
 for (const city of CITIES) {
   const specs = CITY_FILL[city.id];
@@ -1026,7 +1026,7 @@ for (const city of CITIES) {
 }
 
 export const SEED_SPOTS: Spot[] = [...BASE_SPOTS, ...CITY_FILL_SPOTS];
-export const SEED_EVENTS: JmaaEvent[] = [...BASE_EVENTS, ...CITY_FILL_EVENTS];
+export const SEED_EVENTS: HudlgoEvent[] = [...BASE_EVENTS, ...CITY_FILL_EVENTS];
 
 export const SEED_CONDITIONS: Conditions[] = [
   { spotId: 's11', activityType: 'water', updatedAt: now.toISOString(), fields: { swellM: 1.8, windKts: 8, tempC: 22, waterTempC: 19, summary: 'Clean & glassy', icon: 'Waves' } },

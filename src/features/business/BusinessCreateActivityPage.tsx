@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
@@ -29,6 +30,7 @@ async function geocode(address: string): Promise<{ lat: number; lng: number } | 
 }
 
 export function BusinessCreateActivityPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const bump = useSession((s) => s.bumpData);
   const biz = useAsync(() => getMyBusiness(), []);
@@ -49,9 +51,9 @@ export function BusinessCreateActivityPage() {
 
   async function submit() {
     if (!biz.data) return;
-    if (!activityId) return toast('Pick an activity type', 'error');
-    if (!timeValid) return toast('Start time must be more than 4 hours from now', 'error');
-    if (minCapacity > capacity) return toast('Min capacity can’t be more than the max capacity', 'error');
+    if (!activityId) return toast(t('bizCreate.pickType'), 'error');
+    if (!timeValid) return toast(t('bizCreate.timeRule'), 'error');
+    if (minCapacity > capacity) return toast(t('bizCreate.capacityRule'), 'error');
     setSaving(true);
     try {
       const b = biz.data.business;
@@ -78,10 +80,10 @@ export function BusinessCreateActivityPage() {
         businessId: b.id,
       });
       bump();
-      toast('Activity created 🎉', 'success');
+      toast(t('bizCreate.created'), 'success');
       navigate('/business/dashboard');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not create activity', 'error');
+      toast(err instanceof Error ? err.message : t('bizCreate.failed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -101,10 +103,10 @@ export function BusinessCreateActivityPage() {
   return (
     <div className="mx-auto max-w-xl">
       <button onClick={() => navigate('/business/dashboard')} className="mb-3 inline-flex items-center gap-1.5 text-meta font-medium text-ink-soft hover:text-ink cursor-pointer">
-        <ArrowLeft className="h-4 w-4" strokeWidth={1.8} /> Back to dashboard
+        <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" strokeWidth={1.8} /> Back to dashboard
       </button>
-      <h1 className="font-display text-h1 font-medium text-ink">Host an activity</h1>
-      <p className="mt-1 text-meta text-ink-soft">Create a meetup at your venue. It counts toward your monthly sponsorship usage.</p>
+      <h1 className="font-display text-h1 font-medium text-ink">{t('bizCreate.title')}</h1>
+      <p className="mt-1 text-meta text-ink-soft">{t('bizCreate.subtitle')}</p>
 
       <div className="mt-5 space-y-4 rounded-card border border-border bg-surface p-5">
         {/* Venue (fixed) */}
@@ -115,39 +117,39 @@ export function BusinessCreateActivityPage() {
 
         {/* Activity type */}
         <label className="block">
-          <span className="mb-1.5 block text-meta font-medium text-ink-soft">Activity type</span>
+          <span className="mb-1.5 block text-meta font-medium text-ink-soft">{t('bizCreate.type')}</span>
           <select
             value={activityId}
             onChange={(e) => setActivityId(e.target.value)}
             className="w-full rounded-input border border-border bg-surface px-3.5 py-3 text-[15px] text-ink transition-colors focus:border-clay focus:ring-2 focus:ring-clay/20"
           >
-            <option value="" disabled>{activities.loading ? 'Loading…' : 'Choose an activity'}</option>
+            <option value="" disabled>{activities.loading ? t('common.loading') : t('bizCreate.chooseType')}</option>
             {activities.data?.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>
         </label>
 
-        <Input label="Title" placeholder="e.g. Sunday boardgames night" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Input label={t('bizCreate.titleLabel')} placeholder={t('bizCreate.titlePlaceholder')} value={title} onChange={(e) => setTitle(e.target.value)} />
 
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <Input label="Time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          <Input label={t('create.date')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input label={t('bizCreate.time')} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
-        {!timeValid && <p className="-mt-1 text-[12px] font-medium text-clay">Pick a time more than 4 hours from now.</p>}
+        {!timeValid && <p className="-mt-1 text-[12px] font-medium text-clay">{t('bizCreate.timeRule')}</p>}
 
-        <Input label="Duration (min)" type="number" min={30} step={15} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+        <Input label={t('bizCreate.duration')} type="number" min={30} step={15} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
 
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Min capacity" type="number" min={1} max={capacity} value={minCapacity} onChange={(e) => setMinCapacity(Number(e.target.value))} />
-          <Input label="Max capacity" type="number" min={2} max={12} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
+          <Input label={t('bizCreate.minCapacity')} type="number" min={1} max={capacity} value={minCapacity} onChange={(e) => setMinCapacity(Number(e.target.value))} />
+          <Input label={t('bizCreate.maxCapacity')} type="number" min={2} max={12} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
         </div>
-        {minCapacity > capacity && <p className="-mt-1 text-[12px] font-medium text-clay">Min capacity can’t exceed max capacity.</p>}
+        {minCapacity > capacity && <p className="-mt-1 text-[12px] font-medium text-clay">{t('bizCreate.capacityRule')}</p>}
 
-        <Textarea label="Description" placeholder="What's the meetup about?" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Textarea label={t('business.description')} placeholder={t('bizCreate.descPlaceholder')} value={description} onChange={(e) => setDescription(e.target.value)} />
 
         <Button size="lg" fullWidth loading={saving} disabled={!activityId || !timeValid || minCapacity > capacity} onClick={submit}>
-          Create activity
+          {t('bizCreate.submit')}
         </Button>
       </div>
     </div>

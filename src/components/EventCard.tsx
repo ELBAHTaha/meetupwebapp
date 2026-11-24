@@ -138,7 +138,7 @@ export function EventCard({ event, fromCity }: Props) {
               <Avatar src={event.host.avatar} name={event.host.name} size="xs" verified={event.host.verified} />
               <span className="text-meta font-medium text-ink-soft">
                 {isOwn ? (
-                  <span className="text-clay">You're hosting</span>
+                  <span className="text-clay">{t('eventX.youreHosting')}</span>
                 ) : (
                   t('event.going', { count: event.goingCount, capacity: event.capacity })
                 )}

@@ -34,7 +34,7 @@ export function DevPanel() {
       <button
         onClick={() => setOpen(true)}
         aria-label={t('dev.open')}
-        className="fixed bottom-24 left-4 z-40 flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft shadow-e1 cursor-pointer md:bottom-6"
+        className="fixed bottom-24 start-4 z-40 flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft shadow-e1 cursor-pointer md:bottom-6"
       >
         <FlaskConical className="h-4 w-4 text-clay" strokeWidth={1.7} />
         {t('dev.open')}

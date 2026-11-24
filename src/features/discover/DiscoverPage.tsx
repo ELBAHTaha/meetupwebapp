@@ -130,7 +130,7 @@ export function DiscoverPage() {
           >
             <Bell className="h-5 w-5 text-ink" strokeWidth={1.6} />
             {unread > 0 && (
-              <span className="absolute -right-1 -top-1 grid min-h-[16px] min-w-[16px] place-items-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white">
+              <span className="absolute -end-1 -top-1 grid min-h-[16px] min-w-[16px] place-items-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white">
                 {unread > 9 ? '9+' : unread}
               </span>
             )}
@@ -140,12 +140,12 @@ export function DiscoverPage() {
         {/* Search + filter */}
         <div className="mt-4 flex gap-2">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-faint" strokeWidth={1.6} />
+            <Search className="pointer-events-none absolute start-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-faint" strokeWidth={1.6} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('discover.searchPlaceholder')}
-              className="w-full rounded-input border border-border bg-surface py-3 pl-11 pr-4 text-[15px] placeholder:text-ink-faint focus:border-clay"
+              className="w-full rounded-input border border-border bg-surface py-3 ps-11 pe-4 text-[15px] placeholder:text-ink-faint focus:border-clay"
             />
           </div>
           <button
@@ -155,7 +155,7 @@ export function DiscoverPage() {
           >
             <SlidersHorizontal className="h-5 w-5 text-ink" strokeWidth={1.6} />
             {activeFilterCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-clay text-[10px] font-semibold text-white">
+              <span className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-clay text-[10px] font-semibold text-white">
                 {activeFilterCount}
               </span>
             )}
@@ -177,7 +177,7 @@ export function DiscoverPage() {
             <Button size="sm" onClick={() => navigate('/verify')}>{t('discover.verifyCta')}</Button>
             <button
               onClick={dismissVerify}
-              aria-label="Dismiss"
+              aria-label={t('authFlow.dismiss')}
               className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-surface/60 cursor-pointer"
             >
               <X className="h-4 w-4" strokeWidth={1.8} />

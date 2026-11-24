@@ -1,12 +1,12 @@
-# Jmaâ (codename `hudlgo`) — Architecture & Project Overview
+# hudlgo — Architecture & Project Overview
 
 > A Morocco-first meetup / activity app. When you're bored and want to meet people, you
 > create or join an IRL activity — coffee, padel, surf, board games, hikes, language
 > exchange — and the activity is the vehicle for connection. It's a **two-sided
 > marketplace**: regular consumers on one side, venues/businesses on the other.
 
-It started as a frontend-only mock prototype (which the original [README.md](README.md) still
-describes) and has since grown a full **NestJS + Prisma + MySQL** backend, a **two-sided
+It started as a frontend-only mock prototype (the offline mock is still there for demos) and has
+since grown a full **NestJS + Prisma + MySQL** backend, a **two-sided
 business side**, and **manually activated paid plans** (customers pay offline, an admin
 grants the plan; there is no payment gateway).
 
@@ -19,7 +19,8 @@ grants the plan; there is no payment gateway).
 | **Frontend** | Vite + React 18 + TypeScript, Tailwind CSS, React Router, Zustand (state), react-i18next (en/fr/ar), react-leaflet + OpenStreetMap, lucide-react icons, date-fns |
 | **Backend** | NestJS 10, Prisma 5 ORM, MySQL 8, Passport (JWT + Google OAuth), class-validator, @nestjs/throttler, @nestjs/schedule, Swagger, helmet |
 | **Payments** | None online: offline payment (bank transfer / CashPlus / cash) + admin-approved upgrade requests |
-| **Infra** | Docker Compose (MySQL on :3307, optional api container), local-disk file storage, Resend (email) |
+| **Realtime** | socket.io (`@nestjs/platform-socket.io` + `socket.io-client`) for chat and live notification counts |
+| **Infra** | Docker Compose on one VPS behind Traefik; local-disk uploads (sharp re-encoding, swappable `StorageDriver`); Resend (email); Open-Meteo (weather, no key); `scripts/backup.sh` |
 
 Two apps in one repo: the **frontend** at the repo root ([package.json](package.json), name
 `hudlgo`) and the **backend** under [server/](server/) ([server/package.json](server/package.json),
@@ -135,16 +136,30 @@ transform), a global `JwtAuthGuard` (routes opt out with `@Public`/`@OptionalAut
   reports, flagged users, subscribers, business verifications, venue claims, venue-review
   moderation, activity approval queue, identity-verification queue, and moderation actions
   (warn/suspend/ban).
-- **Infra** — Prisma, Trust, Storage (local-disk uploads), Geocoding (nearest-city/haversine),
-  Notifications, Mail (Resend), **Scheduler** (cron jobs).
+- **Auth extras**: `POST /auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`,
+  `/auth/resend-verification` (hashed one-time `AuthToken`s). `EmailVerifiedGuard` returns
+  `code: EMAIL_NOT_VERIFIED` and gates creating/joining activities and sending chat messages.
+- **Realtime** ([chat.gateway.ts](server/src/chat/chat.gateway.ts)): JWT handshake, `user:<id>`
+  rooms, `thread:join` using `ChatService.assertCanView`. Emits `message:new`, `chat:activity`,
+  `notification:new` and `notification:unread` through the global `RealtimeService`.
+- **Conditions**: `GET /conditions?lat&lng&at&activity` → Open-Meteo forecast + marine data, with
+  a 30-min in-memory cache. Returns `null` when unavailable.
+- **Blocks**: `POST|DELETE /users/:id/block`, `GET /users/me/blocks`. `BlocksService` is used by
+  events (feed, detail, join), users (profile 404) and chat (history + live emits).
+- **Coupons**: `GET /businesses/:id/coupons/lookup`, `POST /businesses/:id/coupons/redeem`
+  (STAFF+). Codes are the activity coupon plus a per-attendee HMAC suffix.
+- **Infra**: Prisma, Trust, Storage (signature-checked uploads, WebP re-encode, EXIF stripped,
+  old files deleted; `StorageDriver` interface), Geocoding, Notifications, Mail (Resend,
+  EN/FR/AR auth emails), **Scheduler** (cron jobs, incl. plan expiry and renewal reminders).
 
 **Guards & access control**
 - `JwtAuthGuard` (global) + `@Public`/`@OptionalAuth`.
 - `RolesGuard` for `ADMIN`.
 - `ConsumerGuard` — blocks `BUSINESS`-role accounts from consumer-only actions (joining, rating
   people, identity verification).
-- `BusinessRoleGuard` + `@BusinessRoles(...)` — enforces OWNER⊇MANAGER⊇STAFF on business/venue
-  mutations.
+- `BusinessRoleGuard` + `@BusinessRoles(...)`: enforces OWNER⊇MANAGER⊇STAFF on business/venue
+  routes. The business's `ownerId` account always counts as OWNER.
+- `EmailVerifiedGuard`: create/join/chat-send require a verified email.
 
 > Route-ordering note: `MonetizationModule` is imported **before** `BusinessModule` so its static
 > `/businesses/mine|sponsored-venues|register` routes resolve before the new `GET /businesses/:id`.
@@ -244,12 +259,22 @@ detail, chat).
 
 **Feature pages** ([src/features/](src/features/)) — auth/onboarding, discover (feed + filter
 sheet + "near me" geolocation), create-event wizard, event detail, chat (list + thread),
-profile/settings/verify, notifications, admin panel, monetization (pricing/business/express
+profile/settings/verify, notifications, admin panel, monetization (pricing/business signup/upgrade requests
 payment), venues browse/detail, and the full business suite (onboarding, dashboard, venue,
 activity detail with attendees, business chat).
 
 **State** — Zustand stores: `session` (auth/user/onboarding, persisted to localStorage), `theme`
 (dark mode via CSS vars), `toast`.
+
+**Realtime** ([src/lib/socket.ts](src/lib/socket.ts), [useRealtime.ts](src/hooks/useRealtime.ts)):
+one shared socket opened by the layouts after login. It re-handshakes on token refresh,
+refreshes the token on an expired handshake, disconnects on logout, and does nothing in mock
+mode. Screens refetch after a reconnect or when the tab becomes visible again.
+
+**i18n / RTL**: all UI strings go through `t()` with full EN/FR/AR parity. Arabic sets
+`dir="rtl"`, layouts use logical Tailwind classes (`ms-`/`pe-`/`start-`/`text-start`/`rounded-ee-`)
+and directional icons are mirrored with `rtl:-scale-x-100`. Backend error `code`s (e.g.
+`EMAIL_NOT_VERIFIED`) are translated globally from `errors.*`.
 
 **Design system** (v0.2, [tailwind.config.js](tailwind.config.js)) — warm Moroccan palette (bone
 canvas, clay primary, olive/saffron/majorelle accents), Fraunces + Inter type, hairline borders
@@ -276,27 +301,38 @@ npm run start:dev    # Nest on :4000, Swagger at /docs
 
 Set `VITE_API_URL=http://localhost:4000` for the frontend to talk to the real backend.
 
+**Tests**: `cd server && npm run test:e2e` runs the end-to-end suites in
+[server/test/](server/test/): smoke, auth recovery, realtime, conditions, upgrades, uploads,
+blocks and coupons. They need a migrated and seeded MySQL in `DATABASE_URL`.
+
 ---
 
 ## 9. Current state & what's not built
 
-**Built** — full consumer app (auth, discover, events + lifecycle, chat, ratings, trust, reports,
-identity verification, notifications, admin panel with analytics), the **Business Foundation
-Phase 1** (orgs/members/roles, venues + claims, business verification, §7 attendee-privacy
-boundary), and the Paddle payment integration (subscriptions, sponsorships, extra-activity fees).
+**Built**
+- Consumer app: auth (email + Google), **email verification + password reset**, discover,
+  activities + lifecycle, **real-time group chat**, ratings, trust, reports, **blocking**,
+  identity verification, notifications (live badge), admin panel with analytics.
+- Business side: orgs/members/roles, venues + claims, business verification, §7 privacy
+  boundary, venue sponsorships, **Silver coupon redemption** with a staff redeem screen and
+  per-activity counts.
+- **Manual monetization**: upgrade requests paid offline, admin approval or direct grants with
+  an audit log, expiry and renewal reminders. Paddle has been removed.
+- Real outdoor conditions (Open-Meteo); saved places backed by real venues.
+- Safe local uploads (validation, WebP re-encode, EXIF/GPS stripped, old-file clean-up), daily
+  backups with optional Google Drive copy, full EN/FR/AR with RTL.
 
-**Not yet built / pending**
-- A real **Offer/redemption** system — the Silver coupon codes are currently display-only.
-- **Paddle go-live**: create the products/prices in the Paddle dashboard and fill the
-  `PADDLE_*` price ids + API key + webhook secret (and `VITE_PADDLE_CLIENT_TOKEN`), then point a
-  Paddle notification destination at `POST /payments/paddle/webhook`.
-- Business **Phase 2–4**: billing changes (TVA/invoices), promotions, online/HYBRID event
-  modes, follows, digests, analytics dashboards.
-- Safety **Phases 2–5**: blocking, quiz, chat filters, checkpoints, CAPTCHA.
-- Production hardening: swap local-disk `StorageService` for S3/R2, production env/deploy setup.
-- Brand rename from legacy `hudlgo` to **Jmaâ** is incomplete (still in package names, Swagger
-  title, coupon prefix, mail sender).
+**Not yet built / known gaps**
+- **Direct messages** don't exist on the backend. The profile "Message" button only appears in
+  the offline mock.
+- Invited business **STAFF** members can use the coupon API, but the app only gives the
+  business UI to the owner account.
+- Legal pages (Terms / Privacy / Refunds) are English-only prose and need a professional FR/AR
+  translation.
+- Business Phase 2–4 (TVA/invoices, promotions, HYBRID events, follows, digests) and safety
+  Phases 3–5 (quiz, checkpoints, stronger CAPTCHA).
+- Uploads live on the VPS disk. An S3-compatible `StorageDriver` can be added when needed.
 
 ---
 
-_Last updated: 2026-06-19._
+_Last updated: 2026-11-24._

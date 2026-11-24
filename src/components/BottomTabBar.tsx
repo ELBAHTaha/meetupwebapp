@@ -26,7 +26,7 @@ export function BottomTabBar() {
     <nav
       className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-app border-t border-border bg-bg/95 backdrop-blur-md md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      aria-label="Primary"
+      aria-label={t('a11y.primaryNav')}
     >
       <div className="flex items-stretch justify-around px-2 pt-1.5 pb-1">
         {tabs.map(({ to, icon: Icon, key, center }) => {

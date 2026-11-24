@@ -8,17 +8,11 @@ import { submitVerification } from '@/api';
 import { useSession } from '@/store/session';
 import { toast } from '@/store/toast';
 
-const POSES = [
-  'Give a thumbs up 👍',
-  'Make a peace sign ✌️',
-  'Touch your right ear',
-  'Open palm facing the camera ✋',
-  'Place a hand on your chin',
-  'Wave hello 👋',
-];
+// Translation keys; the English text is what's stored for the admin reviewer.
+const POSES = ['verifyX.pose.thumbs', 'verifyX.pose.peace', 'verifyX.pose.ear', 'verifyX.pose.palm', 'verifyX.pose.chin', 'verifyX.pose.wave'];
 
 export function VerifyPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const user = useSession((s) => s.user);
   const setUser = useSession((s) => s.setUser);
@@ -44,12 +38,12 @@ export function VerifyPage() {
     if (!file) return;
     setSubmitting(true);
     try {
-      const updated = await submitVerification(file, pose);
+      const updated = await submitVerification(file, i18n.t(pose, { lng: 'en' }));
       setUser(updated);
       toast(t('verify.submittedToast'), 'success');
       navigate('/profile');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not submit', 'error');
+      toast(err instanceof Error ? err.message : t('authFlow.genericError'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -94,7 +88,7 @@ export function VerifyPage() {
             {/* Pose prompt */}
             <div className="rounded-card border border-clay/30 bg-clay-soft/50 p-4">
               <p className="text-[12px] font-semibold uppercase tracking-wide text-clay">{t('verify.poseLabel')}</p>
-              <p className="mt-1 font-display text-h2 font-medium text-ink">{pose}</p>
+              <p className="mt-1 font-display text-h2 font-medium text-ink">{t(pose)}</p>
               <p className="mt-1 text-[12px] text-ink-soft">{t('verify.poseHint')}</p>
             </div>
 

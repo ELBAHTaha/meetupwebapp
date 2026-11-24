@@ -14,11 +14,11 @@ import { AuthBackdrop } from '@/components/AuthBackdrop';
 import { cn } from '@/lib/cn';
 
 const ACTIVITY_CHIPS: { icon: LucideIcon; label: string }[] = [
-  { icon: Coffee, label: 'Coffee' },
-  { icon: Waves, label: 'Surf' },
-  { icon: Mountain, label: 'Hiking' },
-  { icon: Dices, label: 'Board games' },
-  { icon: Bike, label: 'Cycling' },
+  { icon: Coffee, label: 'chips.coffee' },
+  { icon: Waves, label: 'chips.surf' },
+  { icon: Mountain, label: 'chips.hiking' },
+  { icon: Dices, label: 'chips.boardgames' },
+  { icon: Bike, label: 'chips.cycling' },
 ];
 
 function ageFrom(birthday: string): number {
@@ -69,8 +69,8 @@ export function SignupPage() {
     e.preventDefault();
     setError(null);
     if (!google && !photo) return setError(t('auth.photoError'));
-    if (!google && password.length < 8) return setError('Password must be at least 8 characters.');
-    if (!google && !gender) return setError('Please select your gender.');
+    if (!google && password.length < 8) return setError(t('authFlow.passwordTooShort'));
+    if (!google && !gender) return setError(t('authPage.genderRequired'));
     if (birthday && ageFrom(birthday) < 18) return setError(t('auth.ageError'));
     if (isTurnstileEnabled() && !turnstileToken) return setError(t('auth.captchaError'));
     setLoading(true);
@@ -95,7 +95,7 @@ export function SignupPage() {
       toast(t('auth.activeNote'), 'success');
       navigate('/onboarding');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create your account. Please try again.');
+      setError(err instanceof Error ? err.message : t('authPage.signupFailed'));
     } finally {
       setLoading(false);
     }
@@ -136,7 +136,7 @@ export function SignupPage() {
                 className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[12px] font-medium text-white/85 backdrop-blur-sm"
               >
                 <Icon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                {label}
+                {t(label)}
               </span>
             ))}
           </div>
@@ -201,14 +201,14 @@ export function SignupPage() {
             <form onSubmit={(e) => submit(e)} className="space-y-4">
               <Input label={t('auth.name')} placeholder="Salim" value={name} onChange={(e) => setName(e.target.value)} leftIcon={<UserIcon className="h-5 w-5" strokeWidth={1.6} />} required />
               <Input type="email" label={t('auth.email')} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail className="h-5 w-5" strokeWidth={1.6} />} required />
-              <Input type="password" label={t('auth.password')} hint="At least 8 characters" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} leftIcon={<Lock className="h-5 w-5" strokeWidth={1.6} />} minLength={8} required />
+              <Input type="password" label={t('auth.password')} hint={t('authFlow.passwordRule')} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} leftIcon={<Lock className="h-5 w-5" strokeWidth={1.6} />} minLength={8} required />
               <div className="grid grid-cols-2 gap-3">
                 <Input label={t('auth.neighborhood')} placeholder="Maârif" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} required />
                 <Input label={t('auth.zip')} placeholder="20330" value={zip} onChange={(e) => setZip(e.target.value)} required />
               </div>
               <Input type="date" label={t('auth.birthday')} value={birthday} onChange={(e) => setBirthday(e.target.value)} required />
               <div>
-                <span className="mb-1.5 block text-meta font-medium text-ink-soft">Gender</span>
+                <span className="mb-1.5 block text-meta font-medium text-ink-soft">{t('authPage.gender')}</span>
                 <div className="grid grid-cols-2 gap-3">
                   {(['MALE', 'FEMALE'] as const).map((g) => (
                     <button
@@ -220,7 +220,7 @@ export function SignupPage() {
                         gender === g ? 'border-clay bg-clay-soft text-clay' : 'border-border bg-surface text-ink-soft hover:border-ink/25',
                       )}
                     >
-                      {g === 'MALE' ? 'Male' : 'Female'}
+                      {g === 'MALE' ? t('authPage.male') : t('authPage.female')}
                     </button>
                   ))}
                 </div>

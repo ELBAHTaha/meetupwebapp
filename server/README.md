@@ -81,8 +81,11 @@ All seed users share the password: password123
 POST   /auth/signup            (multipart photo + JSON; 18+; ACTIVE immediately)
 POST   /auth/login             GET /auth/me            POST /auth/refresh   POST /auth/logout
 GET    /auth/google            GET /auth/google/callback     (optional)
+POST   /auth/forgot-password   POST /auth/reset-password     (generic response; 1h single-use token)
+POST   /auth/verify-email      POST /auth/resend-verification
 
-GET    /users/:id              PATCH /users/me
+GET    /users/:id              PATCH /users/me   (multipart `photo` replaces the avatar)
+POST   /users/:id/block        DELETE /users/:id/block       GET /users/me/blocks
 GET    /users/me/notifications  PATCH /users/me/notifications/:id/read   …/read-all
 
 GET    /activity-types         POST /activity-types          (custom)
@@ -96,6 +99,15 @@ POST   /events/:id/join        DELETE /events/:id/join
 GET    /events/:id/chat        POST /events/:id/chat/messages   (attendees only; 410 when expired)
 POST   /events/:id/ratings     GET  /events/:id/ratings/pending  (private; after end)
 POST   /reports
+GET    /conditions?lat=&lng=&at=&activity=   (Open-Meteo, cached; null when unavailable)
+
+GET    /subscriptions/me        (plan + hosting/pin allowance)
+POST   /upgrades               GET /upgrades/mine             POST /upgrades/:id/cancel
+GET    /admin/upgrade-requests  POST /admin/upgrade-requests/:id/approve   …/:id/reject
+GET    /admin/users/search?q=   POST /admin/users/:id/plan    POST /admin/businesses/:id/sponsorship
+
+WS     /socket.io              (auth: { token }) thread:join / thread:leave →
+                               message:new, chat:activity, notification:new, notification:unread
 
 GET    /admin/overview         GET /admin/flagged-users      GET /admin/reports
 PATCH  /admin/reports/:id/resolve
@@ -111,6 +123,7 @@ POST   /venues                 PATCH /venues/:id
 POST   /venues/:id/claim       POST /venues/:id/reviews
 GET    /admin/business-verifications   POST …/:id/approve   …/:id/reject
 GET    /admin/venue-claims             POST …/:id/approve   …/:id/reject
+GET    /businesses/:id/coupons/lookup?code=   POST /businesses/:id/coupons/redeem   (STAFF+)
 POST   /admin/venue-reviews/:id/flag   …/:id/remove
 GET    /health
 ```
@@ -126,8 +139,17 @@ GET    /health
 - **Ratings:** only after `endsAt`, only by participants, unique per (event, rater, ratee).
   Recomputes the ratee's `trustScore`; a 1–2★ creates a `Flag`. Flagged = trust < 2.5, flags from
   ≥2 distinct events, or ≥2 reports.
+- **Email verification:** unverified accounts can log in and browse, but creating/joining
+  activities and sending chat messages return 403 `code: EMAIL_NOT_VERIFIED`.
+- **Uploads:** jpg/png/webp only (checked by file signature, ≤5 MB), re-encoded to WebP ≤1600 px
+  with metadata stripped. Business documents may also be PDF (≤8 MB). Replaced files are deleted.
+- **Blocking:** no joins across a block, profiles/hosted activities 404 both ways, hidden from
+  each other's feed, the blocked user's chat messages are hidden from the blocker.
+- **Plans:** granted manually (offline payment) through `PlanGrantsService` and audit-logged.
+  There is no auto-renewal.
 - **Scheduler:** every 5 min completes ended events + sends rating prompts; hourly sends
-  day-before reminders and clears lapsed suspensions; nightly prunes very old chat messages.
+  day-before reminders, clears lapsed suspensions, expires plans/sponsorships and closes stale pin
+  requests; daily renewal reminders (~5 days ahead); nightly prunes very old chat messages.
 - **Business (Foundation):** a `Business` is an org; people belong via `BusinessMember`
   roles (`OWNER ⊇ MANAGER ⊇ STAFF`, enforced by `BusinessRoleGuard`). Creating a business
   makes the caller OWNER (`PENDING_VERIFICATION`); admin approves the RC/ICE submission to

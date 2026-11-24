@@ -1,198 +1,131 @@
-# Jmaâ 🇲🇦
+# hudlgo 🇲🇦
 
-> _Jemaa_ — "gathering / assembly". **The app for when you're bored and want to meet people
-> in Morocco.** Locals beat boredom and make friends; travelers find instant plans and company.
-> Activities — coffee, padel, surf, board games, hikes, language exchange, anything — are the
-> vehicle for connection. Friends and activities are framed equally.
+**hudlgo** is a Morocco-first app for meeting people through real-life activities: coffee,
+padel, surf, board games, hikes, language exchange and more. Bored locals and travellers find
+or host a small activity, join it, and chat with the group. It's a two-sided marketplace:
+consumers on one side, venues/businesses on the other (venue sponsorships, coupons).
 
-> **v0.2 — calm, photo-led redesign.** The visual language was rebuilt from scratch: warm,
-> earthy Moroccan tones, an editorial Fraunces/Inter pairing, photography-led cards, hairline
-> borders over heavy shadows, line icons (no emoji in chrome), and restraint over decoration.
-> See **Design system** below.
+Live at **https://hudlgo.com**.
 
-This is a **frontend-only** build with a clean mock-data layer. There is no backend — all
-data lives in an in-memory store seeded with realistic Moroccan content. The API module is
-designed as the single seam to replace with a real REST backend later.
+| | |
+|---|---|
+| **Frontend** | Vite · React 18 · TypeScript · Tailwind · Zustand · react-i18next (EN / FR / AR with RTL) · react-leaflet · socket.io-client |
+| **Backend** | NestJS 10 · Prisma 5 · MySQL 8 · JWT + Google OAuth · socket.io · @nestjs/schedule · sharp · Resend (email) |
+| **Infra** | One VPS running Docker Compose (api + mysql + Caddy) behind Traefik. Free tiers only. |
 
-## Run it
+- 📐 **[ARCHITECTURE.md](ARCHITECTURE.md)**: data model, modules, domain flows, monetization.
+- 🚀 **[DEPLOY.md](DEPLOY.md)**: production setup, email (Resend), backups, manual payments.
+- 🔌 **[server/README.md](server/README.md)**: backend details and API surface (Swagger at `/docs`).
+
+---
+
+## Repository layout
+
+```
+.
+├─ src/                 # frontend (React)
+│  ├─ api/              # the API seam: mock.ts (offline) ↔ remote.ts (real backend), http.ts
+│  ├─ features/         # pages: auth, discover, create, event, chat, profile, business, admin, …
+│  ├─ components/       # shared UI
+│  ├─ lib/ hooks/ store/ i18n/ types/
+├─ server/              # backend (NestJS) — prisma/schema.prisma, src/<module>/, test/ (e2e)
+├─ scripts/             # backup.sh / restore.sh for the VPS
+├─ docker-compose.prod.yml, docker-compose.traefik.yml, Caddyfile*, Dockerfile.web
+└─ deploy.sh            # used by the GitHub Actions deploy on push to main
+```
+
+## Run it locally
+
+### 1. Frontend only (offline mock)
 
 ```bash
 npm install
+npm run dev                  # http://localhost:5173
+```
+
+Without `VITE_API_URL`, everything runs on an in-memory mock seeded with Moroccan demo data.
+Login accepts anything and makes you the demo user (also an admin). No backend is needed.
+
+### 2. Full stack (real backend)
+
+```bash
+# Database: MySQL 8 in Docker on :3307 (user jmaa / jmaa, root / root)
+docker compose -f server/docker-compose.yml up -d mysql
+
+# Backend
+cd server
+cp .env.example .env         # point DATABASE_URL at the DB above
+npm install
+npx prisma migrate deploy
+npm run seed                 # ⚠️ demo data, wipes tables — never on production
+npm run start:dev            # http://localhost:4000 · Swagger /docs · socket.io /socket.io
+
+# Frontend (from the repo root)
+echo "VITE_API_URL=http://localhost:4000" > .env
 npm run dev
 ```
 
-Open the printed local URL (default http://localhost:5173). On a phone-sized viewport you get
-the bottom tab bar; on desktop a centered shell with a top nav.
+Seeded logins (password `password123`): admin `you@jmaa.app`, user `lena@jmaa.app`, business
+`venue@jmaa.app`. With the placeholder `RESEND_API_KEY=re_xxx`, emails are printed to the API
+console instead of sent. That includes the email-verification and password-reset links.
 
-Other scripts:
+## Scripts
 
-```bash
-npm run build     # typecheck (tsc --noEmit) + production build
-npm run preview   # preview the production build
-npm run lint      # type-only check
-```
+| Where | Command | What it does |
+|---|---|---|
+| root | `npm run dev` / `build` / `preview` | Vite dev server / typecheck + production build / preview |
+| root | `npm run lint` | Type check (`tsc --noEmit`) |
+| server | `npm run start:dev` | Nest in watch mode |
+| server | `npm run build` / `start:prod` | Compile / run `dist/main.js` |
+| server | `npm run lint` | Type check |
+| server | `npm run seed` | Demo seed (destructive). Production uses `seed.prod` automatically. |
+| server | `npm run test:e2e` | End-to-end tests (need a migrated + seeded MySQL in `DATABASE_URL`) |
+| server | `npx prisma migrate deploy` | Apply migrations (additive only — never edit `0_init`) |
 
-> **Demo auth:** login/signup accept anything. "Sign up" collects the new profile fields then
-> runs onboarding (here-for → city → activities → levels → traveler?). "Log in" drops you straight
-> in as the seeded demo user **"You"** (Casablanca). That user is also the seeded **admin**, so
-> **/admin** is reachable and the **Settings → Admin panel** entry appears. A floating **Dev**
-> button (bottom-left) fast-forwards the reminder / start / rating lifecycle without waiting.
-> The seed includes a flagged + reported user (**Tom**) and a just-ended activity so ratings,
-> flagging, and chat-expiry are immediately demoable.
+## Environment variables
 
-## Tech stack
+**Frontend** (`.env`, baked in at build time):
 
-| Concern        | Choice                                            |
-| -------------- | ------------------------------------------------- |
-| Build / app    | Vite + React 18 + TypeScript                      |
-| Styling        | Tailwind CSS (theme tokens in `tailwind.config.js`) |
-| Routing        | React Router                                      |
-| State          | Zustand (`session`, `toast`)                      |
-| Maps           | react-leaflet + OpenStreetMap (CARTO **Positron** tiles, **no API key**) |
-| i18n           | react-i18next — EN + FR populated, AR (Darija) stub |
-| Icons          | lucide-react line icons (1.5px stroke; no emoji in chrome) |
-| Imagery        | curated `images.unsplash.com` URLs via `src/lib/imagery.ts` |
-| Dates          | date-fns                                          |
+| Var | Purpose |
+|---|---|
+| `VITE_API_URL` | Backend base URL. Leave it empty to run on the offline mock. |
+| `VITE_TURNSTILE_SITE_KEY` | Optional Cloudflare Turnstile CAPTCHA on signup |
 
-## Design system (v0.2)
+**Backend** (`server/.env`, production `.env.prod`; see the `.example` files):
 
-All tokens live in `tailwind.config.js`. Neutrals do ~85% of the work; **clay is the only
-color on primary actions** and no view shows more than two accent colors.
+| Var | Purpose |
+|---|---|
+| `DATABASE_URL` | MySQL connection string |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_*_TTL` | Auth tokens |
+| `FRONTEND_URL` | CORS allow-list for REST and WebSockets (comma-separated) |
+| `APP_URL` | Frontend base URL used in email links |
+| `PUBLIC_URL`, `UPLOADS_DIR` | Public API URL (upload links) and the upload folder |
+| `RESEND_API_KEY`, `MAIL_FROM` | Email via Resend (`re_xxx` logs emails instead of sending them) |
+| `PAYMENT_INSTRUCTIONS_EN` / `_FR` / `_AR` | Offline-payment instructions shown with upgrade requests |
+| `GOOGLE_CLIENT_ID` / `_SECRET` / `_CALLBACK_URL` | Optional Google sign-in |
+| `TURNSTILE_SECRET_KEY` | Optional CAPTCHA verification |
+| `THROTTLE_TTL`, `THROTTLE_LIMIT` | Global rate limit |
+| `RCLONE_REMOTE` *(VPS only)* | Optional off-site backup target for `scripts/backup.sh` |
 
-**Color** — `bg #FBF8F2` (warm bone canvas) · `surface #FFF` · `surface-sunk #F3EDE2` ·
-`border #E7DFD2` · `ink #2B2620` / `ink-soft #6F6557` / `ink-faint #9C9384` ·
-**`clay #C2502E` (primary)** · `olive #5F6342` (secondary) · `saffron #D89A34` (ratings/badges) ·
-`majorelle #2E5A87` (rare jewel/links). Status colors derive from olive/saffron/clay.
+## Key ideas
 
-**Type** — `Fraunces` (serif) for display/headings, `Inter` for body/UI. ~6 sizes
-(`display 36 / h1 26 / h2 20 / h3 17 / base 16 / meta 13`).
+- **One API seam.** `src/api/index.ts` exposes `{ ...mock, ...remote }`. Every network
+  function must exist in **both** `mock.ts` and `remote.ts`, or production silently shows mock
+  data. The only intentional mock-only exports are `canStart` (a pure helper) and
+  `devTriggerLifecycle` (dev panel).
+- **Accounts & safety:** email verification (required to host, join or chat), password reset,
+  identity selfie verification, private ratings → trust score, reports, blocking, and admin
+  moderation.
+- **Real-time chat:** socket.io rooms per activity. REST stays the only write path.
+- **Payments are offline.** Customers request an upgrade and pay by bank transfer, CashPlus or
+  cash using a reference code. An admin activates the plan. There is no payment gateway and no
+  auto-renewal (see ARCHITECTURE §6).
+- **Uploads** stay on the VPS disk, validated and re-encoded to WebP with metadata stripped.
+  Daily backups can be copied off-site to Google Drive (DEPLOY §9).
+- **i18n:** every user-facing string goes through `t()` with keys in `src/i18n/{en,fr,ar}.json`.
+  Arabic is right-to-left (logical Tailwind classes: `ms-`/`pe-`/`start-`/`text-start`…).
 
-**Shape & elevation** — varied radii (`image/card 12px`, `input 10px`, pills full,
-`sheet 20px`); hairline `border` + whitespace preferred over shadows, with one subtle `shadow-e1`
-token for sheets/popovers.
+## Deploying
 
-**Imagery** — `src/lib/imagery.ts` maps every activity, group and seed spot to a warm Unsplash
-photo (standardized 3:2, `object-cover`, lazy, optional bottom-up scrim). `<SmartImage>`
-degrades gracefully to a tonal block + line icon if any URL fails, so the UI never shows a
-broken image. The activity-color system (`src/lib/activityColors.ts`) is a muted 3-tone family
-(clay = sport, olive = outdoor, majorelle = social).
-
-**Motion** — 150–250ms ease-out; image hover = gentle 1.03 zoom; sheets slide; no bounce.
-`prefers-reduced-motion` is respected.
-
-## What's built
-
-**Auth & onboarding** — landing/hero, mocked login & signup, 4-step onboarding.
-**Discover** — personalized feed (ordering tuned by `lookingFor`), search, **intent-collection
-rail** ("Free tonight", "Coffee & conversation", "Get moving", "New in town", "Travelers
-welcome", "Chill & social"), photo-led card grid, filter sheet (type, vibe, date, skill,
-open-spots-only, travelers-welcome), city switcher.
-**Map** — all city events as activity-colored Leaflet pins, tap → mini card, list/map toggle.
-**Create event** — 5-step flow: pick activity **or create a custom one**, place (saved spot
-or tap-the-map point), date/time/duration, details (capacity, **minimum players**, skill,
-price, description, travelers, visibility), review & publish.
-**Event detail** — full info, live conditions widget for outdoor events, host card, who's
-going + waitlist, embedded map, RSVP button with full state logic, group-chat link, share,
-report.
-**Chat** — event group chats + DMs, message bubbles with optimistic send.
-**Profile** — own & other-user profiles, activities + levels, badges, ratings/reviews,
-hosting/going/past tabs, edit profile, settings (language switcher EN/FR/Darija).
-**Secondary** — notifications, 404, skeletons & playful empty states throughout.
-
-### Product & schema additions (v0.2)
-
-- **Expanded catalog** — alongside sport/outdoor activities there's a **Social & chill** group
-  (coffee, board games, language exchange, co-working, city walks, dinner, book club, live music,
-  art, volunteering, photo walks), each with seeded events and photos. "Create your own activity"
-  is retained (now with a line-icon picker, type and vibe).
-- **Type extensions** (non-breaking, in `src/types/`): `Activity` gains `group`
-  (`'sport' | 'outdoor' | 'social'`) and `vibe` (`'chill' | 'active'`); `Event` gains an optional
-  `vibe`; `User` gains `lookingFor` (`'partners' | 'friends' | 'both'`). The granular
-  `category` field is preserved; `group` is the new high-level axis. `EventFilters` gains
-  `group`/`vibe`/`collection`.
-- **Onboarding** adds a "What are you here for?" step feeding `lookingFor`, which personalizes
-  Discover copy and ordering.
-
-### Trust, lifecycle & moderation (v0.3)
-
-This build adds the social-safety layer — **de-gated** (no SMS, no approval queues):
-
-- **Signup** collects name, email/password **or** mocked Google, required **profile photo**
-  (local-preview stub; face checks deferred to backend), neighborhood + ZIP, a **client-side
-  18+ check**, and optional unverified **phone**. Accounts are **active immediately**.
-- **Landing** leads with "Meet locals IRL", a **read-only preview** of live activities (cards
-  prompt sign-up), and **Join an activity / Host an activity** CTAs.
-- **Hosting goes live instantly** — no pending state. The form enforces: title ≤ 60 chars,
-  capacity **2–12**, **starts > 4 h from now** (no same-day), optional **gender preference**,
-  and a required **"public place" confirmation** with a soft private-home keyword warning.
-- **Joining** checks the account is active (suspended/banned are blocked) and shows a
-  "Meeting at X, Sat 2pm — see you there!" confirmation. Waitlist/team-minimum logic is unchanged.
-- **Activity lifecycle** (simulated client-side, surfaced as in-app notifications): day-before
-  reminders, a host **"Start activity"** action (enabled 30 min before; prompts a "how to spot
-  me" note → attendees notified), and a post-event **private rating** flow (host↔attendee, 1–5).
-  A floating **Dev** panel fast-forwards reminders / start / completion so every flow is testable
-  without waiting.
-- **Trust score** = average of received private ratings (default 5.0), shown subtly on profiles.
-  A 1–2★ rating **flags** the user; **≥2 flags from different activities** (or trust < 2.5, or
-  ≥2 reports) surfaces them in the admin **Flagged** list.
-- **Reporting** from the group chat, event page, or a profile captures a reason + linked chat log.
-- **Group chats** are attendees-only and **auto-expire 24 h after the activity ends**
-  (`expiresAt = endsAt + 24h`) — expired threads are hidden and the composer is disabled.
-- **Reactive `/admin`** (role-gated; seed admin is **u1 / "You"**, non-admins redirected):
-  overview counts, a **Reports** tab (with chat-log viewer + resolve) and a **Flagged** tab
-  (**Warn / Suspend 7 days / Ban**). No approval tabs. Suspensions auto-lapse.
-
-> **Data model:** `User` gains `status` (`active|suspended|banned`), `role`, `trustScore`,
-> `flagCount`, `neighborhood/zip/birthday/phone?`. The meetup (`JmaaEvent`) keeps its RSVP
-> `status` machine and adds a separate **`lifecycle`** (`live|completed|cancelled`),
-> `genderPreference`, `endsAt`, `startedAt`, `hostSpotNote`. New `Rating` and `Report` entities;
-> `ChatThread` gains `expiresAt`. New fields are normalized at store-load so the existing seed
-> literals stay valid. See **`src/api/ENDPOINTS.md`** for the full REST mapping.
-
-### Core feature logic
-
-- **RSVP states:** `not_joined → joined → waitlisted → host → past`. Joining decrements open
-  spots; leaving frees a spot and **promotes the first waitlisted person**.
-- **Team-sport minimums:** events stay `PENDING` until `minPlayers` is reached, then flip to
-  `CONFIRMED`. Cards and detail show _"Needs N more to confirm"_ — the killer mechanic for
-  football/padel.
-- **Capacity & waitlist:** when full, new joiners are waitlisted with their position shown.
-- **Custom activities** persist in the store and immediately appear in the catalog & filters.
-- **Conditions** (swell/wind/temp/water) surface only for outdoor/weather-dependent activities.
-- **Travelers-welcome** flag is both a card badge and a Discover filter.
-- **Trust & safety (UI):** verified badges, post-event reviews, report button, public meeting
-  point on the map.
-
-## Project structure
-
-```
-src/
-  api/         # mock API + in-memory store + seed data + activity catalog
-  components/  # reusable UI primitives (Button, Chip, EventCard, MapView, …)
-  features/    # feature folders: auth, discover, map, event, create, chat, profile, …
-  hooks/       # useAsync
-  store/       # zustand stores (session, toast)
-  i18n/        # react-i18next config + en/fr/ar JSON
-  routes/      # router config
-  types/       # shared TS types
-  lib/         # helpers (format, distance, classnames, activity colors)
-  styles/      # tailwind entry + base styles
-```
-
-## Swapping in a real backend
-
-`src/api/index.ts` is the **single seam**. Every exported function (`listEvents`, `getEvent`,
-`createEvent`, `joinEvent`, `leaveEvent`, `createCustomActivity`, `getConditions`,
-`listThreads`, `sendMessage`, `login`, `getCurrentUser`, …) returns a `Promise` and maps 1:1
-to a future REST endpoint. Replace the bodies (which read/write `src/api/store.ts`) with real
-`fetch` calls and the UI keeps working unchanged. The TypeScript types in `src/types/` already
-mirror the intended API payloads.
-
-## Notes
-
-- RTL isn't wired up yet, but strings go through `t()` and layout avoids hardcoded direction so
-  it won't block an Arabic RTL pass later.
-- The mock store is session-scoped (resets on reload); only auth/onboarding/city/language
-  persist via `localStorage`.
-#   m e e t u p w e b a p p  
- 
+A push to `main` deploys to production through `.github/workflows/deploy.yml` → `deploy.sh`.
+Work on a branch and merge only when it's ready to ship. See [DEPLOY.md](DEPLOY.md).

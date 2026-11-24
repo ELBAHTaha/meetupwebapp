@@ -65,7 +65,7 @@ export function NotificationsPage() {
                 <button
                   key={n.id}
                   onClick={() => n.eventId && navigate(`/event/${n.eventId}`)}
-                  className={cn('flex w-full items-start gap-3 rounded-card border p-3.5 text-left transition-colors cursor-pointer', n.read ? 'border-border bg-surface' : 'border-clay/20 bg-clay-soft/50 hover:bg-clay-soft')}
+                  className={cn('flex w-full items-start gap-3 rounded-card border p-3.5 text-start transition-colors cursor-pointer', n.read ? 'border-border bg-surface' : 'border-clay/20 bg-clay-soft/50 hover:bg-clay-soft')}
                 >
                   <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-[10px]', n.read ? 'bg-surface-sunk text-ink-soft' : 'bg-clay-soft text-clay')}>
                     <Icon className="h-5 w-5" strokeWidth={1.6} />

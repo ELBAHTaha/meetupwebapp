@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, MapPin } from 'lucide-react';
 import { CITIES } from '@/api/catalog';
 import { cn } from '@/lib/cn';
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function CitySelector({ city, onChange }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -49,8 +51,8 @@ export function CitySelector({ city, onChange }: Props) {
       {open && (
         <div
           role="listbox"
-          aria-label="Choose a city"
-          className="absolute left-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-2.5rem))] origin-top rounded-card border border-border bg-surface p-2 shadow-e1 animate-fade-in"
+          aria-label={t('a11y.chooseCity')}
+          className="absolute start-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-2.5rem))] origin-top rounded-card border border-border bg-surface p-2 shadow-e1 animate-fade-in"
         >
           <div className="grid grid-cols-2 gap-1.5">
             {CITIES.map((c) => {
@@ -65,7 +67,7 @@ export function CitySelector({ city, onChange }: Props) {
                     setOpen(false);
                   }}
                   className={cn(
-                    'flex items-center gap-2 rounded-input border p-2.5 text-left text-meta font-medium transition-colors cursor-pointer',
+                    'flex items-center gap-2 rounded-input border p-2.5 text-start text-meta font-medium transition-colors cursor-pointer',
                     active
                       ? 'border-clay bg-clay-soft text-clay'
                       : 'border-transparent text-ink-soft hover:border-border hover:bg-surface-sunk',

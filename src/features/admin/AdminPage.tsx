@@ -123,7 +123,7 @@ export function AdminPage() {
             ) : analytics.data ? (
               <AnalyticsDashboard data={analytics.data} />
             ) : (
-              <EmptyState icon={BarChart3} title="No analytics yet" />
+              <EmptyState icon={BarChart3} title={t('adminA.noAnalytics')} />
             ))}
 
           {tab === 'upgrades' && <UpgradeRequestsTab onChanged={bumpData} />}
@@ -262,7 +262,7 @@ export function AdminPage() {
               );
             })
           ) : (
-            <p className="text-meta text-ink-soft">No chat log linked.</p>
+            <p className="text-meta text-ink-soft">{t('adminA.noChatLog')}</p>
           )}
         </div>
       </Sheet>
@@ -301,7 +301,7 @@ function FeedbackCard({ item, onResolve }: { item: AdminFeedback; onResolve: () 
         </div>
       </div>
       {item.resolved ? (
-        <p className="mt-2 text-right text-[12px] font-medium text-olive">{t('admin.feedbackDone')}</p>
+        <p className="mt-2 text-end text-[12px] font-medium text-olive">{t('admin.feedbackDone')}</p>
       ) : (
         <div className="mt-3 flex justify-end">
           <Button size="sm" variant="outline" onClick={onResolve} leftIcon={<Check className="h-4 w-4" strokeWidth={1.8} />}>
@@ -317,7 +317,7 @@ function VerificationCard({ item, onApprove, onReject, onOpen }: { item: AdminVe
   const { t } = useTranslation();
   return (
     <div className="rounded-card border border-border bg-surface p-4">
-      <button onClick={onOpen} className="flex w-full items-center gap-3 text-left cursor-pointer">
+      <button onClick={onOpen} className="flex w-full items-center gap-3 text-start cursor-pointer">
         <Avatar src={item.user.avatar} name={item.user.name} size="md" verified={item.user.verified} />
         <div className="flex-1">
           <p className="font-display text-h3 font-medium text-ink">{item.user.name}</p>
@@ -416,27 +416,28 @@ function money(cents: number): string {
 }
 
 function AnalyticsDashboard({ data }: { data: AdminAnalytics }) {
+  const { t } = useTranslation();
   const { totals, growth, engagement, moderation, monetization, activityStatus, topActivities, topCities, signupsByDay, activitiesByDay } = data;
   return (
     <div className="space-y-4">
       {/* KPI grid */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi icon={Users} label="Total users" value={totals.users.toLocaleString()} sub={`+${growth.newUsers7d} this week`} />
-        <Kpi icon={CalendarRange} label="Activities" value={totals.activities.toLocaleString()} sub={`${totals.liveActivities} live now`} />
-        <Kpi icon={DollarSign} label="Est. MRR" value={money(monetization.mrrCents)} sub={`${totals.subscribers} subscribers`} accent />
-        <Kpi icon={TrendingUp} label="Joins / week" value={growth.joins7d.toLocaleString()} sub={`${growth.messages7d} messages`} />
-        <Kpi icon={Crown} label="Pro hosts" value={monetization.hostPro.toLocaleString()} sub="49 MAD/mo" />
-        <Kpi icon={Store} label="Businesses" value={totals.businesses.toLocaleString()} sub={`${totals.approvedBusinesses} approved`} />
-        <Kpi icon={ShieldCheck} label="Avg trust" value={engagement.avgTrust.toFixed(2)} sub={`${engagement.activeHosts} active hosts`} />
-        <Kpi icon={Activity} label="Avg / activity" value={engagement.avgAttendeesPerActivity.toFixed(1)} sub={`${totals.attendances} total joins`} />
+        <Kpi icon={Users} label={t('adminA.totalUsers')} value={totals.users.toLocaleString()} sub={t('adminA.thisWeek', { n: growth.newUsers7d })} />
+        <Kpi icon={CalendarRange} label={t('adminA.activities')} value={totals.activities.toLocaleString()} sub={t('adminA.liveNow', { n: totals.liveActivities })} />
+        <Kpi icon={DollarSign} label={t('adminA.mrr')} value={money(monetization.mrrCents)} sub={t('adminA.subscribers', { n: totals.subscribers })} accent />
+        <Kpi icon={TrendingUp} label={t('adminA.joinsWeek')} value={growth.joins7d.toLocaleString()} sub={t('adminA.messages', { n: growth.messages7d })} />
+        <Kpi icon={Crown} label={t('adminA.proHosts')} value={monetization.hostPro.toLocaleString()} sub={`49 MAD${t('pricing.perMonth')}`} />
+        <Kpi icon={Store} label={t('adminA.businesses')} value={totals.businesses.toLocaleString()} sub={t('adminA.approvedN', { n: totals.approvedBusinesses })} />
+        <Kpi icon={ShieldCheck} label={t('adminA.avgTrust')} value={engagement.avgTrust.toFixed(2)} sub={t('adminA.activeHosts', { n: engagement.activeHosts })} />
+        <Kpi icon={Activity} label={t('adminA.avgPerActivity')} value={engagement.avgAttendeesPerActivity.toFixed(1)} sub={t('adminA.totalJoins', { n: totals.attendances })} />
       </div>
 
       {/* Trend charts */}
       <div className="grid gap-3 md:grid-cols-2">
-        <ChartCard title="New signups" subtitle="Last 14 days" total={growth.newUsers30d} totalLabel="30d">
+        <ChartCard title={t('adminA.newSignups')} subtitle={t('adminA.last14')} total={growth.newUsers30d} totalLabel="30d">
           <MiniBars data={signupsByDay} colorClass="bg-clay" />
         </ChartCard>
-        <ChartCard title="New activities" subtitle="Last 14 days" total={growth.newActivities7d} totalLabel="7d">
+        <ChartCard title={t('adminA.newActivities')} subtitle={t('adminA.last14')} total={growth.newActivities7d} totalLabel="7d">
           <MiniBars data={activitiesByDay} colorClass="bg-majorelle" />
         </ChartCard>
       </div>
@@ -444,44 +445,44 @@ function AnalyticsDashboard({ data }: { data: AdminAnalytics }) {
       {/* Monetization + moderation */}
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-card border border-border bg-surface p-4">
-          <p className="font-display text-h3 font-medium">Revenue</p>
-          <p className="mt-1 font-display text-display font-medium leading-none text-olive">{money(monetization.mrrCents)}<span className="ml-1.5 text-meta font-normal text-ink-soft">/mo est.</span></p>
+          <p className="font-display text-h3 font-medium">{t('adminA.revenue')}</p>
+          <p className="mt-1 font-display text-display font-medium leading-none text-olive">{money(monetization.mrrCents)}<span className="ms-1.5 text-meta font-normal text-ink-soft">{t('adminA.perMonthEst')}</span></p>
           <div className="mt-3 space-y-1.5">
-            <Line label="Pro hosts (49 MAD)" value={monetization.hostPro} />
-            <Line label="Paid extra activities (19.90 MAD)" value={monetization.paidExtras} />
+            <Line label={t('adminA.lineProHosts')} value={monetization.hostPro} />
+            <Line label={t('adminA.linePaidExtras')} value={monetization.paidExtras} />
             <div className="!mt-2.5 border-t border-border pt-2.5">
-              <Line label="Starter venues (199 MAD)" value={monetization.businessTiers.starter} />
-              <Line label="Bronze venues (490 MAD)" value={monetization.businessTiers.bronze} />
-              <Line label="Silver venues (990 MAD)" value={monetization.businessTiers.silver} />
-              <Line label="Gold venues (1990 MAD)" value={monetization.businessTiers.gold} />
+              <Line label={t('adminA.lineStarter')} value={monetization.businessTiers.starter} />
+              <Line label={t('adminA.lineBronze')} value={monetization.businessTiers.bronze} />
+              <Line label={t('adminA.lineSilver')} value={monetization.businessTiers.silver} />
+              <Line label={t('adminA.lineGold')} value={monetization.businessTiers.gold} />
             </div>
           </div>
         </div>
 
         <div className="rounded-card border border-border bg-surface p-4">
-          <p className="font-display text-h3 font-medium">Moderation</p>
+          <p className="font-display text-h3 font-medium">{t('adminA.moderation')}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <MiniStat label="Open reports" value={moderation.openReports} tone="clay" />
-            <MiniStat label="Pending approval" value={moderation.pendingApproval} tone="saffron" />
-            <MiniStat label="Under review" value={moderation.underReview} tone="majorelle" />
-            <MiniStat label="Flagged users" value={moderation.flaggedUsers} tone="clay" />
-            <MiniStat label="Suspended" value={moderation.suspended} tone="ink" />
-            <MiniStat label="Banned" value={moderation.banned} tone="ink" />
-            <MiniStat label="Resolved" value={moderation.resolvedReports} tone="olive" />
+            <MiniStat label={t('admin.openReports')} value={moderation.openReports} tone="clay" />
+            <MiniStat label={t('adminA.pendingApproval')} value={moderation.pendingApproval} tone="saffron" />
+            <MiniStat label={t('adminA.underReview')} value={moderation.underReview} tone="majorelle" />
+            <MiniStat label={t('admin.flaggedUsers')} value={moderation.flaggedUsers} tone="clay" />
+            <MiniStat label={t('adminA.suspended')} value={moderation.suspended} tone="ink" />
+            <MiniStat label={t('adminA.banned')} value={moderation.banned} tone="ink" />
+            <MiniStat label={t('adminA.resolved')} value={moderation.resolvedReports} tone="olive" />
           </div>
         </div>
       </div>
 
       {/* Activity status split */}
       <div className="rounded-card border border-border bg-surface p-4">
-        <p className="font-display text-h3 font-medium">Activity status</p>
+        <p className="font-display text-h3 font-medium">{t('adminA.activityStatus')}</p>
         <StatusBar live={activityStatus.live} completed={activityStatus.completed} cancelled={activityStatus.cancelled} />
       </div>
 
       {/* Breakdowns */}
       <div className="grid gap-3 md:grid-cols-2">
-        <RankCard title="Top activity types" items={topActivities} colorClass="bg-clay" />
-        <RankCard title="Top areas" items={topCities} colorClass="bg-majorelle" />
+        <RankCard title={t('adminA.topActivities')} items={topActivities} colorClass="bg-clay" />
+        <RankCard title={t('adminA.topAreas')} items={topCities} colorClass="bg-majorelle" />
       </div>
     </div>
   );
@@ -506,7 +507,7 @@ function ChartCard({ title, subtitle, total, totalLabel, children }: { title: st
           <p className="font-display text-h3 font-medium">{title}</p>
           <p className="text-[12px] text-ink-faint">{subtitle}</p>
         </div>
-        <p className="text-meta font-semibold text-ink">{total}<span className="ml-1 text-[11px] font-normal text-ink-faint">{totalLabel}</span></p>
+        <p className="text-meta font-semibold text-ink">{total}<span className="ms-1 text-[11px] font-normal text-ink-faint">{totalLabel}</span></p>
       </div>
       <div className="mt-3">{children}</div>
     </div>
@@ -553,6 +554,7 @@ function MiniStat({ label, value, tone }: { label: string; value: number; tone: 
 }
 
 function StatusBar({ live, completed, cancelled }: { live: number; completed: number; cancelled: number }) {
+  const { t } = useTranslation();
   const total = Math.max(1, live + completed + cancelled);
   const seg = (n: number) => `${(n / total) * 100}%`;
   return (
@@ -563,9 +565,9 @@ function StatusBar({ live, completed, cancelled }: { live: number; completed: nu
         <div className="bg-clay" style={{ width: seg(cancelled) }} />
       </div>
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
-        <Legend dot="bg-olive" label="Live" value={live} />
-        <Legend dot="bg-majorelle" label="Completed" value={completed} />
-        <Legend dot="bg-clay" label="Cancelled" value={cancelled} />
+        <Legend dot="bg-olive" label={t('businessChat.status.live')} value={live} />
+        <Legend dot="bg-majorelle" label={t('businessChat.status.completed')} value={completed} />
+        <Legend dot="bg-clay" label={t('businessChat.status.cancelled')} value={cancelled} />
       </div>
     </div>
   );
@@ -581,17 +583,18 @@ function Legend({ dot, label, value }: { dot: string; label: string; value: numb
 }
 
 function RankCard({ title, items, colorClass }: { title: string; items: NamedCount[]; colorClass: string }) {
+  const { t } = useTranslation();
   const max = Math.max(1, ...items.map((i) => i.count));
   return (
     <div className="rounded-card border border-border bg-surface p-4">
       <p className="font-display text-h3 font-medium">{title}</p>
       <div className="mt-3 space-y-2">
-        {items.length === 0 && <p className="text-meta text-ink-faint">No data yet.</p>}
+        {items.length === 0 && <p className="text-meta text-ink-faint">{t('adminA.noData')}</p>}
         {items.map((i) => (
           <div key={i.label}>
             <div className="flex items-center justify-between text-[12px]">
               <span className="truncate text-ink-soft">{i.label}</span>
-              <span className="ml-2 font-semibold text-ink">{i.count}</span>
+              <span className="ms-2 font-semibold text-ink">{i.count}</span>
             </div>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunk">
               <div className={cn('h-full rounded-full', colorClass)} style={{ width: `${(i.count / max) * 100}%` }} />
@@ -705,7 +708,7 @@ function FlaggedCard({
   const { t } = useTranslation();
   return (
     <div className="rounded-card border border-border bg-surface p-4">
-      <button onClick={onOpen} className="flex w-full items-center gap-3 text-left cursor-pointer">
+      <button onClick={onOpen} className="flex w-full items-center gap-3 text-start cursor-pointer">
         <Avatar src={user.avatar} name={user.name} size="md" verified={user.verified} />
         <div className="flex-1">
           <p className="font-display text-h3 font-medium text-ink">{user.name}</p>

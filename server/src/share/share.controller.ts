@@ -42,7 +42,7 @@ export class ShareController {
         .type('html')
         .send(
           shell({
-            title: 'Jmaâ — meet people through real activities',
+            title: 'hudlgo — meet people through real activities',
             description: 'Find or host coffee, padel, surf, hikes and more across Morocco.',
             image: ogImageForActivity(null),
             canonical,
@@ -70,7 +70,7 @@ export class ShareController {
     res.type('html').send(
       shell({
         title: e.title,
-        description: `${e.activityType.name} · ${area} · ${when}. ${going} going${spotsText} — join on Jmaâ.`,
+        description: `${e.activityType.name} · ${area} · ${when}. ${going} going${spotsText} — join on hudlgo.`,
         image: ogImageForActivity(e.activityType.slug),
         canonical,
         redirect: appUrl,
@@ -116,7 +116,7 @@ function shell(m: OgMeta): string {
 <meta name="description" content="${description}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Jmaâ">
+<meta property="og:site_name" content="hudlgo">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
 <meta property="og:image" content="${image}">
@@ -128,7 +128,7 @@ function shell(m: OgMeta): string {
 <meta http-equiv="refresh" content="0; url=${redirect}">
 </head>
 <body>
-<p>Redirecting to <a href="${redirect}">Jmaâ</a>…</p>
+<p>Redirecting to <a href="${redirect}">hudlgo</a>…</p>
 </body>
 </html>`;
 }

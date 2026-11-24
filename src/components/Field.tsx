@@ -34,11 +34,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <FieldWrap label={label} hint={hint}>
       <div className="relative">
         {leftIcon && (
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint">
+          <span className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-faint">
             {leftIcon}
           </span>
         )}
-        <input ref={ref} className={cn(baseInput, !!leftIcon && 'pl-11', className)} {...rest} />
+        <input ref={ref} className={cn(baseInput, !!leftIcon && 'ps-11', className)} {...rest} />
       </div>
     </FieldWrap>
   );

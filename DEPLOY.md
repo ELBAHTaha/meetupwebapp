@@ -1,4 +1,4 @@
-# Deploying Jmaâ to production
+# Deploying hudlgo to production
 
 A single-VPS, Docker-based deployment. Paid plans are paid **offline** and
 activated by an admin (no payment gateway — see §10). Three containers behind one
@@ -53,7 +53,7 @@ docker --version && docker compose version
 ## 4. Get the code onto the VPS
 
 ```bash
-git clone <your-repo-url> jmaa && cd jmaa
+git clone <your-repo-url> meetupwebapp && cd meetupwebapp
 # (or: scp/rsync this folder up if the repo isn't pushed anywhere)
 ```
 

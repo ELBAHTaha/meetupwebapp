@@ -58,21 +58,21 @@ export function SettingsPage() {
           <span className={cn('grid h-10 w-10 place-items-center rounded-[10px]', verifyStatus === 'verified' ? 'bg-olive-soft text-olive' : 'bg-majorelle-soft text-majorelle')}>
             {verifyStatus === 'verified' ? <BadgeCheck className="h-5 w-5" strokeWidth={1.7} /> : <ShieldCheck className="h-5 w-5" strokeWidth={1.6} />}
           </span>
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             <p className="font-display text-h3 font-medium">{t('profile.verifyTitle')}</p>
             <p className="text-[12px] text-ink-soft">{verifyHint}</p>
           </div>
-          <ChevronRight className="h-5 w-5 text-ink-faint" strokeWidth={1.6} />
+          <ChevronRight className="h-5 w-5 text-ink-faint rtl:-scale-x-100" strokeWidth={1.6} />
         </button>
 
         {/* Admins reach the panel from the top navigation bar (admin-only link). */}
         <button onClick={() => navigate('/pricing')} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors">
           <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-saffron-soft text-saffron"><Crown className="h-5 w-5" strokeWidth={1.6} /></span>
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             <p className="font-display text-h3 font-medium">{t('profile.plans')}</p>
             <p className="text-[12px] text-ink-soft">{t('profile.plansHint')}</p>
           </div>
-          <ChevronRight className="h-5 w-5 text-ink-faint" strokeWidth={1.6} />
+          <ChevronRight className="h-5 w-5 text-ink-faint rtl:-scale-x-100" strokeWidth={1.6} />
         </button>
 
         <button onClick={() => navigate('/settings/blocked')} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors">
@@ -86,49 +86,49 @@ export function SettingsPage() {
 
         <button onClick={() => setLangOpen(true)} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors">
           <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-clay-soft text-clay"><Globe className="h-5 w-5" strokeWidth={1.6} /></span>
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             <p className="font-display text-h3 font-medium">{t('profile.language')}</p>
             <p className="text-[12px] text-ink-soft">{current.flag} {current.label}</p>
           </div>
-          <ChevronRight className="h-5 w-5 text-ink-faint" strokeWidth={1.6} />
+          <ChevronRight className="h-5 w-5 text-ink-faint rtl:-scale-x-100" strokeWidth={1.6} />
         </button>
 
         <button onClick={toggleTheme} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors">
           <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-surface-sunk text-ink-soft">
             {dark ? <Moon className="h-5 w-5" strokeWidth={1.6} /> : <Sun className="h-5 w-5" strokeWidth={1.6} />}
           </span>
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             <p className="font-display text-h3 font-medium">{t('profile.theme')}</p>
             <p className="text-[12px] text-ink-soft">{dark ? t('profile.themeDark') : t('profile.themeLight')}</p>
           </div>
-          <span className={cn('relative h-6 w-11 rounded-full transition-colors', dark ? 'bg-clay' : 'bg-border')}>
+          <span dir="ltr" className={cn('relative h-6 w-11 rounded-full transition-colors', dark ? 'bg-clay' : 'bg-border')}>
             <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform', dark ? 'translate-x-[22px]' : 'translate-x-0.5')} />
           </span>
         </button>
 
         <button onClick={toggleEmail} disabled={savingEmail} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors disabled:opacity-60">
           <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-majorelle-soft text-majorelle"><Bell className="h-5 w-5" strokeWidth={1.6} /></span>
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             <p className="font-display text-h3 font-medium">{t('profile.emailTitle')}</p>
             <p className="text-[12px] text-ink-soft">{t('profile.emailHint')}</p>
           </div>
-          <span className={cn('relative h-6 w-11 rounded-full transition-colors', emailOn ? 'bg-clay' : 'bg-border')}>
+          <span dir="ltr" className={cn('relative h-6 w-11 rounded-full transition-colors', emailOn ? 'bg-clay' : 'bg-border')}>
             <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform', emailOn ? 'translate-x-[22px]' : 'translate-x-0.5')} />
           </span>
         </button>
 
-        <button onClick={() => { logout(); navigate('/'); toast('Logged out', 'info'); }} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-clay cursor-pointer hover:bg-clay-soft transition-colors">
+        <button onClick={() => { logout(); navigate('/'); toast(t('a11y.loggedOut'), 'info'); }} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-clay cursor-pointer hover:bg-clay-soft transition-colors">
           <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-clay-soft text-clay"><LogOut className="h-5 w-5" strokeWidth={1.6} /></span>
-          <p className="flex-1 text-left font-display text-h3 font-medium">{t('profile.logout')}</p>
+          <p className="flex-1 text-start font-display text-h3 font-medium">{t('profile.logout')}</p>
         </button>
 
-        <p className="pt-4 text-center text-[12px] text-ink-faint">hudlgo · demo build · v0.2.0</p>
+        <p className="pt-4 text-center text-[12px] text-ink-faint">hudlgo · v0.3.0</p>
       </div>
 
       <Sheet open={langOpen} onClose={() => setLangOpen(false)} title={t('profile.language')}>
         <div className="space-y-2">
           {LANGUAGES.map((l) => (
-            <button key={l.code} onClick={() => { setLanguage(l.code); setLangOpen(false); }} className={cn('flex w-full items-center gap-3 rounded-input border p-4 text-left transition-colors cursor-pointer', i18n.language === l.code ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/20')}>
+            <button key={l.code} onClick={() => { setLanguage(l.code); setLangOpen(false); }} className={cn('flex w-full items-center gap-3 rounded-input border p-4 text-start transition-colors cursor-pointer', i18n.language === l.code ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/20')}>
               <span className="text-2xl">{l.flag}</span>
               <span className="flex-1 font-display text-h3 font-medium">{l.label}</span>
               {i18n.language === l.code && <Check className="h-5 w-5 text-clay" strokeWidth={1.8} />}

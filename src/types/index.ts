@@ -341,7 +341,7 @@ export interface EventLocation {
   label: string;
 }
 
-export interface JmaaEvent {
+export interface HudlgoEvent {
   id: string;
   activityId: string;
   title: string;
@@ -655,7 +655,7 @@ export interface CouponCheck {
   redeemedAt?: string;
 }
 
-export interface EnrichedEvent extends JmaaEvent {
+export interface EnrichedEvent extends HudlgoEvent {
   /** Present for joined attendees of a Silver-sponsored activity. */
   coupon?: EventCoupon;
   /** Returned by createEvent when a pin / extra-activity request was filed. */

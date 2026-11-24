@@ -49,9 +49,9 @@ export function BusinessVenuePage() {
       const res = await uploadVenuePhotos(files);
       setPhotos(res.business.photos);
       bump();
-      toast('Photos added', 'success');
+      toast(t('bizVenue.photosAdded'), 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not upload photos', 'error');
+      toast(err instanceof Error ? err.message : t('bizVenue.uploadFailed'), 'error');
     } finally {
       setUploading(false);
     }
@@ -63,7 +63,7 @@ export function BusinessVenuePage() {
       setPhotos(res.business.photos);
       bump();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not remove photo', 'error');
+      toast(err instanceof Error ? err.message : t('bizVenue.removeFailed'), 'error');
     }
   }
 
@@ -72,10 +72,10 @@ export function BusinessVenuePage() {
     try {
       await updateMyBusiness(form);
       bump();
-      toast('Venue updated', 'success');
+      toast(t('bizVenue.updated'), 'success');
       navigate('/business/dashboard');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not update venue', 'error');
+      toast(err instanceof Error ? err.message : t('bizVenue.updateFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -93,10 +93,10 @@ export function BusinessVenuePage() {
   return (
     <div className="mx-auto max-w-xl">
       <button onClick={() => navigate('/business/dashboard')} className="mb-3 inline-flex items-center gap-1.5 text-meta font-medium text-ink-soft hover:text-ink cursor-pointer">
-        <ArrowLeft className="h-4 w-4" strokeWidth={1.8} /> Back to dashboard
+        <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" strokeWidth={1.8} /> Back to dashboard
       </button>
-      <h1 className="font-display text-h1 font-medium text-ink">Edit your venue</h1>
-      <p className="mt-1 text-meta text-ink-soft">Update how your venue appears to hosts choosing a place.</p>
+      <h1 className="font-display text-h1 font-medium text-ink">{t('bizVenue.title')}</h1>
+      <p className="mt-1 text-meta text-ink-soft">{t('bizVenue.subtitle')}</p>
 
       {/* Plan & usage */}
       <SponsorshipCard sponsorship={data.data?.sponsorship ?? null} />
@@ -105,8 +105,8 @@ export function BusinessVenuePage() {
       <div className="mt-5 rounded-card border border-border bg-surface p-5">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="font-display text-h3 font-medium text-ink">Venue photos</p>
-            <p className="text-[12px] text-ink-soft">Show off your space — up to {MAX_PHOTOS} photos. The first is your cover.</p>
+            <p className="font-display text-h3 font-medium text-ink">{t('bizVenue.photos')}</p>
+            <p className="text-[12px] text-ink-soft">{t('bizVenue.photosHint', { max: MAX_PHOTOS })}</p>
           </div>
           <span className="text-[12px] text-ink-faint">{photos.length}/{MAX_PHOTOS}</span>
         </div>
@@ -116,14 +116,14 @@ export function BusinessVenuePage() {
             <div key={url} className="group relative aspect-square overflow-hidden rounded-card border border-border bg-surface-sunk">
               <img src={url} alt="" className="h-full w-full object-cover" />
               {i === 0 && (
-                <span className="absolute left-1.5 top-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                <span className="absolute start-1.5 top-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
                   Cover
                 </span>
               )}
               <button
                 onClick={() => onRemovePhoto(url)}
-                aria-label="Remove photo"
-                className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-ink/70 text-white backdrop-blur-sm transition-colors hover:bg-clay cursor-pointer"
+                aria-label={t('bizVenue.removePhoto')}
+                className="absolute end-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-ink/70 text-white backdrop-blur-sm transition-colors hover:bg-clay cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" strokeWidth={2} />
               </button>
@@ -142,15 +142,15 @@ export function BusinessVenuePage() {
         </div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={onPickPhotos} />
         {photos.length === 0 && !uploading && (
-          <p className="mt-3 text-[12px] text-ink-faint">No photos yet — add a few so hosts can see your venue.</p>
+          <p className="mt-3 text-[12px] text-ink-faint">{t('bizVenue.noPhotos')}</p>
         )}
       </div>
 
       <div className="mt-4 space-y-4 rounded-card border border-border bg-surface p-5">
-        <Input label="Business name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} leftIcon={<Building2 className="h-5 w-5" strokeWidth={1.6} />} />
-        <Textarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <Input label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
-        <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} leftIcon={<Phone className="h-5 w-5" strokeWidth={1.6} />} />
+        <Input label={t('business.name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} leftIcon={<Building2 className="h-5 w-5" strokeWidth={1.6} />} />
+        <Textarea label={t('business.description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <Input label={t('business.address')} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
+        <Input label={t('business.phone')} type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} leftIcon={<Phone className="h-5 w-5" strokeWidth={1.6} />} />
         <Input
           label={t('coupon.offerLabel')}
           placeholder={t('coupon.defaultOffer')}
@@ -162,9 +162,9 @@ export function BusinessVenuePage() {
         />
 
         <div className="flex gap-3 pt-1">
-          <Button variant="outline" size="lg" onClick={() => navigate('/business/dashboard')}>Cancel</Button>
+          <Button variant="outline" size="lg" onClick={() => navigate('/business/dashboard')}>{t('common.cancel')}</Button>
           <Button size="lg" fullWidth loading={saving} disabled={!form.name || !form.address} onClick={save}>
-            Save changes
+            {t('bizVenue.save')}
           </Button>
         </div>
       </div>
@@ -173,6 +173,7 @@ export function BusinessVenuePage() {
 }
 
 function SponsorshipCard({ sponsorship }: { sponsorship: MyBusiness['sponsorship'] }) {
+  const { t } = useTranslation();
   const TierIcon = sponsorship ? tierIcon[sponsorship.tier] : Store;
   const unlimited = sponsorship?.limit === 'unlimited';
   const pct =
@@ -188,27 +189,27 @@ function SponsorshipCard({ sponsorship }: { sponsorship: MyBusiness['sponsorship
             <TierIcon className="h-5 w-5" strokeWidth={1.7} />
           </span>
           <div>
-            <p className="font-display text-h2 font-medium capitalize text-ink">
-              {sponsorship ? `${sponsorship.tier} sponsorship` : 'No active plan'}
+            <p className="font-display text-h2 font-medium text-ink">
+              {sponsorship ? t('sponsor.activeTitle', { tier: t(`sponsor.tier.${sponsorship.tier}`, sponsorship.tier) }) : t('sponsor.noneTitle')}
             </p>
             {sponsorship && (
               <p className="text-meta text-ink-soft">
-                {(sponsorship.monthlyPriceCents / 100).toFixed(2)} MAD/mo · since {format(new Date(sponsorship.startDate), 'd MMM yyyy')}
+                {t('bizVenue.priceSince', { price: (sponsorship.monthlyPriceCents / 100).toFixed(2), date: format(new Date(sponsorship.startDate), 'd MMM yyyy') })}
               </p>
             )}
           </div>
         </div>
         <Tag className={cn(sponsorship?.status === 'active' ? 'bg-olive-soft text-olive' : 'bg-surface-sunk text-ink-soft')}>
-          {sponsorship?.status ?? 'inactive'}
+          {sponsorship?.status === 'active' ? t('upgrades.status.approved') : t('bizVenue.inactive')}
         </Tag>
       </div>
 
       {sponsorship && (
         <div className="mt-5">
           <div className="flex items-center justify-between text-meta">
-            <span className="text-ink-soft">Sponsored activities this month</span>
+            <span className="text-ink-soft">{t('bizVenue.usageLabel')}</span>
             <span className="font-semibold text-ink">
-              {unlimited ? `${sponsorship.used} · Unlimited` : `${sponsorship.used} / ${sponsorship.limit}`}
+              {unlimited ? `${sponsorship.used} · ${t('bizVenue.unlimited')}` : `${sponsorship.used} / ${sponsorship.limit}`}
             </span>
           </div>
           {!unlimited && (
@@ -218,8 +219,8 @@ function SponsorshipCard({ sponsorship }: { sponsorship: MyBusiness['sponsorship
           )}
           <p className="mt-2 text-[12px] text-ink-faint">
             {unlimited
-              ? 'Unlimited venue usage on your plan.'
-              : `${sponsorship.remaining} remaining — resets on the 1st of the month.`}
+              ? t('bizVenue.unlimitedHint')
+              : t('bizVenue.remainingHint', { count: Number(sponsorship.remaining) })}
           </p>
         </div>
       )}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function PageHeader({ title, back, onBack, right, transparent }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   return (
     <header
@@ -23,13 +25,13 @@ export function PageHeader({ title, back, onBack, right, transparent }: Props) {
       {back && (
         <button
           onClick={() => (onBack ? onBack() : navigate(-1))}
-          aria-label="Back"
+          aria-label={t('common.back')}
           className={cn(
             'grid h-10 w-10 place-items-center rounded-full cursor-pointer transition-colors',
             transparent ? 'border border-border bg-surface/90 backdrop-blur' : 'hover:bg-surface-sunk',
           )}
         >
-          <ChevronLeft className="h-5 w-5" strokeWidth={1.6} />
+          <ChevronLeft className="h-5 w-5 rtl:-scale-x-100" strokeWidth={1.6} />
         </button>
       )}
       {title && <h1 className="font-display text-h2 font-medium text-ink">{title}</h1>}

@@ -109,11 +109,11 @@ export function EventChatThread({
               <div key={m.id} className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
                 {!mine && (showAvatar && sender ? <Avatar src={sender.avatar} name={sender.name} size="xs" /> : <span className="w-6" />)}
                 <div className="max-w-[78%]">
-                  {!mine && showAvatar && <p className="mb-0.5 ml-1 text-[11px] font-medium text-ink-faint">{(sender?.name ?? t('chat.member')).split(' ')[0]}</p>}
-                  <div className={cn('rounded-[14px] px-3.5 py-2.5 text-[15px] leading-snug', mine ? 'rounded-br-[4px] bg-clay-soft text-ink' : 'rounded-bl-[4px] bg-surface-sunk text-ink', m.pending && 'opacity-60')}>
+                  {!mine && showAvatar && <p className="mb-0.5 ms-1 text-[11px] font-medium text-ink-faint">{(sender?.name ?? t('chat.member')).split(' ')[0]}</p>}
+                  <div className={cn('rounded-[14px] px-3.5 py-2.5 text-[15px] leading-snug', mine ? 'rounded-ee-[4px] bg-clay-soft text-ink' : 'rounded-es-[4px] bg-surface-sunk text-ink', m.pending && 'opacity-60')}>
                     {m.text}
                   </div>
-                  <p className={cn('mt-0.5 text-[10px] text-ink-faint', mine ? 'text-right' : 'ml-1')}>{formatChatTime(m.sentAt)}</p>
+                  <p className={cn('mt-0.5 text-[10px] text-ink-faint', mine ? 'text-end' : 'ms-1')}>{formatChatTime(m.sentAt)}</p>
                 </div>
               </div>
             );
@@ -131,7 +131,7 @@ export function EventChatThread({
           <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-center gap-2">
             <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('chat.messageAttendees')} className="flex-1 rounded-full border border-border bg-bg px-4 py-2.5 text-[15px] focus:border-clay" />
             <button type="submit" disabled={!text.trim()} aria-label={t('chat.send')} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-clay text-white transition-transform active:scale-90 disabled:opacity-40 cursor-pointer">
-              <SendHorizonal className="h-5 w-5" strokeWidth={1.6} />
+              <SendHorizonal className="h-5 w-5 rtl:-scale-x-100" strokeWidth={1.6} />
             </button>
           </form>
         )}

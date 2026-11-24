@@ -1,4 +1,5 @@
 import { BadgeCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function Avatar({ src, name, size = 'md', verified, ring, className }: Props) {
+  const { t } = useTranslation();
   return (
     <div className={cn('relative shrink-0', className)}>
       <img
@@ -32,11 +34,11 @@ export function Avatar({ src, name, size = 'md', verified, ring, className }: Pr
       {verified && (
         <BadgeCheck
           className={cn(
-            'absolute -bottom-0.5 -right-0.5 rounded-full bg-surface text-majorelle',
+            'absolute -bottom-0.5 -end-0.5 rounded-full bg-surface text-majorelle',
             size === 'xl' || size === 'lg' ? 'h-6 w-6' : 'h-4 w-4',
           )}
           strokeWidth={1.8}
-          aria-label="Verified"
+          aria-label={t('venue.verified')}
         />
       )}
     </div>
@@ -54,12 +56,12 @@ export function AvatarStack({ users, max = 5, size = 'sm' }: StackProps) {
   const extra = users.length - shown.length;
   return (
     <div className="flex items-center">
-      <div className="flex -space-x-2.5">
+      <div className="flex -space-x-2.5 rtl:space-x-reverse">
         {shown.map((u) => (
           <Avatar key={u.id} src={u.avatar} name={u.name} size={size} ring />
         ))}
       </div>
-      {extra > 0 && <span className="ml-2 text-meta font-medium text-ink-soft">+{extra}</span>}
+      {extra > 0 && <span className="ms-2 text-meta font-medium text-ink-soft">+{extra}</span>}
     </div>
   );
 }

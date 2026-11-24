@@ -71,7 +71,7 @@ export function PublicActivityPage() {
               sub={event.isOnline ? '' : t('event.approxArea')}
             />
             <Row icon={Users} label={t('event.going', { count: event.goingCount, capacity: event.capacity })} />
-            <Row icon={Ticket} label={formatPrice(event.price)} sub={event.price === 0 ? t('event.free') : 'per person'} />
+            <Row icon={Ticket} label={formatPrice(event.price)} sub={event.price === 0 ? t('event.free') : t('eventX.perPerson')} />
           </div>
 
           <div className="mt-4 flex items-center gap-3 rounded-card border border-border bg-surface p-4">

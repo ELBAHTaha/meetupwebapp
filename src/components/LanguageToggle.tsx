@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 
 /** Compact language switcher: a flag button that opens a small dropdown. */
 export function LanguageToggle({ className }: { className?: string }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -25,7 +25,7 @@ export function LanguageToggle({ className }: { className?: string }) {
     <div ref={ref} className={cn('relative', className)}>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Change language"
+        aria-label={t('a11y.changeLanguage')}
         aria-haspopup="menu"
         aria-expanded={open}
         className="flex items-center gap-1.5 rounded-full px-3 py-2 text-meta font-medium text-ink-soft transition-colors hover:bg-surface-sunk cursor-pointer"
@@ -41,7 +41,7 @@ export function LanguageToggle({ className }: { className?: string }) {
               key={l.code}
               onClick={() => { setLanguage(l.code); setOpen(false); }}
               className={cn(
-                'flex w-full items-center gap-2.5 rounded-input px-3 py-2 text-left text-meta transition-colors cursor-pointer',
+                'flex w-full items-center gap-2.5 rounded-input px-3 py-2 text-start text-meta transition-colors cursor-pointer',
                 i18n.language === l.code ? 'bg-clay-soft text-ink' : 'text-ink-soft hover:bg-surface-sunk',
               )}
             >

@@ -72,7 +72,7 @@ function ThreadRow({ thread, currentUserId, onClick }: { thread: ChatThread; cur
   const event = thread.eventId ? db.events.find((e) => e.id === thread.eventId) : undefined;
   const activity = event ? db.activities.find((a) => a.id === event.activityId) : undefined;
   const other = !thread.eventId ? db.users.find((u) => thread.participantIds.includes(u.id) && u.id !== currentUserId) : undefined;
-  const title = thread.title ?? activity?.name ?? other?.name ?? 'Chat';
+  const title = thread.title ?? activity?.name ?? other?.name ?? t('chat.title');
   const sender = last ? last.sender ?? db.users.find((u) => u.id === last.senderId) : undefined;
   const prefix = last ? (last.senderId === currentUserId ? `${t('chat.you')}: ` : sender ? `${sender.name.split(' ')[0]}: ` : '') : '';
   const unread = isThreadUnread(thread.id, last, currentUserId);
@@ -81,7 +81,7 @@ function ThreadRow({ thread, currentUserId, onClick }: { thread: ChatThread; cur
   const ended = thread.ended ?? (thread.endsAt ? new Date(thread.endsAt) < new Date() : false);
 
   return (
-    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-3 text-left transition-colors hover:border-ink/20 cursor-pointer">
+    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-3 text-start transition-colors hover:border-ink/20 cursor-pointer">
       {activity ? (
         <ActivityIcon activity={activity} size="md" tile />
       ) : other ? (

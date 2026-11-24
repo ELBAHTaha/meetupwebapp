@@ -46,8 +46,8 @@ export function LandingPage() {
       {/* ---------- Hero (always dark, independent of theme) ---------- */}
       <header className="relative isolate overflow-hidden bg-[#171410]">
         <AuthBackdrop className="absolute inset-0" />
-        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-clay/30 blur-[120px]" aria-hidden="true" />
-        <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-majorelle/25 blur-[120px]" aria-hidden="true" />
+        <div className="absolute -end-32 -top-32 h-96 w-96 rounded-full bg-clay/30 blur-[120px]" aria-hidden="true" />
+        <div className="absolute -bottom-40 -start-24 h-96 w-96 rounded-full bg-majorelle/25 blur-[120px]" aria-hidden="true" />
         <div className="relative mx-auto flex min-h-[88dvh] max-w-shell flex-col px-6 py-6 text-white">
           {/* Top nav */}
           <nav className="flex items-center justify-between gap-3">
@@ -72,7 +72,7 @@ export function LandingPage() {
               </div>
               <button
                 onClick={toggleTheme}
-                aria-label="Toggle dark mode"
+                aria-label={t('a11y.toggleTheme')}
                 className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 cursor-pointer transition-colors"
               >
                 {theme === 'dark' ? <Sun className="h-4 w-4" strokeWidth={1.8} /> : <Moon className="h-4 w-4" strokeWidth={1.8} />}
@@ -102,7 +102,7 @@ export function LandingPage() {
             </h1>
             <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-white/85">{t('landing.heroSubtitle')}</p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" strokeWidth={2} />} onClick={() => navigate('/signup')}>
+              <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" strokeWidth={2} />} onClick={() => navigate('/signup')}>
                 {t('landing.ctaJoin')}
               </Button>
               <Button
@@ -210,7 +210,7 @@ export function LandingPage() {
             <Button
               size="lg"
               className="mt-7"
-              rightIcon={<ArrowRight className="h-4 w-4" strokeWidth={2} />}
+              rightIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" strokeWidth={2} />}
               onClick={() => navigate('/business')}
             >
               {t('landing.bizCta')}
@@ -219,16 +219,16 @@ export function LandingPage() {
           {/* Tier cards */}
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              { name: 'Starter', price: '199 MAD', Icon: Store },
-              { name: 'Bronze', price: '490 MAD', Icon: Store },
-              { name: 'Silver', price: '990 MAD', Icon: BadgeCheck },
+              { name: t('sponsor.tier.starter'), price: '199 MAD', Icon: Store },
+              { name: t('sponsor.tier.bronze'), price: '490 MAD', Icon: Store },
+              { name: t('sponsor.tier.silver'), price: '990 MAD', Icon: BadgeCheck },
             ].map((tier) => (
               <div key={tier.name} className="rounded-card border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
                 <tier.Icon className="h-6 w-6 text-saffron" strokeWidth={1.6} />
                 <p className="mt-3 font-display text-h2 font-medium">{tier.name}</p>
                 <p className="mt-1 text-[15px] font-semibold text-white">
                   {tier.price}
-                  <span className="text-[12px] font-normal text-white/60">/mo</span>
+                  <span className="text-[12px] font-normal text-white/60">{t('pricing.perMonth')}</span>
                 </p>
               </div>
             ))}
@@ -241,7 +241,7 @@ export function LandingPage() {
         <h2 className="mx-auto max-w-xl font-display text-display font-medium leading-[1.05] text-ink">{t('landing.finalTitle')}</h2>
         <p className="mx-auto mt-3 max-w-md text-[16px] text-ink-soft">{t('landing.finalSubtitle')}</p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" strokeWidth={2} />} onClick={() => navigate('/signup')}>
+          <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" strokeWidth={2} />} onClick={() => navigate('/signup')}>
             {t('landing.ctaJoin')}
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate('/login')}>{t('landing.login')}</Button>
@@ -299,7 +299,7 @@ function SectionHead({ title, subtitle }: { title: string; subtitle?: string }) 
 function Step({ n, icon: Icon, title, body }: { n: number; icon: LucideIcon; title: string; body: string }) {
   return (
     <div className="relative rounded-card border border-border bg-surface p-6">
-      <span className="absolute right-5 top-5 font-display text-display font-medium leading-none text-surface-sunk">{n}</span>
+      <span className="absolute end-5 top-5 font-display text-display font-medium leading-none text-surface-sunk">{n}</span>
       <span className="grid h-11 w-11 place-items-center rounded-[12px] bg-clay-soft text-clay">
         <Icon className="h-6 w-6" strokeWidth={1.6} />
       </span>
@@ -325,7 +325,7 @@ function Feature({ icon: Icon, title, body }: { icon: LucideIcon; title: string;
 function PreviewCard({ event, onClick }: { event: EnrichedEvent; onClick: () => void }) {
   const { t } = useTranslation();
   return (
-    <button onClick={onClick} className="group block overflow-hidden rounded-card border border-border bg-surface text-left">
+    <button onClick={onClick} className="group block overflow-hidden rounded-card border border-border bg-surface text-start">
       <SmartImage
         src={eventImage(event)}
         alt={event.title}
@@ -334,7 +334,7 @@ function PreviewCard({ event, onClick }: { event: EnrichedEvent; onClick: () => 
         rounded={false}
         className="aspect-[3/2] w-full"
       >
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-2.5 py-1 text-[12px] font-medium text-ink backdrop-blur-sm">
+        <span className="absolute start-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-2.5 py-1 text-[12px] font-medium text-ink backdrop-blur-sm">
           <ActivityIcon activity={event.activity} size="sm" className="!h-4 !w-4" />
           {event.activity.name}
         </span>
@@ -343,7 +343,7 @@ function PreviewCard({ event, onClick }: { event: EnrichedEvent; onClick: () => 
         <h3 className="line-clamp-1 font-display text-h3 font-medium text-ink">{event.title}</h3>
         <p className="mt-1 flex items-center gap-1.5 text-meta text-ink-soft">
           {event.isOnline ? <Video className="h-3.5 w-3.5 text-majorelle" strokeWidth={1.6} /> : <MapPin className="h-3.5 w-3.5" strokeWidth={1.5} />}
-          {event.isOnline ? 'Online' : event.resolvedLocation.label}
+          {event.isOnline ? t('event.online') : event.resolvedLocation.label}
         </p>
         <p className="mt-2 text-meta text-ink-faint">{formatEventDate(event.startsAt)} · {t('event.loginToJoin')}</p>
       </div>

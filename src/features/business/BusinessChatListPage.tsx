@@ -65,7 +65,7 @@ export function BusinessChatListPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/business/chat/${a.id}`)}
-                className="group flex w-full items-center gap-3 rounded-card border border-border bg-surface p-3.5 text-left transition-colors hover:border-clay/40 cursor-pointer"
+                className="group flex w-full items-center gap-3 rounded-card border border-border bg-surface p-3.5 text-start transition-colors hover:border-clay/40 cursor-pointer"
               >
                 <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-clay-soft text-clay">
                   <MessageCircle className="h-5 w-5" strokeWidth={1.6} />
@@ -82,7 +82,7 @@ export function BusinessChatListPage() {
                     {a.going != null ? ` · ${t('businessChat.going', { count: a.going })}` : ''}
                   </p>
                 </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint transition-colors group-hover:text-clay" strokeWidth={1.7} />
+                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint transition-colors group-hover:text-clay rtl:-scale-x-100" strokeWidth={1.7} />
               </button>
             );
           })}

@@ -113,7 +113,7 @@ export function EventDetailPage() {
         );
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not join', 'error');
+      toast(err instanceof Error ? err.message : t('eventX.joinFailed'), 'error');
     } finally {
       setActing(false);
     }
@@ -126,7 +126,7 @@ export function EventDetailPage() {
     bumpData();
     reload();
     setActing(false);
-    toast('You left the event', 'info');
+    toast(t('eventX.left'), 'info');
   }
 
   async function confirmStart() {
@@ -136,9 +136,9 @@ export function EventDetailPage() {
       bumpData();
       reload();
       setStartOpen(false);
-      toast('Attendees notified you’ve arrived 👋', 'success');
+      toast(t('eventX.arrived'), 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not start', 'error');
+      toast(err instanceof Error ? err.message : t('eventX.startFailed'), 'error');
     } finally {
       setActing(false);
     }
@@ -152,7 +152,7 @@ export function EventDetailPage() {
       reload();
       toast(t('event.confirmedToast'), 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not confirm', 'error');
+      toast(err instanceof Error ? err.message : t('eventX.confirmFailed'), 'error');
     } finally {
       setActing(false);
     }
@@ -167,7 +167,7 @@ export function EventDetailPage() {
       reload();
       toast(t('event.cancelledToast'), 'info');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not cancel', 'error');
+      toast(err instanceof Error ? err.message : t('eventX.cancelFailed'), 'error');
     } finally {
       setActing(false);
     }
@@ -178,8 +178,8 @@ export function EventDetailPage() {
     <div className="pb-28 md:pb-10">
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-4">
-        <button onClick={() => navigate(-1)} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink hover:bg-surface-sunk cursor-pointer transition-colors">
-          <ChevronLeft className="h-5 w-5" strokeWidth={1.6} />
+        <button onClick={() => navigate(-1)} aria-label={t('common.back')} className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink hover:bg-surface-sunk cursor-pointer transition-colors">
+          <ChevronLeft className="h-5 w-5 rtl:-scale-x-100" strokeWidth={1.6} />
         </button>
         <button onClick={() => setShareOpen(true)} aria-label={t('event.share')} className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink hover:bg-surface-sunk cursor-pointer transition-colors">
           <Share2 className="h-[18px] w-[18px]" strokeWidth={1.6} />
@@ -235,7 +235,7 @@ export function EventDetailPage() {
         <div className="divide-y divide-border rounded-card border border-border bg-surface">
           <MetaRow icon={CalendarDays} label={formatDayLong(event.startsAt)} sub={formatTimeRange(event.startsAt, event.durationMins)} />
           <MetaRow icon={Clock} label={t('event.duration', { mins: event.durationMins })} />
-          <MetaRow icon={Ticket} label={formatPrice(event.price)} sub={event.price === 0 ? t('event.free') : 'per person'} />
+          <MetaRow icon={Ticket} label={formatPrice(event.price)} sub={event.price === 0 ? t('event.free') : t('eventX.perPerson')} />
           <MetaRow icon={Users} label={`${event.capacity} ${t('event.capacityWord')}`} sub={event.minPlayers > 1 ? t('event.minPlayers', { count: event.minPlayers }) : ''} />
         </div>
 
@@ -278,7 +278,7 @@ export function EventDetailPage() {
         </section>
 
         {/* Host */}
-        <button onClick={() => navigate(`/user/${event.host.id}`)} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-left cursor-pointer hover:border-ink/20 transition-colors">
+        <button onClick={() => navigate(`/user/${event.host.id}`)} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-start cursor-pointer hover:border-ink/20 transition-colors">
           <Avatar src={event.host.avatar} name={event.host.name} size="md" verified={event.host.verified} />
           <div className="flex-1">
             <p className="text-[12px] text-ink-faint">{t('event.hostedBy')}</p>
@@ -316,7 +316,7 @@ export function EventDetailPage() {
           {waitlist.length > 0 && (
             <div className="mt-4 rounded-card border border-border bg-surface-sunk/60 p-3">
               <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">{t('event.waitlist')} · {waitlist.length}</p>
-              <div className="mt-2 flex -space-x-2">
+              <div className="mt-2 flex -space-x-2 rtl:space-x-reverse">
                 {waitlist.map((a) => {
                   const u = db.users.find((x) => x.id === a.userId);
                   return u ? <Avatar key={a.userId} src={u.avatar} name={u.name} size="sm" ring /> : null;

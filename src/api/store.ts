@@ -5,7 +5,7 @@ import type {
   Conditions,
   EnrichedEvent,
   EventLocation,
-  JmaaEvent,
+  HudlgoEvent,
   Rating,
   Report,
   Review,
@@ -30,14 +30,14 @@ import {
 const DAY = 86_400_000;
 
 /** Compute an event's end time (explicit endsAt or startsAt + duration). */
-export function endsAtOf(e: Pick<JmaaEvent, 'startsAt' | 'durationMins' | 'endsAt'>): string {
+export function endsAtOf(e: Pick<HudlgoEvent, 'startsAt' | 'durationMins' | 'endsAt'>): string {
   if (e.endsAt) return e.endsAt;
   return new Date(new Date(e.startsAt).getTime() + e.durationMins * 60_000).toISOString();
 }
 
 // Normalize seed records so the new fields are always present at runtime,
 // without having to edit every seed literal.
-function normalizeEvent(e: JmaaEvent): JmaaEvent {
+function normalizeEvent(e: HudlgoEvent): HudlgoEvent {
   const ends = endsAtOf(e);
   const past = new Date(e.startsAt).getTime() < Date.now();
   return {
@@ -65,7 +65,7 @@ interface Store {
   users: User[];
   activities: Activity[];
   spots: Spot[];
-  events: JmaaEvent[];
+  events: HudlgoEvent[];
   conditions: Conditions[];
   threads: ChatThread[];
   reviews: Review[];
@@ -105,7 +105,7 @@ const PERSIST_MAX_AGE = 24 * 60 * 60 * 1000; // 1 day
 interface PersistedDb {
   savedAt: number;
   users: User[];
-  events: JmaaEvent[];
+  events: HudlgoEvent[];
   threads: ChatThread[];
   reviews: Review[];
   ratings: Rating[];
@@ -166,13 +166,13 @@ export const findActivity = (id: string) => db.activities.find((a) => a.id === i
 export const findSpot = (id?: string) => (id ? db.spots.find((s) => s.id === id) : undefined);
 export const findEvent = (id: string) => db.events.find((e) => e.id === id);
 
-const goingCountOf = (e: JmaaEvent) =>
+const goingCountOf = (e: HudlgoEvent) =>
   e.attendees.filter((a) => a.status === 'going' || a.status === 'host').length;
 
-const isPast = (e: JmaaEvent) => new Date(e.startsAt).getTime() < Date.now();
+const isPast = (e: HudlgoEvent) => new Date(e.startsAt).getTime() < Date.now();
 
 /** Recompute the team-sport / capacity status of an event in place. */
-export function recomputeStatus(e: JmaaEvent): void {
+export function recomputeStatus(e: HudlgoEvent): void {
   if (isPast(e)) {
     e.status = 'PAST';
     return;
@@ -184,7 +184,7 @@ export function recomputeStatus(e: JmaaEvent): void {
 }
 
 /** Renumber waitlist positions after any membership change. */
-function renumberWaitlist(e: JmaaEvent): void {
+function renumberWaitlist(e: HudlgoEvent): void {
   let pos = 1;
   e.attendees
     .filter((a) => a.status === 'waitlisted')
@@ -194,7 +194,7 @@ function renumberWaitlist(e: JmaaEvent): void {
     });
 }
 
-export function viewerStatusOf(e: JmaaEvent, userId: string): ViewerRsvp {
+export function viewerStatusOf(e: HudlgoEvent, userId: string): ViewerRsvp {
   if (isPast(e)) {
     return e.attendees.some((a) => a.userId === userId) ? 'past' : 'past';
   }
@@ -205,7 +205,7 @@ export function viewerStatusOf(e: JmaaEvent, userId: string): ViewerRsvp {
   return 'joined';
 }
 
-export function resolvedLocationOf(e: JmaaEvent): EventLocation {
+export function resolvedLocationOf(e: HudlgoEvent): EventLocation {
   const spot = findSpot(e.spotId);
   if (spot) return { lat: spot.lat, lng: spot.lng, label: spot.name };
   return e.location ?? { lat: 33.5731, lng: -7.5898, label: 'Location TBD' };
@@ -225,7 +225,7 @@ function nearestCityName(p: EventLocation): string {
   return best.name;
 }
 
-export function enrich(e: JmaaEvent, viewerId = db.currentUserId): EnrichedEvent {
+export function enrich(e: HudlgoEvent, viewerId = db.currentUserId): EnrichedEvent {
   const activity = findActivity(e.activityId)!;
   const host = findUser(e.hostId)!;
   const spot = findSpot(e.spotId);
@@ -307,7 +307,7 @@ export function leaveEventInStore(eventId: string, userId: string): void {
 }
 
 /** Make sure an event's group chat exists and the user is a participant. */
-export function ensureEventThread(e: JmaaEvent, userId: string): ChatThread {
+export function ensureEventThread(e: HudlgoEvent, userId: string): ChatThread {
   let thread = db.threads.find((t) => t.eventId === e.id);
   if (!thread) {
     thread = {

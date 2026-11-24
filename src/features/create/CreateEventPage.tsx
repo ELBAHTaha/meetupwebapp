@@ -100,7 +100,7 @@ export function CreateEventPage() {
     bumpData();
     pickActivity(a);
     setCustomOpen(false);
-    toast(`${a.name} added`, 'success');
+    toast(t('createX.customAdded', { name: a.name }), 'success');
   }
 
   async function publish() {
@@ -143,7 +143,7 @@ export function CreateEventPage() {
       );
       navigate(`/event/${created.id}`);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not publish', 'error');
+      toast(err instanceof Error ? err.message : t('createX.publishFailed'), 'error');
     } finally {
       setPublishing(false);
     }
@@ -198,7 +198,7 @@ export function CreateEventPage() {
                           onClick={() => pickActivity(a)}
                           className={cn('relative flex flex-col items-center gap-2 rounded-card border p-3 transition-colors cursor-pointer', on ? 'border-clay bg-clay-soft' : 'border-border bg-surface hover:border-ink/20')}
                         >
-                          {on && <span className="absolute right-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full bg-clay text-white"><Check className="h-3 w-3" strokeWidth={2.4} /></span>}
+                          {on && <span className="absolute end-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full bg-clay text-white"><Check className="h-3 w-3" strokeWidth={2.4} /></span>}
                           <ActivityIcon activity={a} size="md" tile />
                           <span className="text-center text-[12px] font-medium leading-tight text-ink-soft">{a.name}</span>
                         </button>
@@ -252,7 +252,7 @@ export function CreateEventPage() {
                       </Chip>
                     ))}
                   </div>
-                  {businessId && <p className="mt-1.5 text-[12px] text-ink-faint">Venue sponsor selected. Your activity will be linked to their profile.</p>}
+                  {businessId && <p className="mt-1.5 text-[12px] text-ink-faint">{t('createX.sponsorSelected')}</p>}
                 </div>
               )}
               {!isOnline && (
@@ -268,7 +268,7 @@ export function CreateEventPage() {
                   <Chip key={s.id} active={spotId === s.id} onClick={() => { setSpotId(s.id); setPoint(null); }} leftIcon={<MapPin className="h-3.5 w-3.5" strokeWidth={1.6} />} activeClassName="bg-olive text-white">{s.name}</Chip>
                 ))}
               </div>
-              <p className="mb-2 text-meta font-semibold text-ink">Search a place</p>
+              <p className="mb-2 text-meta font-semibold text-ink">{t('createX.searchPlace')}</p>
               <PlaceSearch
                 city={mapCity}
                 cityCenter={cityCenter}
@@ -290,7 +290,7 @@ export function CreateEventPage() {
                   <span>{t('create.privateWarn')}</span>
                 </div>
               )}
-              <button onClick={() => setPublicConfirmed((v) => !v)} className={cn('mt-3 flex w-full items-start gap-3 rounded-card border p-3.5 text-left transition-colors cursor-pointer', publicConfirmed ? 'border-olive bg-olive-soft' : 'border-border bg-surface hover:border-ink/20')}>
+              <button onClick={() => setPublicConfirmed((v) => !v)} className={cn('mt-3 flex w-full items-start gap-3 rounded-card border p-3.5 text-start transition-colors cursor-pointer', publicConfirmed ? 'border-olive bg-olive-soft' : 'border-border bg-surface hover:border-ink/20')}>
                 <span className={cn('mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border', publicConfirmed ? 'border-olive bg-olive text-white' : 'border-ink/30')}>
                   {publicConfirmed && <Check className="h-3.5 w-3.5" strokeWidth={2.6} />}
                 </span>
@@ -340,7 +340,7 @@ export function CreateEventPage() {
               <h2 className="font-display text-h1 font-medium">{t('create.detailsTitle')}</h2>
               <div>
                 <Input label={t('create.eventTitle')} placeholder={t('create.titlePlaceholder')} value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} />
-                <p className="mt-1 text-right text-[12px] text-ink-faint">{t('create.titleCount', { n: title.length })}</p>
+                <p className="mt-1 text-end text-[12px] text-ink-faint">{t('create.titleCount', { n: title.length })}</p>
               </div>
               <div>
                 <span className="mb-1.5 block text-meta font-medium text-ink-soft">{t('create.genderPref')}</span>
@@ -479,6 +479,7 @@ function PlaceSearch({
   cityCenter: { lat: number; lng: number };
   onSelect: (p: PlaceResult) => void;
 }) {
+  const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -519,14 +520,14 @@ function PlaceSearch({
   return (
     <div className="mb-1">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-faint" strokeWidth={1.6} />
+        <Search className="pointer-events-none absolute start-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-faint" strokeWidth={1.6} />
         <input
           value={q}
           onChange={(e) => { setQ(e.target.value); setTouched(true); }}
-          placeholder={`Search a place in ${city}…`}
-          className="w-full rounded-input border border-border bg-surface py-3 pl-11 pr-10 text-[15px] placeholder:text-ink-faint focus:border-clay"
+          placeholder={t('createX.searchIn', { city })}
+          className="w-full rounded-input border border-border bg-surface py-3 ps-11 pe-10 text-[15px] placeholder:text-ink-faint focus:border-clay"
         />
-        {loading && <Loader2 className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-ink-faint" strokeWidth={1.8} />}
+        {loading && <Loader2 className="absolute end-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-ink-faint" strokeWidth={1.8} />}
       </div>
       {results.length > 0 && (
         <ul className="mt-2 overflow-hidden rounded-card border border-border bg-surface">
@@ -535,7 +536,7 @@ function PlaceSearch({
               <button
                 type="button"
                 onClick={() => { onSelect(r); setQ(r.label); setResults([]); }}
-                className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left text-meta text-ink hover:bg-surface-sunk cursor-pointer transition-colors"
+                className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-start text-meta text-ink hover:bg-surface-sunk cursor-pointer transition-colors"
               >
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-clay" strokeWidth={1.6} />
                 <span className="leading-snug">{r.label}</span>
@@ -628,19 +629,20 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4 px-4 py-2.5">
       <dt className="text-ink-soft">{k}</dt>
-      <dd className="text-right font-medium text-ink">{v}</dd>
+      <dd className="text-end font-medium text-ink">{v}</dd>
     </div>
   );
 }
 
 function Stepper({ label, hint, value, min, max, onChange }: { label: string; hint?: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
+  const { t } = useTranslation();
   return (
     <div>
       <span className="mb-1.5 block text-meta font-medium text-ink-soft">{label}</span>
       <div className="flex items-center gap-4 rounded-input border border-border bg-surface p-1.5">
-        <button onClick={() => onChange(Math.max(min, value - 1))} className="grid h-9 w-9 place-items-center rounded-[8px] bg-surface-sunk cursor-pointer hover:bg-border" aria-label="Decrease"><Minus className="h-4 w-4" strokeWidth={1.8} /></button>
+        <button onClick={() => onChange(Math.max(min, value - 1))} className="grid h-9 w-9 place-items-center rounded-[8px] bg-surface-sunk cursor-pointer hover:bg-border" aria-label={t('createX.decrease')}><Minus className="h-4 w-4" strokeWidth={1.8} /></button>
         <span className="flex-1 text-center font-display text-h2 font-medium">{value}</span>
-        <button onClick={() => onChange(Math.min(max, value + 1))} className="grid h-9 w-9 place-items-center rounded-[8px] bg-surface-sunk cursor-pointer hover:bg-border" aria-label="Increase"><Plus className="h-4 w-4" strokeWidth={1.8} /></button>
+        <button onClick={() => onChange(Math.min(max, value + 1))} className="grid h-9 w-9 place-items-center rounded-[8px] bg-surface-sunk cursor-pointer hover:bg-border" aria-label={t('createX.increase')}><Plus className="h-4 w-4" strokeWidth={1.8} /></button>
       </div>
       {hint && <span className="mt-1.5 block text-[12px] text-ink-faint">{hint}</span>}
     </div>
@@ -651,7 +653,7 @@ function ToggleRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
   return (
     <button onClick={onToggle} className="flex w-full items-center justify-between rounded-input border border-border bg-surface px-4 py-3.5 cursor-pointer">
       <span className="text-[15px] font-medium text-ink">{label}</span>
-      <span className={cn('relative h-6 w-11 rounded-full transition-colors', on ? 'bg-clay' : 'bg-border')}>
+      <span dir="ltr" className={cn('relative h-6 w-11 rounded-full transition-colors', on ? 'bg-clay' : 'bg-border')}>
         <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform', on ? 'translate-x-[22px]' : 'translate-x-0.5')} />
       </span>
     </button>
@@ -668,7 +670,7 @@ function CustomActivitySheet({ open, onClose, onCreate }: { open: boolean; onClo
   return (
     <Sheet open={open} onClose={onClose} title={t('create.orCustom')}>
       <div className="space-y-4">
-        <Input label={t('create.customName')} placeholder="e.g. Frisbee" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input label={t('create.customName')} placeholder={t('createX.customPlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         <div>
           <span className="mb-1.5 block text-meta font-medium text-ink-soft">{t('create.customIcon')}</span>
           <div className="grid grid-cols-8 gap-2">

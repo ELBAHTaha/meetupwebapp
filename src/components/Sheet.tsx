@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -11,6 +12,7 @@ interface SheetProps {
 }
 
 export function Sheet({ open, onClose, title, children, variant = 'bottom' }: SheetProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -43,7 +45,7 @@ export function Sheet({ open, onClose, title, children, variant = 'bottom' }: Sh
           <h2 className="font-display text-h2 font-medium text-ink">{title}</h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-surface-sunk cursor-pointer"
           >
             <X className="h-5 w-5" strokeWidth={1.5} />
