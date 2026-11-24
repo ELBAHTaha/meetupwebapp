@@ -622,7 +622,9 @@
     "INVALID_TOKEN": "This link is invalid or has expired. Request a new one.",
     "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again.",
     "INVALID_UPLOAD": "Please upload a JPG, PNG or WebP image (PDF also works for business documents).",
-    "BLOCKED": "You can’t join this activity."
+    "BLOCKED": "You can’t join this activity.",
+    "COUPON_ALREADY_REDEEMED": "This coupon was already redeemed.",
+    "COUPON_OUT_OF_WINDOW": "This coupon can only be used on the day of the activity (± 1 day)."
   },
   "businessChat": {
     "title": "Messages",
@@ -866,5 +868,41 @@
     "settingsHint": "People you’ve blocked",
     "pageHint": "Blocked people can’t join your activities, see your profile or show up in your feed.",
     "empty": "You haven’t blocked anyone"
+  },
+  "coupon": {
+    "defaultOffer": "10% off your order",
+    "at": "Your coupon at {{venue}}",
+    "codeLabel": "Coupon code",
+    "showStaff": "Show this code to the staff — valid on the activity day (± 1 day), once.",
+    "notYet": "Usable on the activity day (± 1 day). Show this code to the staff then.",
+    "redeemedOn": "Redeemed {{date}}",
+    "offerLabel": "Coupon offer (Silver)",
+    "offerHint": "What attendees get with their coupon. Leave empty to use the default.",
+    "redeemTitle": "Redeem coupon",
+    "redeemSubtitle": "Type or paste the code from the attendee’s app to check it, then mark it redeemed.",
+    "check": "Check code",
+    "offerIs": "Offer: {{offer}}",
+    "markRedeemed": "Mark as redeemed",
+    "redeemedToast": "Coupon redeemed ✓",
+    "redeemedCount_one": "{{count}} redeemed",
+    "redeemedCount_other": "{{count}} redeemed",
+    "problem": {
+      "INVALID_CODE": "That doesn’t look like a hudlgo coupon code.",
+      "NOT_FOUND": "No coupon with that code at your venue.",
+      "NEED_ATTENDEE_CODE": "Ask for the full code shown in the attendee’s app (it ends with 4 extra characters).",
+      "OUT_OF_WINDOW": "This coupon can only be used on the day of the activity (± 1 day).",
+      "ALREADY_REDEEMED": "This coupon was already redeemed."
+    }
+  },
+  "bizDash": {
+    "loadError": "Could not load your business right now.",
+    "welcome": "Welcome back",
+    "welcomeName": "Welcome back, {{name}}",
+    "activitiesTitle": "Activities at your venue",
+    "host": "Host activity",
+    "empty": "No meetups have used your venue yet.",
+    "emptyHint": "Host one above — it’ll show up here with live attendance.",
+    "hostedBy": "hosted by {{name}}",
+    "goingOf": "{{going}} / {{capacity}} going"
   }
 }

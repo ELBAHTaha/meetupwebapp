@@ -35,6 +35,7 @@ import { BusinessActivityDetailPage } from '@/features/business/BusinessActivity
 import { BusinessChatListPage } from '@/features/business/BusinessChatListPage';
 import { BusinessChatThreadPage } from '@/features/business/BusinessChatThreadPage';
 import { BusinessOnboardPage } from '@/features/business/BusinessOnboardPage';
+import { BusinessRedeemPage } from '@/features/business/BusinessRedeemPage';
 import { VenuesPage } from '@/features/venues/VenuesPage';
 import { VenueDetailPage } from '@/features/venues/VenueDetailPage';
 import { TermsPage } from '@/features/legal/TermsPage';
@@ -121,6 +122,7 @@ export const router = createBrowserRouter([
       { path: '/business/chat', element: <BusinessChatListPage /> },
       { path: '/business/chat/:eventId', element: <BusinessChatThreadPage /> },
       { path: '/business/upgrades', element: <UpgradesPage /> },
+      { path: '/business/redeem', element: <BusinessRedeemPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

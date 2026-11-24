@@ -18,13 +18,18 @@ const RANK: Record<BusinessMemberRole, number> = {
 export class BusinessAccessService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** The caller's active role in the business, or null if not an active member. */
+  /**
+   * The caller's active role in the business, or null if not an active member.
+   * The business's owner account (Business.ownerId — e.g. a dedicated business
+   * account created via /businesses/register) always counts as OWNER.
+   */
   async memberRole(userId: string, businessId: string): Promise<BusinessMemberRole | null> {
     const member = await this.prisma.businessMember.findUnique({
       where: { businessId_userId: { businessId, userId } },
     });
-    if (!member || member.status !== BusinessMemberStatus.ACTIVE) return null;
-    return member.role;
+    if (member && member.status === BusinessMemberStatus.ACTIVE) return member.role;
+    const owned = await this.prisma.business.count({ where: { id: businessId, ownerId: userId } });
+    return owned ? BusinessMemberRole.OWNER : null;
   }
 
   /** Throw 403 unless the caller is an active member with at least `min` role. */

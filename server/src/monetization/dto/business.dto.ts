@@ -60,4 +60,10 @@ export class UpdateBusinessDto {
   @IsString()
   @MaxLength(40)
   phone?: string;
+
+  /** Silver perk text, e.g. "10% off your order". Empty → default offer. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  couponOffer?: string;
 }

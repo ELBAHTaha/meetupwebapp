@@ -24,6 +24,7 @@ import type {
   AdminUserPlan,
   CreateUpgradeInput,
   UpgradeRequest,
+  CouponCheck,
   ChatThread,
   CreateActivityInput,
   CreateEventInput,
@@ -322,8 +323,14 @@ export const adminSetBusinessSponsorship = (
 
 export const getMyBusiness = () => api.get<MyBusiness>('/businesses/mine');
 
-export const updateMyBusiness = (patch: { name?: string; description?: string; address?: string; phone?: string }) =>
+export const updateMyBusiness = (patch: { name?: string; description?: string; address?: string; phone?: string; couponOffer?: string }) =>
   api.patch<MyBusiness>('/businesses/mine', patch);
+
+// ---- Coupons (staff at the venue) -------------------------------------------
+export const lookupCoupon = (businessId: string, code: string) =>
+  api.get<CouponCheck>(`/businesses/${businessId}/coupons/lookup?code=${encodeURIComponent(code)}`);
+export const redeemCoupon = (businessId: string, code: string) =>
+  api.post<CouponCheck>(`/businesses/${businessId}/coupons/redeem`, { code });
 
 export const uploadVenuePhotos = (files: File[]) => {
   const form = new FormData();

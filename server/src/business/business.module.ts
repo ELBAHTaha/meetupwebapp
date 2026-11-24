@@ -4,6 +4,8 @@ import { BusinessOrgService } from './business-org.service';
 import { BusinessOrgController } from './business-org.controller';
 import { VenueService } from './venue.service';
 import { VenueController } from './venue.controller';
+import { CouponsService } from './coupons.service';
+import { CouponsController } from './coupons.controller';
 
 // Business-side foundation: org + members/roles + verification, and first-class
 // venues + claim/review. PrismaService, StorageService and NotificationsService
@@ -12,8 +14,8 @@ import { VenueController } from './venue.controller';
 // `/businesses/sponsored-venues` and `/businesses/register` routes register
 // before this module's `GET /businesses/:id`.
 @Module({
-  controllers: [BusinessOrgController, VenueController],
-  providers: [BusinessAccessService, BusinessOrgService, VenueService],
+  controllers: [BusinessOrgController, VenueController, CouponsController],
+  providers: [BusinessAccessService, BusinessOrgService, VenueService, CouponsService],
   exports: [BusinessAccessService],
 })
 export class BusinessModule {}

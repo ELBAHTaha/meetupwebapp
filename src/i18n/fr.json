@@ -622,7 +622,9 @@
     "INVALID_TOKEN": "Ce lien est invalide ou a expiré. Demandes-en un nouveau.",
     "TOO_MANY_REQUESTS": "Trop de tentatives. Patiente quelques minutes et réessaie.",
     "INVALID_UPLOAD": "Envoie une image JPG, PNG ou WebP (le PDF est aussi accepté pour les documents d’entreprise).",
-    "BLOCKED": "Tu ne peux pas rejoindre cette activité."
+    "BLOCKED": "Tu ne peux pas rejoindre cette activité.",
+    "COUPON_ALREADY_REDEEMED": "Ce coupon a déjà été utilisé.",
+    "COUPON_OUT_OF_WINDOW": "Ce coupon n’est utilisable que le jour de l’activité (± 1 jour)."
   },
   "businessChat": {
     "title": "Messages",
@@ -866,5 +868,41 @@
     "settingsHint": "Les personnes que tu as bloquées",
     "pageHint": "Les personnes bloquées ne peuvent pas rejoindre tes activités, voir ton profil ni apparaître dans ton fil.",
     "empty": "Tu n’as bloqué personne"
+  },
+  "coupon": {
+    "defaultOffer": "10 % de réduction sur ta commande",
+    "at": "Ton coupon chez {{venue}}",
+    "codeLabel": "Code du coupon",
+    "showStaff": "Montre ce code au personnel — valable le jour de l’activité (± 1 jour), une seule fois.",
+    "notYet": "Utilisable le jour de l’activité (± 1 jour). Montre ce code au personnel à ce moment-là.",
+    "redeemedOn": "Utilisé le {{date}}",
+    "offerLabel": "Offre du coupon (Silver)",
+    "offerHint": "Ce que les participants obtiennent avec leur coupon. Laisse vide pour l’offre par défaut.",
+    "redeemTitle": "Valider un coupon",
+    "redeemSubtitle": "Saisis ou colle le code affiché dans l’app du participant pour le vérifier, puis valide-le.",
+    "check": "Vérifier le code",
+    "offerIs": "Offre : {{offer}}",
+    "markRedeemed": "Marquer comme utilisé",
+    "redeemedToast": "Coupon validé ✓",
+    "redeemedCount_one": "{{count}} utilisé",
+    "redeemedCount_other": "{{count}} utilisés",
+    "problem": {
+      "INVALID_CODE": "Ce n’est pas un code coupon hudlgo.",
+      "NOT_FOUND": "Aucun coupon avec ce code dans ton établissement.",
+      "NEED_ATTENDEE_CODE": "Demande le code complet affiché dans l’app du participant (il se termine par 4 caractères en plus).",
+      "OUT_OF_WINDOW": "Ce coupon n’est utilisable que le jour de l’activité (± 1 jour).",
+      "ALREADY_REDEEMED": "Ce coupon a déjà été utilisé."
+    }
+  },
+  "bizDash": {
+    "loadError": "Impossible de charger ton entreprise pour le moment.",
+    "welcome": "Bon retour",
+    "welcomeName": "Bon retour, {{name}}",
+    "activitiesTitle": "Activités dans ton établissement",
+    "host": "Organiser une activité",
+    "empty": "Aucune rencontre n’a encore eu lieu chez toi.",
+    "emptyHint": "Organises-en une ci-dessus — elle apparaîtra ici avec les participants en direct.",
+    "hostedBy": "organisée par {{name}}",
+    "goingOf": "{{going}} / {{capacity}} participants"
   }
 }

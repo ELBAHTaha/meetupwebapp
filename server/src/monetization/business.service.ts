@@ -50,6 +50,7 @@ export class BusinessService {
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
+        _count: { select: { redemptions: true } },
         activity: {
           select: {
             id: true,
@@ -80,6 +81,7 @@ export class BusinessService {
         contactEmail: business.contactEmail,
         status: business.status.toLowerCase(),
         photos: (business.photos as string[] | null) ?? [],
+        couponOffer: business.couponOffer ?? undefined,
       },
       sponsorship: sponsorship
         ? {
@@ -107,13 +109,14 @@ export class BusinessService {
         status: u.activity.status.toLowerCase(),
         locationLabel: u.activity.locationLabel,
         couponCode: u.couponCode ?? undefined,
+        redemptions: u._count.redemptions,
       })),
     };
   }
 
   async updateMyBusiness(
     userId: string,
-    dto: { name?: string; description?: string; address?: string; phone?: string },
+    dto: { name?: string; description?: string; address?: string; phone?: string; couponOffer?: string },
   ): Promise<unknown> {
     const business = await this.prisma.business.findFirst({
       where: { ownerId: userId },
@@ -127,6 +130,8 @@ export class BusinessService {
         description: dto.description ?? undefined,
         address: dto.address ?? undefined,
         phone: dto.phone ?? undefined,
+        // Empty string clears the custom offer (attendees then see the default).
+        ...(dto.couponOffer !== undefined ? { couponOffer: dto.couponOffer.trim() || null } : {}),
       },
     });
     return this.myBusiness(userId);

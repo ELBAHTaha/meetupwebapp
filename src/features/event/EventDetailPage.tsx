@@ -21,6 +21,7 @@ import {
   Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { CouponCard } from '@/components/CouponCard';
 import { Avatar } from '@/components/Avatar';
 import { ActivityIcon } from '@/components/ActivityIcon';
 import { Tag } from '@/components/Chip';
@@ -237,6 +238,9 @@ export function EventDetailPage() {
           <MetaRow icon={Ticket} label={formatPrice(event.price)} sub={event.price === 0 ? t('event.free') : 'per person'} />
           <MetaRow icon={Users} label={`${event.capacity} ${t('event.capacityWord')}`} sub={event.minPlayers > 1 ? t('event.minPlayers', { count: event.minPlayers }) : ''} />
         </div>
+
+        {/* Silver-sponsored venue perk: the attendee's personal coupon */}
+        {event.coupon && <CouponCard coupon={event.coupon} />}
 
         {/* Extra activity waiting for its offline payment (host only) */}
         {status === 'host' && event.awaitingPayment && (

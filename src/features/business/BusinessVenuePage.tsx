@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, Crown, ImagePlus, Loader2, MapPin, Phone, Star, Store, X } from 'lucide-react';
+import { ArrowLeft, Building2, Crown, ImagePlus, Loader2, MapPin, Phone, Star, Store, X, Ticket } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { getMyBusiness, removeVenuePhoto, updateMyBusiness, uploadVenuePhotos } from '@/api';
@@ -19,10 +20,11 @@ const tierIcon: Record<SponsorshipTier, LucideIcon> = { starter: Store, bronze: 
 const MAX_PHOTOS = 6;
 
 export function BusinessVenuePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const bump = useSession((s) => s.bumpData);
   const data = useAsync(() => getMyBusiness(), []);
-  const [form, setForm] = useState({ name: '', description: '', address: '', phone: '' });
+  const [form, setForm] = useState({ name: '', description: '', address: '', phone: '', couponOffer: '' });
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -32,7 +34,7 @@ export function BusinessVenuePage() {
   useEffect(() => {
     if (data.data && !ready) {
       const b = data.data.business;
-      setForm({ name: b.name, description: b.description, address: b.address, phone: b.phone });
+      setForm({ name: b.name, description: b.description, address: b.address, phone: b.phone, couponOffer: b.couponOffer ?? '' });
       setPhotos(b.photos ?? []);
       setReady(true);
     }
@@ -149,6 +151,15 @@ export function BusinessVenuePage() {
         <Textarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         <Input label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} leftIcon={<MapPin className="h-5 w-5" strokeWidth={1.6} />} />
         <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} leftIcon={<Phone className="h-5 w-5" strokeWidth={1.6} />} />
+        <Input
+          label={t('coupon.offerLabel')}
+          placeholder={t('coupon.defaultOffer')}
+          hint={t('coupon.offerHint')}
+          maxLength={160}
+          value={form.couponOffer}
+          onChange={(e) => setForm({ ...form, couponOffer: e.target.value })}
+          leftIcon={<Ticket className="h-5 w-5" strokeWidth={1.6} />}
+        />
 
         <div className="flex gap-3 pt-1">
           <Button variant="outline" size="lg" onClick={() => navigate('/business/dashboard')}>Cancel</Button>

@@ -25,6 +25,7 @@ import type {
   BillingInterval,
   CreateUpgradeInput,
   UpgradeRequest,
+  CouponCheck,
   SignupInput,
   Spot,
   SponsoredVenue,
@@ -741,7 +742,30 @@ export async function getMyBusiness(): Promise<MyBusiness> {
   return delay(MOCK_BUSINESS, 200);
 }
 
-export async function updateMyBusiness(patch: { name?: string; description?: string; address?: string; phone?: string }): Promise<MyBusiness> {
+// ---- Coupons (mock): codes are the activity code + "-DEMO" ------------------
+const mockRedeemed = new Set<string>();
+
+export async function lookupCoupon(_businessId: string, code: string): Promise<CouponCheck> {
+  const m = /^(HUDLGO-[A-Z0-9]{5,6})-?([A-Z0-9]{4})?$/.exec(code.toUpperCase().replace(/\s+/g, ''));
+  if (!m) return delay({ ok: false, problem: 'INVALID_CODE' }, 200);
+  const a = MOCK_BUSINESS.activities.find((x) => x.couponCode === m[1]);
+  if (!a) return delay({ ok: false, problem: 'NOT_FOUND' }, 200);
+  const activity = { id: a.id, title: a.title, startsAt: a.startsAt };
+  if (!m[2]) return delay({ ok: false, problem: 'NEED_ATTENDEE_CODE', activity }, 200);
+  const attendee = { id: 'u2', name: 'Demo attendee', avatar: findUser('u2')?.avatar ?? '' };
+  const full = `${m[1]}-${m[2]}`;
+  if (mockRedeemed.has(full)) return delay({ ok: false, problem: 'ALREADY_REDEEMED', code: full, activity, attendee }, 200);
+  return delay({ ok: true, code: full, activity, attendee, offer: MOCK_BUSINESS.business.couponOffer }, 200);
+}
+
+export async function redeemCoupon(businessId: string, code: string): Promise<CouponCheck> {
+  const check = await lookupCoupon(businessId, code);
+  if (!check.ok) throw new Error('This coupon can’t be redeemed.');
+  mockRedeemed.add(check.code!);
+  return { ...check, redeemedAt: new Date().toISOString() };
+}
+
+export async function updateMyBusiness(patch: { name?: string; description?: string; address?: string; phone?: string; couponOffer?: string }): Promise<MyBusiness> {
   MOCK_BUSINESS = { ...MOCK_BUSINESS, business: { ...MOCK_BUSINESS.business, ...patch } };
   return delay(MOCK_BUSINESS, 250);
 }

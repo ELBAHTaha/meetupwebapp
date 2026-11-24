@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { publicUser } from './user.serializer';
 import { serializeActivity } from './activity.serializer';
 import { nearestCityName } from '../utils/area';
+import { attendeeCouponCode, withinRedeemWindow } from '../utils/coupon';
 
 export const eventInclude = {
   host: {
@@ -26,10 +27,11 @@ export const eventInclude = {
   // badge the activity in the feed.
   venueUsages: {
     where: { isSponsored: true },
-    include: { business: { select: { name: true } }, sponsorship: { select: { tier: true } } },
+    include: { business: { select: { name: true, couponOffer: true } }, sponsorship: { select: { tier: true } } },
     orderBy: { createdAt: 'desc' },
     take: 1,
   },
+  couponRedemptions: { select: { userId: true, createdAt: true } },
 } satisfies Prisma.EventInclude;
 
 export type EventWithRels = Prisma.EventGetPayload<{ include: typeof eventInclude }>;
@@ -93,6 +95,19 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
       ? { name: venue.business.name, tier: venue.sponsorship.tier.toLowerCase() as 'bronze' | 'silver' | 'gold' }
       : undefined;
 
+  // Silver perk: a joined attendee's personal coupon (offer text set by the venue).
+  const myAttendance = viewerId ? e.attendances.find((a) => a.userId === viewerId && a.status === 'JOINED') : undefined;
+  const coupon =
+    myAttendance && venue?.couponCode
+      ? {
+          code: attendeeCouponCode(venue.couponCode, venue.id, viewerId!),
+          offer: venue.business.couponOffer ?? undefined,
+          venueName: venue.business.name,
+          redeemable: withinRedeemWindow(e.startsAt),
+          redeemedAt: e.couponRedemptions.find((r) => r.userId === viewerId)?.createdAt.toISOString(),
+        }
+      : undefined;
+
   return {
     id: e.id,
     activityId: e.activityType.slug,
@@ -133,6 +148,7 @@ export function serializeEvent(e: EventWithRels, viewerId?: string) {
     // Currently featured (pin still active) — drives the "Featured" badge + feed order.
     pinned: e.pinnedUntil ? new Date(e.pinnedUntil) > new Date() : false,
     sponsoredVenue,
+    coupon,
     attendees,
     // Enriched relations (so the frontend doesn't need a separate user store).
     activity: serializeActivity(e.activityType),

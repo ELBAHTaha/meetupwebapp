@@ -64,6 +64,8 @@ export const {
   adminSetBusinessSponsorship,
   getMyBusiness,
   updateMyBusiness,
+  lookupCoupon,
+  redeemCoupon,
   uploadVenuePhotos,
   removeVenuePhoto,
   // ---- Business orgs & venues (Foundation) ----

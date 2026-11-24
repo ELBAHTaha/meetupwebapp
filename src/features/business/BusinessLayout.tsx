@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, LogOut, MessageCircle, Plus, Receipt, Store } from 'lucide-react';
+import { LayoutDashboard, LogOut, MessageCircle, Plus, Receipt, Store, Ticket } from 'lucide-react';
 import { Toaster } from '@/components/Toaster';
 import { DevelopedBy } from '@/components/DevelopedBy';
 import { FeedbackButton } from '@/components/FeedbackButton';
@@ -15,6 +15,7 @@ const links = [
   { to: '/business/chat', icon: MessageCircle, label: 'Chat' },
   { to: '/business/create', icon: Plus, label: 'Host activity' },
   { to: '/business/venue', icon: Store, label: 'Venue' },
+  { to: '/business/redeem', icon: Ticket, label: 'Redeem' },
   { to: '/business/upgrades', icon: Receipt, label: 'Plan' },
 ];
 

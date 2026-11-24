@@ -18,6 +18,7 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function BusinessDashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, dataVersion } = useSession();
   const data = useAsync(() => getMyBusiness(), [dataVersion]);
@@ -33,7 +34,7 @@ export function BusinessDashboardPage() {
   }
 
   if (!data.data) {
-    return <p className="text-meta text-ink-soft">Could not load your business right now.</p>;
+    return <p className="text-meta text-ink-soft">{t('bizDash.loadError')}</p>;
   }
 
   const { business, activities } = data.data;
@@ -41,7 +42,7 @@ export function BusinessDashboardPage() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-meta text-ink-soft">Welcome back{user?.name ? `, ${user.name}` : ''}</p>
+        <p className="text-meta text-ink-soft">{user?.name ? t('bizDash.welcomeName', { name: user.name }) : t('bizDash.welcome')}</p>
         <h1 className="font-display text-h1 font-medium text-ink">{business.name}</h1>
       </div>
 
@@ -50,17 +51,22 @@ export function BusinessDashboardPage() {
       {/* Activities at venue */}
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-display text-h2 font-medium text-ink">Activities at your venue</h2>
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/business/create')}>
-            Host activity
-          </Button>
+          <h2 className="font-display text-h2 font-medium text-ink">{t('bizDash.activitiesTitle')}</h2>
+          <div className="flex gap-2">
+            <Button variant="outline" leftIcon={<Ticket className="h-4 w-4" />} onClick={() => navigate('/business/redeem')}>
+              {t('coupon.redeemTitle')}
+            </Button>
+            <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/business/create')}>
+              {t('bizDash.host')}
+            </Button>
+          </div>
         </div>
 
         {activities.length === 0 ? (
           <div className="rounded-card border border-dashed border-border bg-surface p-6 text-center">
             <CalendarRange className="mx-auto h-7 w-7 text-ink-faint" strokeWidth={1.4} />
-            <p className="mt-2 text-meta text-ink-soft">No meetups have used your venue yet.</p>
-            <p className="text-[12px] text-ink-faint">Host one above — it’ll show up here with live attendance.</p>
+            <p className="mt-2 text-meta text-ink-soft">{t('bizDash.empty')}</p>
+            <p className="text-[12px] text-ink-faint">{t('bizDash.emptyHint')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -110,6 +116,7 @@ function SponsorshipCard({ sponsorship, onManage }: { sponsorship: MyBusiness['s
 }
 
 function ActivityCard({ a, onOpen }: { a: MyBusinessActivity; onOpen: () => void }) {
+  const { t } = useTranslation();
   const start = new Date(a.startsAt);
   const end = a.endsAt ? new Date(a.endsAt) : null;
   const price = a.price ?? 0;
@@ -118,7 +125,7 @@ function ActivityCard({ a, onOpen }: { a: MyBusinessActivity; onOpen: () => void
   return (
     <button
       onClick={onOpen}
-      className="group flex w-full items-stretch gap-3 rounded-card border border-border bg-surface p-4 text-left transition-colors hover:border-clay/40 cursor-pointer"
+      className="group flex w-full items-stretch gap-3 rounded-card border border-border bg-surface p-4 text-start transition-colors hover:border-clay/40 cursor-pointer"
     >
       {/* Date block */}
       <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-card bg-surface-sunk py-2">
@@ -130,11 +137,11 @@ function ActivityCard({ a, onOpen }: { a: MyBusinessActivity; onOpen: () => void
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="truncate font-display text-h3 font-medium text-ink">{a.title}</p>
-          <Tag className={cn('shrink-0 capitalize', STATUS_TONE[status] ?? STATUS_TONE.live)}>{status}</Tag>
+          <Tag className={cn('shrink-0', STATUS_TONE[status] ?? STATUS_TONE.live)}>{t(`businessChat.status.${status}`, status)}</Tag>
         </div>
 
         <p className="mt-0.5 truncate text-[12px] text-ink-soft">
-          {a.activityType} · hosted by {a.hostName}
+          {a.activityType} · {t('bizDash.hostedBy', { name: a.hostName })}
         </p>
 
         {/* Detail chips */}
@@ -146,7 +153,7 @@ function ActivityCard({ a, onOpen }: { a: MyBusinessActivity; onOpen: () => void
           {(a.going != null || a.capacity != null) && (
             <span className="flex items-center gap-1">
               <Users className="h-3.5 w-3.5 text-clay" strokeWidth={1.7} />
-              {a.going ?? 0}{a.capacity != null ? ` / ${a.capacity}` : ''} going
+              {t('bizDash.goingOf', { going: a.going ?? 0, capacity: a.capacity ?? '—' })}
             </span>
           )}
           {a.locationLabel && (
@@ -154,16 +161,16 @@ function ActivityCard({ a, onOpen }: { a: MyBusinessActivity; onOpen: () => void
               <MapPin className="h-3.5 w-3.5 text-clay" strokeWidth={1.7} /> {a.locationLabel}
             </span>
           )}
-          <span className="font-medium text-ink">{price > 0 ? `${price} MAD` : 'Free'}</span>
+          <span className="font-medium text-ink">{price > 0 ? `${price} MAD` : t('pin.free')}</span>
           {a.couponCode && (
             <Tag leftIcon={<Ticket className="h-3.5 w-3.5" strokeWidth={1.7} />} className="bg-majorelle-soft text-majorelle">
-              {a.couponCode}
+              <span dir="ltr">{a.couponCode}</span> · {t('coupon.redeemedCount', { count: a.redemptions ?? 0 })}
             </Tag>
           )}
         </div>
       </div>
 
-      <ChevronRight className="h-5 w-5 shrink-0 self-center text-ink-faint transition-colors group-hover:text-clay" strokeWidth={1.7} />
+      <ChevronRight className="h-5 w-5 shrink-0 self-center text-ink-faint transition-colors group-hover:text-clay rtl:rotate-180" strokeWidth={1.7} />
     </button>
   );
 }

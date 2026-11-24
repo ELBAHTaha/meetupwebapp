@@ -262,6 +262,8 @@ model User {
   feedback         Feedback[]         @relation("UserFeedback")
   upgradeRequests  UpgradeRequest[]   @relation("UpgradeRequester")
   blocksMade       Block[]            @relation("BlocksMade")
+  couponRedemptions CouponRedemption[] @relation("CouponHolder")
+  couponsRedeemed  CouponRedemption[] @relation("CouponRedeemer")
   blockedBy        Block[]            @relation("BlockedBy")
   upgradeDecisions UpgradeRequest[]   @relation("UpgradeDecider")
   referredBy       User?              @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
@@ -351,6 +353,7 @@ model Event {
 
   attendances Attendance[]
   upgradeRequests UpgradeRequest[]
+  couponRedemptions CouponRedemption[]
   chatThread  ChatThread?
   ratings     Rating[]
   flags       Flag[]
@@ -591,6 +594,8 @@ model Business {
   verifiedAt       DateTime?
   defaultVenueId   String?
   businessTosAcceptedAt DateTime? // Business ToS / advertising-policy acceptance
+  // Silver perk: what attendees get with their coupon (e.g. "10% off your order").
+  couponOffer      String?        @db.VarChar(160)
   ownerId          String?
   owner            User?          @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt        DateTime       @default(now())
@@ -603,6 +608,7 @@ model Business {
   verifications BusinessVerification[]
   claims        VenueClaim[]
   upgradeRequests UpgradeRequest[]
+  couponRedemptions CouponRedemption[]
 
   @@index([status])
   @@index([ownerId])
@@ -745,6 +751,7 @@ model ActivityVenue {
   isSponsored   Boolean     @default(false)
   couponCode    String?
   createdAt     DateTime    @default(now())
+  redemptions   CouponRedemption[]
 
   @@index([activityId])
   @@index([businessId, createdAt])
@@ -755,6 +762,28 @@ model ActivityVenue {
 // (eventType paddle_*); now records manual grants/extensions/revocations and
 // automatic expiries. `paddleEventId` is kept (unique) and holds a generated
 // audit id for new rows; `adminId` is the admin who made a manual change.
+// A Silver coupon used at the venue. One per attendee per activity; the code
+// is the activity's coupon + a per-attendee suffix (see common/utils/coupon.ts).
+model CouponRedemption {
+  id              String        @id @default(cuid())
+  activityVenueId String
+  activityVenue   ActivityVenue @relation(fields: [activityVenueId], references: [id], onDelete: Cascade)
+  activityId      String
+  activity        Event         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation("CouponHolder", fields: [userId], references: [id], onDelete: Cascade)
+  businessId      String
+  business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  redeemedById    String?
+  redeemedBy      User?         @relation("CouponRedeemer", fields: [redeemedById], references: [id], onDelete: SetNull)
+  code            String        @db.VarChar(40)
+  createdAt       DateTime      @default(now())
+
+  @@unique([activityId, userId])
+  @@index([businessId, createdAt])
+  @@index([activityVenueId])
+}
+
 model SubscriptionEvent {
   id            String   @id @default(cuid())
   userId        String?

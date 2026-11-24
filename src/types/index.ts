@@ -175,6 +175,8 @@ export interface MyBusinessActivity {
   status?: string;
   locationLabel?: string;
   couponCode?: string;
+  /** Coupons redeemed for this activity so far. */
+  redemptions?: number;
 }
 
 export interface MyBusiness {
@@ -189,6 +191,8 @@ export interface MyBusiness {
     contactEmail: string;
     status: string;
     photos: string[];
+    /** Silver perk text attendees see with their coupon (default offer when unset). */
+    couponOffer?: string;
   };
   sponsorship: {
     tier: SponsorshipTier;
@@ -630,7 +634,30 @@ export interface LoginInput {
 }
 
 /** Event enriched with resolved relations for convenient rendering. */
+/** A joined attendee's personal coupon for a Silver-sponsored activity. */
+export interface EventCoupon {
+  code: string;
+  offer?: string;
+  venueName: string;
+  /** True on the activity's day ± 1 (Morocco time). */
+  redeemable: boolean;
+  redeemedAt?: string;
+}
+
+/** Staff-side result of checking a coupon code. */
+export interface CouponCheck {
+  ok: boolean;
+  problem?: 'INVALID_CODE' | 'NOT_FOUND' | 'NEED_ATTENDEE_CODE' | 'OUT_OF_WINDOW' | 'ALREADY_REDEEMED';
+  code?: string;
+  offer?: string;
+  activity?: { id: string; title: string; startsAt: string };
+  attendee?: { id: string; name: string; avatar: string };
+  redeemedAt?: string;
+}
+
 export interface EnrichedEvent extends JmaaEvent {
+  /** Present for joined attendees of a Silver-sponsored activity. */
+  coupon?: EventCoupon;
   /** Returned by createEvent when a pin / extra-activity request was filed. */
   upgradeRequest?: UpgradeRequest;
   activity: Activity;
