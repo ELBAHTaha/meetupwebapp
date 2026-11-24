@@ -400,7 +400,11 @@
     "bio": "Bio",
     "city": "City",
     "noEvents": "Nothing here yet",
-    "message": "Message"
+    "message": "Message",
+    "changePhoto": "Change photo",
+    "photoUpdated": "Photo updated",
+    "photoTooBig": "Photos can be at most 5 MB.",
+    "updated": "Profile updated"
   },
   "myEvents": {
     "title": "My Events",
@@ -616,7 +620,8 @@
   "errors": {
     "EMAIL_NOT_VERIFIED": "Please verify your email first — check your inbox for the confirmation link.",
     "INVALID_TOKEN": "This link is invalid or has expired. Request a new one.",
-    "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again."
+    "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again.",
+    "INVALID_UPLOAD": "Please upload a JPG, PNG or WebP image (PDF also works for business documents)."
   },
   "businessChat": {
     "title": "Messages",

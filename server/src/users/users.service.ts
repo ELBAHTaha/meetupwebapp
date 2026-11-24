@@ -38,8 +38,9 @@ export class UsersService {
   /** Submit a selfie (with the prompted pose) for identity verification → admin review. */
   async submitVerification(id: string, selfie: Express.Multer.File | undefined, pose?: string): Promise<unknown> {
     if (!selfie) throw new BadRequestException('A verification selfie is required.');
-    if (!selfie.mimetype.startsWith('image/')) throw new BadRequestException('The selfie must be an image.');
-    const selfieUrl = await this.storage.save(selfie, 'verify');
+    // Validated by file signature + re-encoded (EXIF/GPS stripped) in StorageService.
+    const selfieUrl = await this.storage.saveImage(selfie, 'verify');
+    const previous = await this.prisma.user.findUnique({ where: { id }, select: { verificationSelfieUrl: true } });
     await this.prisma.user.update({
       where: { id },
       data: {
@@ -48,6 +49,10 @@ export class UsersService {
         verificationStatus: 'PENDING',
       },
     });
+    // A re-submission replaces the old selfie — don't keep identity photos around.
+    if (previous?.verificationSelfieUrl && previous.verificationSelfieUrl !== selfieUrl) {
+      await this.storage.delete(previous.verificationSelfieUrl);
+    }
     await this.notifications.notifyAdmins(
       { type: 'admin', title: 'New verification to review', body: 'A user submitted an identity selfie for verification.' },
       id,
@@ -56,7 +61,10 @@ export class UsersService {
   }
 
   async updateMe(id: string, dto: UpdateMeDto, photo?: Express.Multer.File): Promise<unknown> {
-    const photoUrl = photo ? await this.storage.save(photo, 'avatar') : undefined;
+    const photoUrl = photo ? await this.storage.saveImage(photo, 'avatar') : undefined;
+    const oldPhoto = photoUrl
+      ? (await this.prisma.user.findUnique({ where: { id }, select: { photoUrl: true } }))?.photoUrl
+      : undefined;
     const coords = dto.zip || dto.neighborhood ? this.geocoding.geocode(dto.zip, dto.neighborhood) : null;
 
     await this.prisma.user.update({
@@ -74,6 +82,8 @@ export class UsersService {
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       },
     });
+    // Replaced avatar → remove the old file (ignored if it isn't one of ours).
+    if (oldPhoto && oldPhoto !== photoUrl) await this.storage.delete(oldPhoto);
     return this.me(id);
   }
 }

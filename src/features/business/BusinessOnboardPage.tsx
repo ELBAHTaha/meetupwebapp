@@ -165,7 +165,7 @@ function VerifyForm({ businessId, onDone }: { businessId: string; onDone: () => 
       <button onClick={() => fileRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-card border border-dashed border-clay/50 bg-clay-soft/30 px-3 py-3 text-meta font-medium text-clay cursor-pointer">
         <Upload className="h-4 w-4" strokeWidth={1.7} /> {files.length ? `${files.length} file(s) selected` : 'Upload documents'}
       </button>
-      <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+      <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
       <Button size="sm" fullWidth loading={busy} onClick={submit}>Submit for review</Button>
     </div>
   );

@@ -163,17 +163,64 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 Migrations are applied automatically on boot. The prod seed is idempotent and
 never deletes data, so redeploys are safe.
 
-**Database backup** (do this on a schedule — e.g. cron daily)
+**Backups (database + uploads), daily, free**
+
+`scripts/backup.sh` dumps MySQL (consistent `mysqldump --single-transaction`,
+gzipped) and tars the `uploads` volume, both streamed out of the running
+containers. It writes them to `~/hudlgo-backups/YYYY-MM-DD/`, keeps the last
+**14 days**, verifies each archive and logs to `~/hudlgo-backups/backup.log`. It
+never stops anything.
+
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec mysql \
-  sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' > backup-$(date +%F).sql
+cd ~/meetupwebapp && bash scripts/backup.sh     # run once by hand to check it works
 ```
 
-**Restore**
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T mysql \
-  sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < backup-YYYY-MM-DD.sql
+Schedule it every day at 03:30 (`crontab -e` as the deploy user):
+```cron
+30 3 * * * cd $HOME/meetupwebapp && bash scripts/backup.sh >/dev/null 2>&1
 ```
+
+**Off-site copy to Google Drive (free 15 GB) with rclone.** Without this, a dead
+VPS takes the backups with it.
+1. Install rclone on the VPS: `curl https://rclone.org/install.sh | sudo bash`
+2. The VPS has no browser, so authorise on your laptop: install rclone there
+   too and run `rclone authorize "drive"`. Sign in with the Google account that
+   should hold the backups, then copy the token JSON it prints.
+3. On the VPS run `rclone config` → `n` (new remote) → name **`gdrive`** →
+   storage **`drive`** → leave client id/secret empty → scope **`drive.file`**
+   (rclone only sees the files it creates) → *Edit advanced config?* `n` →
+   *Use web browser to automatically authenticate?* **`n`** → paste the token
+   from step 2 → *Shared drive?* `n` → confirm.
+4. Test it: `rclone mkdir gdrive:hudlgo-backups && rclone lsd gdrive:`
+5. Add `RCLONE_REMOTE=gdrive:hudlgo-backups` to `.env.prod`. The next backup
+   copies the day's folder to Drive and prunes Drive copies older than 14 days.
+
+A day of backups is roughly the size of the gzipped DB plus your photos, which are
+small WebP files. 14 days fits comfortably in 15 GB for a long time.
+
+**Restore** (⚠️ overwrites live data; asks you to type `RESTORE`):
+```bash
+bash scripts/restore.sh 2026-11-24                 # database + uploads from that day
+bash scripts/restore.sh 2026-11-24 --db-only       # or --uploads-only
+# from Google Drive first:
+rclone copy gdrive:hudlgo-backups/2026-11-24 ~/hudlgo-backups/2026-11-24
+```
+The api is stopped during a database restore and started again afterwards. Any
+newer migrations are re-applied on boot.
+
+**Free uptime monitoring (optional): UptimeRobot**
+
+1. Create a free account at <https://uptimerobot.com> (50 monitors, 5-minute
+   checks, email alerts).
+2. *Add New Monitor* → type **HTTP(s)** → URL `https://api.hudlgo.com/health` →
+   friendly name `hudlgo API` → interval 5 min → alert contact = your email
+   (the free plan also offers the mobile app's push notifications).
+3. Add a second **HTTP(s)** monitor for `https://hudlgo.com` (`hudlgo web`). If you
+   want, use the *Keyword* type with keyword `hudlgo` to catch a blank page.
+4. Optional: *Status pages* → create a free public status page with both monitors.
+
+`/health` is public, cheap and doesn't touch user data, so pinging it every 5
+minutes costs nothing.
 
 **Logs / status / stop**
 ```bash
@@ -184,6 +231,14 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod down   # stop (ke
 
 Persistent data lives in named volumes: `mysql_data` (DB), `uploads` (user photos),
 `caddy_data` (TLS certs). `down` keeps them; `down -v` **deletes** them — don't.
+
+**Uploads** stay on the VPS disk (the `uploads` volume). The api only accepts
+JPG/PNG/WebP photos (checked by file signature, ≤5 MB). It re-encodes them to WebP
+(≤1600 px, quality 80) with EXIF/GPS stripped, and deletes the old file when an
+avatar or venue photo is replaced. Business documents may also be PDFs (≤8 MB).
+Storage sits behind a `StorageDriver` interface
+(`server/src/storage/storage.driver.ts`), so moving to S3-compatible storage later
+means adding a driver, not touching callers.
 
 ## 10. Paid plans: offline payment + manual activation
 

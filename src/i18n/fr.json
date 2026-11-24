@@ -400,7 +400,11 @@
     "bio": "Bio",
     "city": "Ville",
     "noEvents": "Rien ici pour l'instant",
-    "message": "Message"
+    "message": "Message",
+    "changePhoto": "Changer la photo",
+    "photoUpdated": "Photo mise à jour",
+    "photoTooBig": "Les photos font au maximum 5 Mo.",
+    "updated": "Profil mis à jour"
   },
   "myEvents": {
     "title": "Mes Événements",
@@ -616,7 +620,8 @@
   "errors": {
     "EMAIL_NOT_VERIFIED": "Confirme d’abord ton e-mail — regarde dans ta boîte mail pour le lien de confirmation.",
     "INVALID_TOKEN": "Ce lien est invalide ou a expiré. Demandes-en un nouveau.",
-    "TOO_MANY_REQUESTS": "Trop de tentatives. Patiente quelques minutes et réessaie."
+    "TOO_MANY_REQUESTS": "Trop de tentatives. Patiente quelques minutes et réessaie.",
+    "INVALID_UPLOAD": "Envoie une image JPG, PNG ou WebP (le PDF est aussi accepté pour les documents d’entreprise)."
   },
   "businessChat": {
     "title": "Messages",

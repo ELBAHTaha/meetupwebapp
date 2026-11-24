@@ -30,6 +30,7 @@ export const {
   resendVerification,
   getReferral,
   updateProfile,
+  uploadAvatar,
   getUser,
   submitVerification,
   // ---- Activities & events ----

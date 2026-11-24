@@ -138,7 +138,7 @@ export function BusinessVenuePage() {
             </button>
           )}
         </div>
-        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPickPhotos} />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={onPickPhotos} />
         {photos.length === 0 && !uploading && (
           <p className="mt-3 text-[12px] text-ink-faint">No photos yet — add a few so hosts can see your venue.</p>
         )}

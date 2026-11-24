@@ -145,8 +145,9 @@ export class BusinessService {
     const current = (business.photos as string[] | null) ?? [];
     const room = Math.max(0, MAX_VENUE_PHOTOS - current.length);
     if (room === 0) throw new BadRequestException(`You can upload up to ${MAX_VENUE_PHOTOS} venue photos.`);
-    const accepted = (files ?? []).filter((f) => f.mimetype.startsWith('image/')).slice(0, room);
-    const urls = await Promise.all(accepted.map((f) => this.storage.save(f, 'venue')));
+    // Each photo is validated by signature, resized and re-encoded (StorageService).
+    const accepted = (files ?? []).slice(0, room);
+    const urls = await Promise.all(accepted.map((f) => this.storage.saveImage(f, 'venue')));
     await this.prisma.business.update({ where: { id: business.id }, data: { photos: [...current, ...urls] } });
     return this.myBusiness(userId);
   }
@@ -155,7 +156,9 @@ export class BusinessService {
   async removePhoto(userId: string, url: string): Promise<unknown> {
     const business = await this.ownedBusiness(userId);
     const current = (business.photos as string[] | null) ?? [];
+    if (!current.includes(url)) return this.myBusiness(userId);
     await this.prisma.business.update({ where: { id: business.id }, data: { photos: current.filter((p) => p !== url) } });
+    await this.storage.delete(url);
     return this.myBusiness(userId);
   }
 

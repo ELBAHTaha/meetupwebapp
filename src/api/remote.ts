@@ -139,6 +139,13 @@ export function getUser(id: string): Promise<User | null> {
   return api.get<User>(`/users/${id}`).catch(() => null);
 }
 
+/** Replace the profile photo (server validates, re-encodes and deletes the old one). */
+export function uploadAvatar(photo: File): Promise<User> {
+  const form = new FormData();
+  form.append('photo', photo);
+  return api.upload<User>('/users/me', form, 'PATCH');
+}
+
 export function submitVerification(selfie: File, pose: string): Promise<User> {
   const form = new FormData();
   form.append('selfie', selfie);

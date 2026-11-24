@@ -175,7 +175,7 @@ export function SignupPage() {
                   <Camera className="h-7 w-7 text-ink-faint" strokeWidth={1.5} />
                 )}
               </button>
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onPhoto} />
               <p className="mt-2 text-[12px] text-ink-faint">{t('auth.addPhoto')} · required</p>
             </div>
 

@@ -111,7 +111,7 @@ export function VerifyPage() {
                   <span className="mt-2 text-meta font-medium">{t('verify.takeSelfie')}</span>
                 </button>
               )}
-              <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="hidden" onChange={onPick} />
               {preview && (
                 <button
                   onClick={() => fileRef.current?.click()}

@@ -151,7 +151,8 @@ export class VenueService {
     if (existing) throw new BadRequestException('A claim for this venue is already pending review.');
 
     const uploaded = await Promise.all(
-      (files ?? []).filter((f) => f.mimetype).map((f) => this.storage.save(f, 'venue-claim')),
+      // Images or PDF, validated by signature (StorageService.saveDocument).
+      (files ?? []).map((f) => this.storage.saveDocument(f, 'venue-claim')),
     );
     const evidence = [...(dto.evidence ?? []), ...uploaded];
     const claim = await this.prisma.venueClaim.create({

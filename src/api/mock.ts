@@ -148,6 +148,14 @@ export async function updateProfile(patch: Partial<User>): Promise<User> {
   return delay(me, 250);
 }
 
+/** Replace the profile photo (mock: a local object URL). */
+export async function uploadAvatar(photo: File): Promise<User> {
+  const me = findUser(db.currentUserId)!;
+  me.avatar = URL.createObjectURL(photo);
+  saveDb();
+  return delay(me, 300);
+}
+
 export async function submitVerification(selfie: File, pose: string): Promise<User> {
   const me = findUser(db.currentUserId)!;
   me.verificationStatus = 'pending';

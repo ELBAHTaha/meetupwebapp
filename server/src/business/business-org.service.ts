@@ -98,7 +98,8 @@ export class BusinessOrgService {
   async submitVerification(id: string, dto: SubmitVerificationDto, files: UploadFile[] = []) {
     await this.ensureBusiness(id);
     const uploaded = await Promise.all(
-      (files ?? []).filter((f) => f.mimetype).map((f) => this.storage.save(f, 'biz-doc')),
+      // Images or PDF, validated by signature (StorageService.saveDocument).
+      (files ?? []).map((f) => this.storage.saveDocument(f, 'biz-doc')),
     );
     const documentUrls = [...(dto.documentUrls ?? []), ...uploaded];
     const verification = await this.prisma.businessVerification.create({

@@ -78,7 +78,7 @@ export class AuthService {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new BadRequestException('An account with this email already exists.');
 
-    const photoUrl = photo ? await this.storage.save(photo, 'avatar') : undefined;
+    const photoUrl = photo ? await this.storage.saveImage(photo, 'avatar') : undefined;
     const coords = this.geocoding.geocode(dto.zip, dto.neighborhood);
 
     const user = await this.prisma.user.create({
