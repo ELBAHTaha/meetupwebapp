@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { BlocksService } from '../blocks/blocks.service';
 import { UpdateMeDto } from './dto/update-user.dto';
 import { lookingForIn, meUser, publicUser, userPublicInclude } from '../common/serializers/user.serializer';
 
@@ -13,11 +14,12 @@ export class UsersService {
     private readonly storage: StorageService,
     private readonly geocoding: GeocodingService,
     private readonly notifications: NotificationsService,
+    private readonly blocks: BlocksService,
   ) {}
 
-  async publicProfile(id: string): Promise<unknown> {
+  async publicProfile(id: string, viewerId?: string): Promise<unknown> {
     const user = await this.prisma.user.findUnique({ where: { id }, include: userPublicInclude });
-    if (!user) throw new NotFoundException('User not found.');
+    if (!user || (await this.blocks.eitherWay(viewerId, id))) throw new NotFoundException('User not found.');
     const counts = await this.counts(id);
     return { ...publicUser(user), ...counts };
   }

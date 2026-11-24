@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -14,7 +15,8 @@ import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { SubmitVerificationDto, UpdateMeDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
-import { Public } from '../common/decorators/public.decorator';
+import { OptionalAuth } from '../common/decorators/optional-auth.decorator';
+import { BlocksService } from '../blocks/blocks.service';
 import { ConsumerGuard } from '../common/guards/consumer.guard';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -25,7 +27,24 @@ export class UsersController {
   constructor(
     private readonly users: UsersService,
     private readonly notifications: NotificationsService,
+    private readonly blocks: BlocksService,
   ) {}
+
+  // ---- Blocking (declared before `:id` so "me" isn't read as a user id) ----
+  @Get('me/blocks')
+  myBlocks(@CurrentUser() user: AuthUser) {
+    return this.blocks.listMine(user.id);
+  }
+
+  @Post(':id/block')
+  block(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.blocks.block(user.id, id);
+  }
+
+  @Delete(':id/block')
+  unblock(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.blocks.unblock(user.id, id);
+  }
 
   @Get('me/notifications')
   listNotifications(@CurrentUser() user: AuthUser) {
@@ -58,9 +77,10 @@ export class UsersController {
     return this.users.submitVerification(user.id, selfie, dto.pose);
   }
 
-  @Public()
+  // Public, but a signed-in viewer can't see someone they blocked / who blocked them (404).
+  @OptionalAuth()
   @Get(':id')
-  publicProfile(@Param('id') id: string) {
-    return this.users.publicProfile(id);
+  publicProfile(@Param('id') id: string, @CurrentUser() viewer?: AuthUser) {
+    return this.users.publicProfile(id, viewer?.id);
   }
 }

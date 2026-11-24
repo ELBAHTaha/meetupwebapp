@@ -32,6 +32,9 @@ export const {
   updateProfile,
   uploadAvatar,
   getUser,
+  blockUser,
+  unblockUser,
+  listBlockedUsers,
   submitVerification,
   // ---- Activities & events ----
   listActivities,

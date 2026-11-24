@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Bell, Check, ChevronRight, Crown, Globe, LogOut, Moon, ShieldCheck, Sun } from 'lucide-react';
+import { Ban, BadgeCheck, Bell, Check, ChevronRight, Crown, Globe, LogOut, Moon, ShieldCheck, Sun } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Sheet } from '@/components/Sheet';
 import { useSession } from '@/store/session';
@@ -73,6 +73,15 @@ export function SettingsPage() {
             <p className="text-[12px] text-ink-soft">{t('profile.plansHint')}</p>
           </div>
           <ChevronRight className="h-5 w-5 text-ink-faint" strokeWidth={1.6} />
+        </button>
+
+        <button onClick={() => navigate('/settings/blocked')} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors">
+          <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-surface-sunk text-ink-soft"><Ban className="h-5 w-5" strokeWidth={1.6} /></span>
+          <div className="flex-1 text-start">
+            <p className="font-display text-h3 font-medium">{t('block.settingsTitle')}</p>
+            <p className="text-[12px] text-ink-soft">{t('block.settingsHint')}</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-ink-faint rtl:rotate-180" strokeWidth={1.6} />
         </button>
 
         <button onClick={() => setLangOpen(true)} className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 cursor-pointer hover:border-ink/20 transition-colors">

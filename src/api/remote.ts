@@ -146,6 +146,11 @@ export function uploadAvatar(photo: File): Promise<User> {
   return api.upload<User>('/users/me', form, 'PATCH');
 }
 
+// ---- Blocking ----------------------------------------------------------------
+export const blockUser = (id: string) => api.post<{ success: true }>(`/users/${id}/block`);
+export const unblockUser = (id: string) => api.del<{ success: true }>(`/users/${id}/block`);
+export const listBlockedUsers = () => api.get<(User & { blockedAt?: string })[]>('/users/me/blocks');
+
 export function submitVerification(selfie: File, pose: string): Promise<User> {
   const form = new FormData();
   form.append('selfie', selfie);

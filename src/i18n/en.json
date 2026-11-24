@@ -621,7 +621,8 @@
     "EMAIL_NOT_VERIFIED": "Please verify your email first — check your inbox for the confirmation link.",
     "INVALID_TOKEN": "This link is invalid or has expired. Request a new one.",
     "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again.",
-    "INVALID_UPLOAD": "Please upload a JPG, PNG or WebP image (PDF also works for business documents)."
+    "INVALID_UPLOAD": "Please upload a JPG, PNG or WebP image (PDF also works for business documents).",
+    "BLOCKED": "You can’t join this activity."
   },
   "businessChat": {
     "title": "Messages",
@@ -849,5 +850,21 @@
     "revoke": "Revoke",
     "confirmRevoke": "Revoke the plan for {{name}}?",
     "saved": "Plan updated"
+  },
+  "block": {
+    "block": "Block",
+    "unblock": "Unblock",
+    "viewProfile": "View profile",
+    "confirmTitle": "Block {{name}}?",
+    "effect1": "Neither of you can join the other’s activities or see each other’s profile.",
+    "effect2": "Their activities disappear from your feed, and yours from theirs.",
+    "effect3": "You won’t see their messages in group chats. They aren’t notified.",
+    "undoHint": "You can unblock anytime in Settings → Blocked users.",
+    "done": "{{name}} is blocked",
+    "unblocked": "{{name}} is unblocked",
+    "settingsTitle": "Blocked users",
+    "settingsHint": "People you’ve blocked",
+    "pageHint": "Blocked people can’t join your activities, see your profile or show up in your feed.",
+    "empty": "You haven’t blocked anyone"
   }
 }

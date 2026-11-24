@@ -14,6 +14,7 @@ import { ChatListPage } from '@/features/chat/ChatListPage';
 import { ChatThreadPage } from '@/features/chat/ChatThreadPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { SettingsPage } from '@/features/profile/SettingsPage';
+import { BlockedUsersPage } from '@/features/profile/BlockedUsersPage';
 import { EditProfilePage } from '@/features/profile/EditProfilePage';
 import { VerifyPage } from '@/features/profile/VerifyPage';
 import { EventDetailPage } from '@/features/event/EventDetailPage';
@@ -93,6 +94,7 @@ export const router = createBrowserRouter([
       { path: '/profile/edit', element: <EditProfilePage /> },
       { path: '/verify', element: <VerifyPage /> },
       { path: '/settings', element: <SettingsPage /> },
+      { path: '/settings/blocked', element: <BlockedUsersPage /> },
       { path: '/event/:id', element: <EventDetailPage /> },
       { path: '/user/:id', element: <UserProfilePage /> },
       { path: '/my-events', element: <MyEventsPage /> },

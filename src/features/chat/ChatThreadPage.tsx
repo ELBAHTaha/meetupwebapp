@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Flag, Lock, SendHorizonal } from 'lucide-react';
+import { Ban, Flag, Lock, SendHorizonal, UserRound } from 'lucide-react';
+import { Sheet } from '@/components/Sheet';
+import { BlockUserSheet } from '@/components/BlockUserSheet';
 import { PageHeader } from '@/components/PageHeader';
 import { Avatar } from '@/components/Avatar';
 import { ActivityIcon } from '@/components/ActivityIcon';
@@ -27,6 +29,10 @@ export function ChatThreadPage() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
+  // Tapping a sender opens profile / block / report actions for that member.
+  const [member, setMember] = useState<{ id: string; name: string } | null>(null);
+  const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
+  const [reportUserId, setReportUserId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const thread = db.threads.find((x) => x.id === threadId);
@@ -111,9 +117,20 @@ export function ChatThreadPage() {
             const showAvatar = !mine && messages[i - 1]?.senderId !== m.senderId;
             return (
               <div key={m.id} className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
-                {!mine && (showAvatar && sender ? <Avatar src={sender.avatar} name={sender.name} size="xs" /> : <span className="w-6" />)}
+                {!mine &&
+                  (showAvatar && sender ? (
+                    <button onClick={() => setMember({ id: m.senderId, name: sender.name })} aria-label={sender.name} className="cursor-pointer">
+                      <Avatar src={sender.avatar} name={sender.name} size="xs" />
+                    </button>
+                  ) : (
+                    <span className="w-6" />
+                  ))}
                 <div className="max-w-[78%] animate-fade-in">
-                  {!mine && showAvatar && <p className="mb-0.5 ml-1 text-[11px] font-medium text-ink-faint">{sender?.name.split(' ')[0]}</p>}
+                  {!mine && showAvatar && sender && (
+                    <button onClick={() => setMember({ id: m.senderId, name: sender.name })} className="mb-0.5 ms-1 block text-[11px] font-medium text-ink-faint hover:text-ink cursor-pointer">
+                      {sender.name.split(' ')[0]}
+                    </button>
+                  )}
                   <div className={cn('rounded-[14px] px-3.5 py-2.5 text-[15px] leading-snug', mine ? 'rounded-br-[4px] bg-clay-soft text-ink' : 'rounded-bl-[4px] bg-surface-sunk text-ink', m.pending && 'opacity-60')}>
                     {m.text}
                   </div>
@@ -142,6 +159,32 @@ export function ChatThreadPage() {
       </div>
 
       <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} targetType={reportTargetType} targetId={reportTargetId} chatThreadId={thread?.id} />
+      <ReportSheet open={!!reportUserId} onClose={() => setReportUserId(null)} targetType="user" targetId={reportUserId ?? ''} chatThreadId={thread?.id ?? fetched?.id} />
+
+      <Sheet open={!!member} onClose={() => setMember(null)} title={member?.name}>
+        {member && (
+          <div className="grid gap-2 pb-2">
+            <button onClick={() => { setMember(null); navigate(`/user/${member.id}`); }} className="flex items-center gap-3 rounded-input border border-border bg-surface px-4 py-3 text-meta font-medium text-ink cursor-pointer hover:bg-surface-sunk">
+              <UserRound className="h-4 w-4" strokeWidth={1.7} /> {t('block.viewProfile')}
+            </button>
+            <button onClick={() => { setBlockTarget(member); setMember(null); }} className="flex items-center gap-3 rounded-input border border-border bg-surface px-4 py-3 text-meta font-medium text-ink cursor-pointer hover:bg-surface-sunk">
+              <Ban className="h-4 w-4" strokeWidth={1.7} /> {t('block.block')}
+            </button>
+            <button onClick={() => { setReportUserId(member.id); setMember(null); }} className="flex items-center gap-3 rounded-input border border-border bg-surface px-4 py-3 text-meta font-medium text-clay cursor-pointer hover:bg-clay-soft">
+              <Flag className="h-4 w-4" strokeWidth={1.7} /> {t('report.title')}
+            </button>
+          </div>
+        )}
+      </Sheet>
+      <BlockUserSheet
+        open={!!blockTarget}
+        onClose={() => setBlockTarget(null)}
+        user={blockTarget}
+        onBlocked={() => {
+          const id = blockTarget?.id;
+          setMessages((cur) => cur.filter((x) => x.senderId !== id));
+        }}
+      />
     </div>
   );
 }

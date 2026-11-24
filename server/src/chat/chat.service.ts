@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { BlocksService } from '../blocks/blocks.service';
 import { messageViolation } from '../common/utils/message-filter';
 import { avatarFor } from '../common/serializers/user.serializer';
 
@@ -30,6 +31,7 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeService,
+    private readonly blocks: BlocksService,
   ) {}
 
   /**
@@ -55,8 +57,10 @@ export class ChatService {
     const event = await this.assertCanView(eventId, userId);
     const thread = event.chatThread!;
     const ended = new Date(event.endsAt) < new Date();
+    // Messages from people I blocked are hidden from me.
+    const hiddenSenders = await this.blocks.blockedBy(userId);
     const messages = await this.prisma.chatMessage.findMany({
-      where: { threadId: thread.id },
+      where: { threadId: thread.id, ...(hiddenSenders.length ? { senderId: { notIn: hiddenSenders } } : {}) },
       orderBy: { sentAt: 'asc' },
       include: { sender: senderSelect },
     });
@@ -92,8 +96,10 @@ export class ChatService {
       include: { sender: senderSelect },
     });
     const out = serializeMessage(msg);
-    const participants = [event.hostId, ...event.attendances.map((a) => a.userId)];
-    this.realtime.toThread(eventId, 'message:new', { eventId, message: out });
+    // Live delivery skips everyone who blocked the sender.
+    const blockers = await this.blocks.blockersOf(userId);
+    const participants = [event.hostId, ...event.attendances.map((a) => a.userId)].filter((id) => !blockers.includes(id));
+    this.realtime.toThread(eventId, 'message:new', { eventId, message: out }, blockers);
     this.realtime.toUsers(participants, 'chat:activity', { eventId, message: out });
     return out;
   }

@@ -11,6 +11,7 @@ import { GeocodingModule } from './geocoding/geocoding.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MailModule } from './mail/mail.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ActivityTypesModule } from './activity-types/activity-types.module';
@@ -40,6 +41,7 @@ import { HealthController } from './health/health.controller';
     // Infrastructure
     PrismaModule,
     RealtimeModule,
+    BlocksModule,
     TrustModule,
     StorageModule,
     GeocodingModule,

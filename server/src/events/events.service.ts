@@ -19,6 +19,7 @@ import { haversineKm } from '../common/utils/haversine';
 import { ActivityCategory, GenderPreference, Prisma, Visibility } from '@prisma/client';
 import { SubscriptionService } from '../monetization/subscription.service';
 import { UpgradesService } from '../monetization/upgrades.service';
+import { BlocksService } from '../blocks/blocks.service';
 import { BusinessService } from '../monetization/business.service';
 
 const FOUR_HOURS = 4 * 60 * 60 * 1000;
@@ -36,6 +37,7 @@ export class EventsService {
     private readonly upgrades: UpgradesService,
     private readonly businesses: BusinessService,
     private readonly trust: TrustService,
+    private readonly blocks: BlocksService,
   ) {}
 
   // --- guards -------------------------------------------------------------
@@ -215,6 +217,8 @@ export class EventsService {
       approvedAt: { not: null }, // hidden until an admin approves
       endsAt: { gt: new Date() },
     };
+    const hiddenHosts = await this.blocks.relatedIds(viewerId);
+    if (hiddenHosts.length) where.hostId = { notIn: hiddenHosts };
 
     if (query.typeId) {
       const id = await this.activityTypes.resolveId(query.typeId);
@@ -308,6 +312,10 @@ export class EventsService {
     const e = await this.loadOrThrow(id, viewerId);
     // Under-review or not-yet-approved activities are hidden from everyone but the host.
     if ((e.underReview || !e.approvedAt) && e.hostId !== viewerId) throw new NotFoundException('Activity not found.');
+    // Blocked either way → the host's activities don't exist for this viewer
+    // (an existing attendee keeps access to an activity they already joined).
+    const attending = !!viewerId && e.attendances.some((a) => a.userId === viewerId);
+    if (!attending && (await this.blocks.eitherWay(viewerId, e.hostId))) throw new NotFoundException('Activity not found.');
     return serializeEvent(e, viewerId);
   }
 
@@ -431,6 +439,10 @@ export class EventsService {
     if (e.hostId === userId) throw new BadRequestException('You are the host of this activity.');
     if (e.attendances.some((a) => a.userId === userId)) {
       throw new BadRequestException('You have already joined this activity.');
+    }
+    // No new joins across a block (either direction). Existing attendance is left alone.
+    if (await this.blocks.eitherWay(userId, e.hostId)) {
+      throw new ForbiddenException({ message: 'You can’t join this activity.', code: 'BLOCKED' });
     }
     // Gender preference
     if (e.genderPreference !== 'ANY') {

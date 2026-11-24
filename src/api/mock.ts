@@ -271,9 +271,11 @@ function cityOriginForZip(zip?: string): { lat: number; lng: number } | null {
 }
 
 export async function listEvents(filters: EventFilters = {}, opts: ListOpts = {}): Promise<EnrichedEvent[]> {
+  const blocked = mockBlocks();
   let list = db.events
     .filter((e) => e.status !== 'PAST' && e.lifecycle !== 'cancelled' && e.lifecycle !== 'completed')
     .filter((e) => !e.underReview && !!e.approvedAt)
+    .filter((e) => !blocked.has(e.hostId))
     .filter((e) => matches(e, filters))
     .map((e) => enrich(e));
 
@@ -888,6 +890,7 @@ export async function joinEvent(id: string, _shareContactWithHostBusiness = fals
   const e = findEvent(id);
   if (!e) throw new Error('Activity not found.');
   if (e.lifecycle === 'cancelled') throw new Error('This activity was cancelled.');
+  if (mockBlocks().has(e.hostId)) throw new Error('You can’t join this activity.');
   joinEventInStore(id, userId);
   // Notify the host that someone joined their activity.
   if (e.hostId !== userId) {
@@ -909,8 +912,45 @@ export async function leaveEvent(id: string, userId: string = db.currentUserId):
 
 // ---- Users -----------------------------------------------------------------
 
+// Mock blocking: ids the demo user blocked, persisted per browser.
+const BLOCKS_KEY = 'hudlgo-mock-blocks';
+function mockBlocks(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(BLOCKS_KEY) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function saveMockBlocks(s: Set<string>): void {
+  try {
+    localStorage.setItem(BLOCKS_KEY, JSON.stringify([...s]));
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function getUser(id: string): Promise<User | null> {
-  return delay(findUser(id) ?? null, 200);
+  // Blocked → their profile doesn't exist for me (parity with the backend's 404).
+  return delay(mockBlocks().has(id) ? null : findUser(id) ?? null, 200);
+}
+
+export async function blockUser(id: string): Promise<{ success: true }> {
+  if (id === db.currentUserId) throw new Error('You can’t block yourself.');
+  const s = mockBlocks();
+  s.add(id);
+  saveMockBlocks(s);
+  return delay({ success: true }, 200);
+}
+
+export async function unblockUser(id: string): Promise<{ success: true }> {
+  const s = mockBlocks();
+  s.delete(id);
+  saveMockBlocks(s);
+  return delay({ success: true }, 200);
+}
+
+export async function listBlockedUsers(): Promise<(User & { blockedAt?: string })[]> {
+  return delay([...mockBlocks()].map((id) => findUser(id)).filter((u): u is User => !!u), 150);
 }
 
 export async function getReviewsForUser(userId: string): Promise<Review[]> {
@@ -953,7 +993,11 @@ export async function listThreads(userId: string = db.currentUserId): Promise<Ch
 
 export async function getThread(id: string): Promise<ChatThread | null> {
   const t = db.threads.find((x) => x.id === id);
-  return delay(t ? enrichThread(structuredClone(t)) : null, 200);
+  if (!t) return delay(null, 200);
+  const blocked = mockBlocks();
+  const copy = structuredClone(t);
+  copy.messages = copy.messages.filter((m) => !blocked.has(m.senderId));
+  return delay(enrichThread(copy), 200);
 }
 
 export async function sendMessage(threadId: string, text: string): Promise<ChatMessage> {

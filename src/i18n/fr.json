@@ -621,7 +621,8 @@
     "EMAIL_NOT_VERIFIED": "Confirme d’abord ton e-mail — regarde dans ta boîte mail pour le lien de confirmation.",
     "INVALID_TOKEN": "Ce lien est invalide ou a expiré. Demandes-en un nouveau.",
     "TOO_MANY_REQUESTS": "Trop de tentatives. Patiente quelques minutes et réessaie.",
-    "INVALID_UPLOAD": "Envoie une image JPG, PNG ou WebP (le PDF est aussi accepté pour les documents d’entreprise)."
+    "INVALID_UPLOAD": "Envoie une image JPG, PNG ou WebP (le PDF est aussi accepté pour les documents d’entreprise).",
+    "BLOCKED": "Tu ne peux pas rejoindre cette activité."
   },
   "businessChat": {
     "title": "Messages",
@@ -849,5 +850,21 @@
     "revoke": "Retirer",
     "confirmRevoke": "Retirer l’offre de {{name}} ?",
     "saved": "Offre mise à jour"
+  },
+  "block": {
+    "block": "Bloquer",
+    "unblock": "Débloquer",
+    "viewProfile": "Voir le profil",
+    "confirmTitle": "Bloquer {{name}} ?",
+    "effect1": "Aucun de vous deux ne pourra rejoindre les activités de l’autre ni voir son profil.",
+    "effect2": "Ses activités disparaissent de ton fil, et les tiennes du sien.",
+    "effect3": "Tu ne verras plus ses messages dans les chats de groupe. La personne n’est pas prévenue.",
+    "undoHint": "Tu peux débloquer à tout moment dans Paramètres → Utilisateurs bloqués.",
+    "done": "{{name}} est bloqué(e)",
+    "unblocked": "{{name}} est débloqué(e)",
+    "settingsTitle": "Utilisateurs bloqués",
+    "settingsHint": "Les personnes que tu as bloquées",
+    "pageHint": "Les personnes bloquées ne peuvent pas rejoindre tes activités, voir ton profil ni apparaître dans ton fil.",
+    "empty": "Tu n’as bloqué personne"
   }
 }

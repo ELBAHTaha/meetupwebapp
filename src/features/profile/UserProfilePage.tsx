@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Flag, MessageCircle, UserX } from 'lucide-react';
+import { Ban, Flag, MessageCircle, UserX } from 'lucide-react';
+import { BlockUserSheet } from '@/components/BlockUserSheet';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { ProfileView } from './ProfileView';
@@ -20,6 +21,7 @@ export function UserProfilePage() {
   const navigate = useNavigate();
   const me = useSession((s) => s.user);
   const [reportOpen, setReportOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
   const { data: user, loading } = useAsync(() => getUser(id), [id]);
 
   // Own profile? Redirect-style render via ProfileView self.
@@ -70,9 +72,18 @@ export function UserProfilePage() {
             <Button variant="danger" leftIcon={<Flag className="h-4 w-4" strokeWidth={1.6} />} onClick={() => setReportOpen(true)}>
               {t('report.title')}
             </Button>
+            <Button variant="outline" leftIcon={<Ban className="h-4 w-4" strokeWidth={1.6} />} onClick={() => setBlockOpen(true)}>
+              {t('block.block')}
+            </Button>
           </div>
           <ProfileView user={user} self={false} />
           <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} targetType="user" targetId={user.id} />
+          <BlockUserSheet
+            open={blockOpen}
+            onClose={() => setBlockOpen(false)}
+            user={{ id: user.id, name: user.name }}
+            onBlocked={() => navigate(-1)}
+          />
         </>
       ) : (
         <EmptyState icon={UserX} title={t('common.notFound')} />
