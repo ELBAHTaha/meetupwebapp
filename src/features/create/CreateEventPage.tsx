@@ -112,11 +112,9 @@ export function CreateEventPage() {
         activityId: activity.id,
         title: (title || `${activity.name} meetup`).slice(0, 60),
         spotId: isOnline ? undefined : spotId,
-        location: isOnline
-          ? { lat: 0, lng: 0, label: 'Online' }
-          : spotId
-            ? undefined
-            : resolvedLocation ?? undefined,
+        // Always send the coordinates — for a saved place too (the backend needs
+        // lat/lng; the mock resolves spotId itself).
+        location: isOnline ? { lat: 0, lng: 0, label: 'Online' } : resolvedLocation ?? undefined,
         areaLabel: isOnline ? 'Online' : areaLabel.trim() || undefined,
         startsAt: new Date(startsAtMs).toISOString(),
         durationMins: duration,

@@ -473,5 +473,23 @@
     "going_two": "جوج مشاركين",
     "going_few": "{{count}} مشاركين",
     "going_many": "{{count}} مشارك"
+  },
+  "conditions": {
+    "swell": "الموج",
+    "period": "المدة",
+    "wind": "الريح",
+    "air": "الجو",
+    "water": "الما",
+    "source": "التوقعات: Open-Meteo",
+    "summary": {
+      "clear": "السما صافية",
+      "cloudy": "مغيّم",
+      "fog": "الضباب",
+      "rain": "الشتا",
+      "showers": "زخات ديال الشتا",
+      "snow": "الثلج",
+      "storm": "العواصف",
+      "windy": "فيه الريح"
+    }
   }
 }

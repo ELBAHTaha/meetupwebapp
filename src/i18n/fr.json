@@ -630,5 +630,23 @@
       "completed": "Terminée",
       "cancelled": "Annulée"
     }
+  },
+  "conditions": {
+    "swell": "Vagues",
+    "period": "Période",
+    "wind": "Vent",
+    "air": "Air",
+    "water": "Eau",
+    "source": "Prévisions : Open-Meteo",
+    "summary": {
+      "clear": "Ciel dégagé",
+      "cloudy": "Nuageux",
+      "fog": "Brouillard",
+      "rain": "Pluie",
+      "showers": "Averses",
+      "snow": "Neige",
+      "storm": "Orages",
+      "windy": "Venteux"
+    }
   }
 }

@@ -25,6 +25,7 @@ import { MonetizationModule } from './monetization/monetization.module';
 import { PaymentsModule } from './payments/payments.module';
 import { BusinessModule } from './business/business.module';
 import { ShareModule } from './share/share.module';
+import { ConditionsModule } from './conditions/conditions.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -61,6 +62,7 @@ import { HealthController } from './health/health.controller';
     // before BusinessModule's GET /businesses/:id (Express matches in order).
     BusinessModule,
     ShareModule,
+    ConditionsModule,
     SchedulerModule,
   ],
   controllers: [HealthController],

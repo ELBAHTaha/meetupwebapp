@@ -2,9 +2,12 @@
 // API barrel — the single import surface for the whole app (`@/api`).
 //
 // When VITE_API_URL is set, calls go to the live NestJS backend (`remote.ts`);
-// otherwise everything runs on the in-memory mock (`mock.ts`). Endpoints the
-// backend doesn't expose yet (spots, aggregated chat threads, public reviews,
-// dev lifecycle triggers) always fall back to the mock so no screen crashes.
+// otherwise everything runs on the in-memory mock (`mock.ts`).
+//
+// ⚠️ Every network-backed function in mock.ts MUST also exist in remote.ts —
+// a missing one silently falls back to fake mock data in production. The only
+// intentional mock-only exports are the pure helper `canStart` and the
+// dev-only `devTriggerLifecycle`.
 // ---------------------------------------------------------------------------
 import { USE_REMOTE } from './http';
 import * as mock from './mock';
@@ -106,12 +109,13 @@ export const {
   warnUser,
   suspendUser,
   banUser,
-  // ---- Mock-only (no backend endpoint yet) ----
+  // ---- Spots (venues), conditions (Open-Meteo), reviews ----
   listSpots,
   getConditions,
   getReviewsForUser,
-  hasRated,
+  // ---- Pure client helpers (no network; identical in mock and remote) ----
   canStart,
+  // ---- Dev-only (DevPanel, hidden in production builds) ----
   devTriggerLifecycle,
 } = impl;
 

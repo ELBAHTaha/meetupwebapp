@@ -7,6 +7,7 @@ import type {
   ChatMessage,
   ChatThread,
   Conditions,
+  ConditionsQuery,
   CreateActivityInput,
   CreateEventInput,
   EnrichedEvent,
@@ -192,11 +193,17 @@ export async function listSpots(city?: string): Promise<Spot[]> {
   return delay([...spots], 120);
 }
 
-export async function getConditions(
-  spotId: string,
-  _activityType?: string,
-): Promise<Conditions | null> {
-  const c = db.conditions.find((x) => x.spotId === spotId) ?? null;
+/** Canned conditions for a seeded spot (or the nearest one within ~3 km). */
+export async function getConditions(q: ConditionsQuery): Promise<Conditions | null> {
+  let spotId = q.spotId;
+  if (!spotId) {
+    const near = db.spots
+      .map((s) => ({ s, d: distanceKm({ lat: q.lat, lng: q.lng }, { lat: s.lat, lng: s.lng }) }))
+      .filter((x) => x.d <= 3)
+      .sort((a, b) => a.d - b.d)[0];
+    spotId = near?.s.id;
+  }
+  const c = spotId ? db.conditions.find((x) => x.spotId === spotId) ?? null : null;
   return delay(c, 280);
 }
 
@@ -898,16 +905,6 @@ export async function submitRating(input: RatingInput): Promise<Rating> {
     saveDb();
   }
   return delay(rating, 200);
-}
-
-/** Whether the current user already rated this person for this activity. */
-export async function hasRated(toUserId: string, activityId: string): Promise<boolean> {
-  return delay(
-    db.ratings.some(
-      (r) => r.fromUserId === db.currentUserId && r.toUserId === toUserId && r.activityId === activityId,
-    ),
-    80,
-  );
 }
 
 /** People the current user still needs to rate for a completed event. */

@@ -279,6 +279,9 @@ export interface Spot {
   lat: number;
   lng: number;
   activityIds: string[];
+  /** Real backend: the venue's street address and listing status. */
+  address?: string;
+  status?: 'listed' | 'claimed' | 'verified';
 }
 
 export interface Attendee {
@@ -348,16 +351,35 @@ export interface JmaaEvent {
 
 export interface Conditions {
   spotId: string;
-  activityType: ActivityCategory;
+  activityType: ActivityCategory | string;
   updatedAt: string;
+  /** "open-meteo" when it's a live forecast from the backend. */
+  source?: string;
   fields: {
     swellM?: number;
+    /** Wave period in seconds (marine forecast). */
+    wavePeriodS?: number;
     windKts?: number;
     tempC?: number;
     waterTempC?: number;
+    /** English fallback text. */
     summary: string;
+    /** Translatable key from the backend: clear | cloudy | fog | rain | showers | snow | storm | windy. */
+    summaryKey?: string;
     icon?: string; // lucide icon key for the summary
   };
+}
+
+/** Where/when to fetch outdoor conditions for an activity. */
+export interface ConditionsQuery {
+  lat: number;
+  lng: number;
+  /** ISO start time of the activity. */
+  at: string;
+  /** Activity slug — water sports add sea conditions. */
+  activityId?: string;
+  /** Mock-only: the seeded spot's canned conditions. */
+  spotId?: string;
 }
 
 export interface ChatMessage {

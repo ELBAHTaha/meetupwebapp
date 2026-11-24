@@ -10,8 +10,11 @@
 // were written to the same contract), so components need no changes.
 // ---------------------------------------------------------------------------
 import { api, tokens } from './http';
+import { CITIES } from './catalog';
 import type {
   Activity,
+  Conditions,
+  ConditionsQuery,
   AdminBusinessVerification,
   AdminVenueClaim,
   AppNotification,
@@ -33,6 +36,7 @@ import type {
   Review,
   SponsoredVenue,
   SponsorshipTier,
+  Spot,
   User,
   VenueCard,
   VenueProfile,
@@ -140,6 +144,50 @@ export function submitVerification(selfie: File, pose: string): Promise<User> {
   return api.upload<User>('/users/me/verification', form);
 }
 
+// ---- Spots (saved places) & conditions -------------------------------------
+const VENUE_STATUS_RANK: Record<string, number> = { verified: 0, claimed: 1, listed: 2 };
+
+/**
+ * "Saved places" in the create flow = real venues around the selected city
+ * (listed, claimed and verified). Verified venues first, then claimed, then
+ * listed; within a status, better-reviewed venues first, then nearest.
+ */
+export async function listSpots(city?: string): Promise<Spot[]> {
+  const center = CITIES.find((c) => c.name === city) ?? CITIES[0];
+  const venues = await api.get<VenueCard[]>(`/venues?lat=${center.lat}&lng=${center.lng}&radiusKm=25`);
+  return venues
+    .map((v, distanceRank) => ({ v, distanceRank }))
+    .sort(
+      (a, b) =>
+        (VENUE_STATUS_RANK[a.v.status] ?? 3) - (VENUE_STATUS_RANK[b.v.status] ?? 3) ||
+        b.v.avgRating - a.v.avgRating ||
+        b.v.reviewCount - a.v.reviewCount ||
+        a.distanceRank - b.distanceRank,
+    )
+    .slice(0, 20)
+    .map(({ v }) => ({
+      id: v.id,
+      name: v.name,
+      city: center.name,
+      lat: v.lat,
+      lng: v.lng,
+      activityIds: [],
+      address: v.address,
+      status: v.status as Spot['status'],
+    }));
+}
+
+/** Live forecast (Open-Meteo via the backend). `null` → the widget hides itself. */
+export async function getConditions(q: ConditionsQuery): Promise<Conditions | null> {
+  const p = new URLSearchParams({ lat: String(q.lat), lng: String(q.lng), at: q.at });
+  if (q.activityId) p.set('activity', q.activityId);
+  try {
+    return (await api.get<Conditions | null>(`/conditions?${p.toString()}`)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ---- Activity types --------------------------------------------------------
 export function listActivities(): Promise<Activity[]> {
   return api.get<Activity[]>('/activity-types');
@@ -193,6 +241,8 @@ export function createEvent(input: CreateEventInput & { lat?: number; lng?: numb
     description: input.description,
     locationLabel: loc.label,
     address: (input as { address?: string }).address ?? loc.label,
+    // A "saved place" is a real venue id on the backend — link the activity to it.
+    venueId: input.isOnline ? undefined : input.spotId,
     areaLabel: input.areaLabel,
     lat: loc.lat,
     lng: loc.lng,

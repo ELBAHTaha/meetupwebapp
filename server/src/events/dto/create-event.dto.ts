@@ -134,4 +134,10 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   businessId?: string;
+
+  @ApiPropertyOptional({ description: 'Venue picked from "saved places" — links the activity to the venue page.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  venueId?: string;
 }

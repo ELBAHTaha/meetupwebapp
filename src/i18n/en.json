@@ -630,5 +630,23 @@
       "completed": "Completed",
       "cancelled": "Cancelled"
     }
+  },
+  "conditions": {
+    "swell": "Waves",
+    "period": "Period",
+    "wind": "Wind",
+    "air": "Air",
+    "water": "Water",
+    "source": "Forecast: Open-Meteo",
+    "summary": {
+      "clear": "Clear skies",
+      "cloudy": "Cloudy",
+      "fog": "Foggy",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow",
+      "storm": "Thunderstorms",
+      "windy": "Windy"
+    }
   }
 }

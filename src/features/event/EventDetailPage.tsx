@@ -58,10 +58,20 @@ export function EventDetailPage() {
   const [spotNote, setSpotNote] = useState('');
 
   const { data: event, loading, reload } = useAsync(() => getEvent(id), [id, dataVersion]);
-  const showConditions = !!event?.activity.outdoor && !!event?.spotId;
+  // Live forecast for outdoor, in-person activities (hidden when unavailable).
+  const showConditions = !!event?.activity.outdoor && !event?.isOnline && !!event?.resolvedLocation;
   const conditions = useAsync(
-    () => (showConditions ? getConditions(event!.spotId!) : Promise.resolve(null)),
-    [event?.spotId, showConditions],
+    () =>
+      showConditions
+        ? getConditions({
+            lat: event!.resolvedLocation.lat,
+            lng: event!.resolvedLocation.lng,
+            at: event!.startsAt,
+            activityId: event!.activityId,
+            spotId: event!.spotId,
+          })
+        : Promise.resolve(null),
+    [event?.id, event?.startsAt, showConditions],
   );
 
   if (loading) {

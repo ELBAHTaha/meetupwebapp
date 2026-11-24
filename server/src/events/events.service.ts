@@ -140,9 +140,15 @@ export class EventsService {
         ? new Date(Date.now() + 24 * 60 * 60 * 1000)
         : undefined;
 
+    // Optional venue link (from the "saved places" picker). Unknown ids are ignored.
+    const venueId = dto.venueId
+      ? (await this.prisma.venue.findUnique({ where: { id: dto.venueId }, select: { id: true } }))?.id
+      : undefined;
+
     const event = await this.prisma.event.create({
       data: {
         hostId: userId,
+        venueId: dto.isOnline ? undefined : venueId,
         activityTypeId,
         title: dto.title.slice(0, 60),
         description: dto.description,
